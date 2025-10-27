@@ -1,0 +1,87 @@
+# Pas besoin de "version" avec Docker Compose v2+
+
+services:
+  # --- BACKEND (Laravel) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    restart: unless-stopped
+
+    # Monter le code source + le .env spécifique du backend
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/.env:/var/www/html/.env
+
+    ports:
+      - "${APP_PORT:-8000}:80"
+
+    # Variables d'environnement nécessaires à Laravel
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-crm_ai}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      TRANSCRIPTION_MODE: ${TRANSCRIPTION_MODE:-openai}
+
+    depends_on:
+      - db
+
+  # --- BASE DE DONNÉES ---
+  db:
+    image: mariadb:11
+    container_name: mariadb_db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-crm_ai}
+      MARIADB_USER: ${MARIADB_USER:-root}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-root}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  # --- PHPMYADMIN ---
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - "${PMA_PORT:-8080}:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${MARIADB_USER:-root}
+      PMA_PASSWORD: ${MARIADB_PASSWORD:-root}
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      - db
+
+  # --- FRONTEND (Vite/React/Vue/Autre) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: crm_ai_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:${APP_PORT:-8000}/api
+      VITE_API_KEY: la-guigz-key
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    depends_on:
+      - backend
+
+# --- VOLUMES ---
+volumes:
+  mariadb_data:
