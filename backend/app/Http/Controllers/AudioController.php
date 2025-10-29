@@ -2,62 +2,60 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
-use App\Services\TranscriptionService;
-use App\Services\AnalysisService;
-use App\Services\ClientSyncService;
+use App\Models\Client;
 use App\Models\AudioRecord;
+use Illuminate\Http\Request;
+use App\Services\AnalysisService;
+use Illuminate\Http\JsonResponse;
+use App\Services\ClientSyncService;
+use App\Services\TranscriptionService;
+use Illuminate\Support\Facades\Storage;
 
 class AudioController extends Controller
 {
     public function upload(
         Request $request,
-        TranscriptionService $transcription,
-        AnalysisService $analysis,
-        ClientSyncService $clientSync
+        TranscriptionService $transcriptionService,
+        AnalysisService $analysisService,
+        ClientSyncService $clientSyncService
     ): JsonResponse {
-
         $request->validate([
-            'audio' => 'required|file|mimes:mp3,wav,ogg,m4a|max:51200',
+            'audio' => 'required|file|mimes:mp3,wav,ogg,webm|max:10240',
+            'client_id' => 'nullable|integer|exists:clients,id',
         ]);
-
-        // 1️⃣ Stockage temporaire
-        $path = $request->file('audio')->store('audio', 'public');
-
-        // 2️⃣ Création de l’entrée audio
-        $record = AudioRecord::create([
-            'path' => $path,
-            'status' => 'processing',
-        ]);
-
-        // 3️⃣ Transcription via Whisper
-        $text = $transcription->transcribe(storage_path("app/public/$path"));
-
-        if (!$text) {
-            $record->update(['status' => 'failed']);
-            return response()->json(['error' => 'Échec de la transcription'], 500);
+    
+        // 🔊 1. Enregistrement du fichier audio
+        $path = $request->file('audio')->store('audio_uploads', 'public');
+    
+        // 🧠 2. Transcription du vocal
+        $transcription = $transcriptionService->transcribe(storage_path("app/public/$path"));
+    
+        // 💬 3. Analyse du texte via GPT
+        $data = $analysisService->extractClientData($transcription);
+    
+        // 🔍 4. Si un client_id est fourni → on met à jour CE client
+        if ($request->filled('client_id')) {
+            $client = Client::findOrFail($request->input('client_id'));
+            $client->fill(array_filter($data)); // n’écrase que les champs renseignés
+            if ($client->isDirty()) $client->save();
+        } else {
+            // 🆕 Sinon, création ou MAJ automatique selon les infos extraites
+            $client = $clientSyncService->findOrCreateFromAnalysis($data);
         }
-
-        // 4️⃣ Analyse GPT → données structurées
-        $data = $analysis->extractClientData($text ?? '');
-
-        // 5️⃣ Synchronisation : création ou mise à jour du client
-        $client = $clientSync->findOrCreateFromAnalysis($data);
-
-        // 6️⃣ Mise à jour de l’audio
-        $record->update([
-            'client_id' => $client->id,
+    
+        // ✅ 5. Sauvegarde de l’audio dans la table audio_records
+        AudioRecord::create([
+            'path' => $path,
             'status' => 'done',
-            'transcription' => $text,
-            'processed_at' => now(),
+            'client_id' => $client->id,
         ]);
-
+    
         return response()->json([
-            'message' => 'Audio traité et client synchronisé avec succès.',
+            'message' => 'Analyse terminée',
             'client' => $client,
-            'analysis' => $data,
+            'transcription' => $transcription,
+            'data' => $data,
         ]);
     }
+    
 }

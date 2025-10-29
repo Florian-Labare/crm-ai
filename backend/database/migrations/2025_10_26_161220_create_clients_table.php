@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nom')->nullable();
             $table->string('prenom')->nullable();
-            $table->date('datedenaissance')->nullable();
+            $table->string('datedenaissance')->nullable();
             $table->string('lieudenaissance')->nullable();
             $table->string('situationmatrimoniale')->nullable();
             $table->string('profession')->nullable();
