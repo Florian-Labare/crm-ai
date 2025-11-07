@@ -1,12 +1,14 @@
 import React, { useState } from "react";
+import { toast } from "react-toastify";
 import api from "../api/apiClient";
 
 interface Props {
-  clientId: number;
-  onUpdateClient: (data: any) => void;
+  clientId?: number;
+  onUpdateClient?: (data: any) => void;
+  onUploadSuccess?: (data: any) => void;
 }
 
-const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient }) => {
+const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient, onUploadSuccess }) => {
   const [recording, setRecording] = useState(false);
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,9 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient }) => {
         const blob = new Blob(chunks, { type: "audio/webm" });
         const formData = new FormData();
         formData.append("audio", blob);
-        formData.append("client_id", clientId.toString()); // 🆕 pour rattacher le client
+        if (clientId) {
+          formData.append("client_id", clientId.toString()); // 🆕 pour rattacher le client
+        }
 
         try {
           setLoading(true);
@@ -34,13 +38,33 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient }) => {
             timeout: 120000,
           });
 
-          if (res.data) {
-            console.log("✅ Client mis à jour :", res.data);
-            onUpdateClient(res.data); // 🧠 mise à jour en direct du parent
+          if (res.data && res.data.client) {
+            console.log("✅ Client mis à jour :", res.data.client);
+
+            // Afficher un toast de succès avec le nom du client
+            const clientName = res.data.client.prenom && res.data.client.nom
+              ? `${res.data.client.prenom} ${res.data.client.nom}`
+              : "Client";
+
+            if (clientId) {
+              toast.success(`✅ Fiche client "${clientName}" mise à jour !`);
+            } else {
+              toast.success(`✅ Fiche client "${clientName}" créée !`);
+            }
+
+            if (onUpdateClient) {
+              onUpdateClient(res.data.client); // 🧠 mise à jour en direct du parent
+            }
+            if (onUploadSuccess) {
+              onUploadSuccess(res.data); // 🧠 callback pour Dashboard
+            }
+            setError(null);
           }
         } catch (err) {
           console.error(err);
-          setError("Erreur lors du traitement de l’audio.");
+          const errorMsg = "Erreur lors du traitement de l'audio.";
+          setError(errorMsg);
+          toast.error(errorMsg);
         } finally {
           setLoading(false);
         }
@@ -51,7 +75,9 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient }) => {
       setRecording(true);
     } catch (err) {
       console.error(err);
-      setError("Impossible d'accéder au micro.");
+      const errorMsg = "Impossible d'accéder au micro.";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 

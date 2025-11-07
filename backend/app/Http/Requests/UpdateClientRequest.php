@@ -22,7 +22,8 @@ class UpdateClientRequest extends FormRequest
             'profession' => 'sometimes|string|max:255',
             'revenusannuels' => 'sometimes|string|max:255',
             'nombreenfants' => 'sometimes|integer',
-            'besoins' => 'sometimes|string|max:500',
+            'besoins' => 'sometimes|nullable|array',
+            'besoins.*' => 'string|max:255',
         ];
     }
 }

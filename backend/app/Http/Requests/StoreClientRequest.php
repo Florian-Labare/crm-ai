@@ -22,7 +22,8 @@ class StoreClientRequest extends FormRequest
             'profession' => 'nullable|string|max:255',
             'revenusannuels' => 'nullable|string|max:255',
             'nombreenfants' => 'nullable|integer',
-            'besoins' => 'nullable|string|max:500',
+            'besoins' => 'nullable|array',
+            'besoins.*' => 'string|max:255',
         ];
     }
 }

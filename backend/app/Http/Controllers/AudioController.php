@@ -36,10 +36,48 @@ class AudioController extends Controller
         // 🔍 4. Si un client_id est fourni → on met à jour CE client
         if ($request->filled('client_id')) {
             $client = Client::findOrFail($request->input('client_id'));
-            $client->fill(array_filter($data)); // n’écrase que les champs renseignés
+
+            // 🎯 Gestion intelligente des besoins
+            if (isset($data['besoins']) && isset($data['besoins_action'])) {
+                $currentBesoins = is_array($client->besoins) ? $client->besoins : [];
+                $newBesoins = is_array($data['besoins']) ? $data['besoins'] : [];
+
+                switch ($data['besoins_action']) {
+                    case 'add':
+                        // Ajouter les nouveaux besoins sans doublon
+                        $data['besoins'] = array_values(array_unique(array_merge($currentBesoins, $newBesoins)));
+                        break;
+
+                    case 'remove':
+                        // Retirer les besoins mentionnés
+                        $data['besoins'] = array_values(array_diff($currentBesoins, $newBesoins));
+                        break;
+
+                    case 'replace':
+                    default:
+                        // Remplacer complètement
+                        $data['besoins'] = $newBesoins;
+                        break;
+                }
+
+                // Retirer besoins_action des données à sauvegarder
+                unset($data['besoins_action']);
+            }
+
+            // Filtrer les données pour ne garder que les champs réellement renseignés
+            // On retire : null, chaînes vides, tableaux vides
+            $filteredData = array_filter($data, function($value) {
+                if ($value === null) return false;
+                if ($value === '') return false;
+                if (is_array($value) && empty($value)) return false;
+                return true;
+            });
+
+            $client->fill($filteredData);
             if ($client->isDirty()) $client->save();
         } else {
             // 🆕 Sinon, création ou MAJ automatique selon les infos extraites
+            unset($data['besoins_action']); // Pas besoin pour une création
             $client = $clientSyncService->findOrCreateFromAnalysis($data);
         }
     

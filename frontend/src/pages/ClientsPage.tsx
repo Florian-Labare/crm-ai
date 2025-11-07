@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import api from "../api/apiClient";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import api from "../api/apiClient";
 
 interface Client {
   id: number;
@@ -12,7 +14,6 @@ interface Client {
 const ClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,7 +26,8 @@ const ClientsPage: React.FC = () => {
       const res = await api.get("/clients");
       setClients(res.data);
     } catch (err) {
-      setError("Erreur lors du chargement des clients.");
+      console.error(err);
+      toast.error("Erreur lors du chargement des clients");
     } finally {
       setLoading(false);
     }
@@ -37,9 +39,10 @@ const ClientsPage: React.FC = () => {
     try {
       await api.delete(`/clients/${id}`);
       setClients((prev) => prev.filter((c) => c.id !== id)); // ✅ mise à jour immédiate
+      toast.success("Client supprimé avec succès");
     } catch (err) {
-      alert("❌ Erreur lors de la suppression du client.");
       console.error(err);
+      toast.error("Erreur lors de la suppression du client");
     }
   };
 
@@ -51,16 +54,10 @@ const ClientsPage: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-red-600 text-center mt-10">
-        ❌ {error}
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-md">
+    <>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">👥 Liste des clients</h1>
         <button
@@ -107,7 +104,8 @@ const ClientsPage: React.FC = () => {
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

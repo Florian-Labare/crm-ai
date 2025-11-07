@@ -16,11 +16,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->trustHosts();
 
-        // ✅ Ajoute ton middleware CORS à la pile globale
-        $middleware->append(CorsMiddleware::class);
-        // (ou $middleware->prepend(CorsMiddleware::class) si tu veux le tout premier)
+        // ✅ CORS doit être en premier pour gérer les preflight et les erreurs
+        $middleware->prepend(CorsMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
+            // Ajouter les headers CORS à toutes les réponses d'erreur
+            $response->headers->set('Access-Control-Allow-Origin', 'http://localhost:5173');
+            $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+            return $response;
+        });
     })
     ->create();

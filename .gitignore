@@ -1,0 +1,162 @@
+# ========================================
+# FICHIERS SENSIBLES - NE JAMAIS COMMITER
+# ========================================
+
+# Variables d'environnement (contiennent clés API, mots de passe, etc.)
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+
+# Credentials et secrets
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+secrets.json
+config/secrets.php
+
+# ========================================
+# LARAVEL BACKEND
+# ========================================
+
+# Dependencies
+backend/vendor/
+backend/node_modules/
+
+# Cache & Storage
+backend/storage/*.key
+backend/storage/app/*
+!backend/storage/app/.gitignore
+!backend/storage/app/public
+backend/storage/app/public/*
+!backend/storage/app/public/.gitignore
+backend/storage/framework/cache/*
+!backend/storage/framework/cache/.gitignore
+backend/storage/framework/sessions/*
+!backend/storage/framework/sessions/.gitignore
+backend/storage/framework/views/*
+!backend/storage/framework/views/.gitignore
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/bootstrap/cache/*
+!backend/bootstrap/cache/.gitignore
+
+# Audio files (peuvent contenir des données sensibles)
+backend/storage/app/*.wav
+backend/storage/app/*.mp3
+backend/storage/app/*.webm
+backend/storage/app/audio/*
+
+# Tests
+backend/.phpunit.result.cache
+backend/phpunit.xml
+!backend/phpunit.xml.dist
+
+# ========================================
+# REACT FRONTEND
+# ========================================
+
+# Dependencies
+frontend/node_modules/
+
+# Production
+frontend/dist/
+frontend/build/
+
+# Cache
+frontend/.cache/
+frontend/.vite/
+frontend/.parcel-cache/
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Editor
+frontend/.vscode/*
+!frontend/.vscode/extensions.json
+frontend/.idea/
+
+# OS
+frontend/.DS_Store
+frontend/Thumbs.db
+
+# ========================================
+# DOCKER
+# ========================================
+
+# Données MySQL (contiennent toutes les données clients sensibles)
+mysql-data/
+mariadb-data/
+db-data/
+
+# ========================================
+# IDE & EDITORS
+# ========================================
+
+# PhpStorm / IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ========================================
+# OS GENERATED
+# ========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ========================================
+# LOGS
+# ========================================
+
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========================================
+# BACKUP & TEMP
+# ========================================
+
+*.backup
+*.bak
+*.tmp
+*.temp
+*~
+.swp
+.swo

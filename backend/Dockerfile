@@ -5,13 +5,14 @@ RUN apt-get update && apt-get install -y \
     git \
     unzip \
     zip \
+    libzip-dev \
     libpq-dev \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql gd mbstring exif pcntl bcmath opcache
+    && docker-php-ext-install pdo pdo_mysql gd mbstring exif pcntl bcmath opcache zip
 
 # Activer mod_rewrite pour Apache
 RUN a2enmod rewrite
@@ -37,6 +38,11 @@ RUN chown -R www-data:www-data /var/www/html \
 # --- Configuration Apache personnalisée ---
 COPY ./docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
+# Copier et configurer le script d'entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 80
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["apache2-foreground"]

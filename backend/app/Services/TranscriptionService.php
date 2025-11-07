@@ -48,7 +48,12 @@ class TranscriptionService
                 return null;
             }
 
-            return $response->json('text') ?? null;
+            $transcription = $response->json('text') ?? null;
+
+            // 📝 Log de la transcription pour debug
+            Log::info('📝 Transcription Whisper', ['text' => $transcription]);
+
+            return $transcription;
         } catch (\Throwable $e) {
             Log::error('[Whisper API] ' . $e->getMessage());
             return null;

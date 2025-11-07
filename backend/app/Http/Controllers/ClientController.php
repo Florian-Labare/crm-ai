@@ -16,7 +16,9 @@ class ClientController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        return response()->json(Client::findOrFail($id));
+        $client = Client::with(['conjoint', 'enfants', 'entreprise', 'santeSouhait'])
+            ->findOrFail($id);
+        return response()->json($client);
     }
 
     public function store(StoreClientRequest $request): JsonResponse
