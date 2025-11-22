@@ -1,0 +1,395 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\Client;
+use App\Models\AudioRecord;
+use Illuminate\Bus\Queueable;
+use App\Services\AnalysisService;
+use App\Services\BaeService;
+use App\Services\EnfantSyncService;
+use Illuminate\Queue\SerializesModels;
+use App\Services\ClientSyncService;
+use Illuminate\Queue\InteractsWithQueue;
+use App\Services\TranscriptionService;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Log;
+use Exception;
+
+class ProcessAudioRecording implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * Nombre de tentatives avant échec définitif
+     */
+    public $tries = 3;
+
+    /**
+     * Temps max d'exécution (5 minutes)
+     */
+    public $timeout = 300;
+
+    /**
+     * Délai avant nouvelle tentative (backoff exponentiel)
+     */
+    public $backoff = [30, 60, 120]; // 30s, 1min, 2min
+
+    /**
+     * L'enregistrement audio à traiter
+     */
+    protected AudioRecord $audioRecord;
+
+    /**
+     * ID du client existant (optionnel)
+     */
+    protected ?int $existingClientId;
+
+    /**
+     * Créer une nouvelle instance du job
+     */
+    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null)
+    {
+        $this->audioRecord = $audioRecord;
+        $this->existingClientId = $existingClientId;
+    }
+
+    /**
+     * Exécuter le job
+     */
+    public function handle(
+        TranscriptionService $transcriptionService,
+        AnalysisService $analysisService,
+        ClientSyncService $clientSyncService
+    ): void {
+        try {
+            Log::info("🎵 Début du traitement audio #{$this->audioRecord->id}");
+
+            // 1️⃣ Mettre le statut à "processing"
+            $this->audioRecord->update(['status' => 'processing']);
+
+            // 2️⃣ Transcription via Whisper API
+            Log::info("🧠 Transcription audio #{$this->audioRecord->id}...");
+            $audioPath = storage_path("app/public/{$this->audioRecord->path}");
+
+            if (!file_exists($audioPath)) {
+                throw new Exception("Fichier audio introuvable : {$audioPath}");
+            }
+
+            $transcription = $transcriptionService->transcribe($audioPath);
+
+            if (empty($transcription)) {
+                throw new Exception("Transcription vide ou échec de Whisper API");
+            }
+
+            Log::info("✅ Transcription réussie : " . strlen($transcription) . " caractères");
+
+            // 3️⃣ Analyse GPT pour extraction des données
+            Log::info("💬 Analyse GPT-4 des données client...");
+            $data = $analysisService->extractClientData($transcription);
+
+            // 🔍 LOG DEBUG - Voir ce que GPT retourne pour les besoins
+            if (isset($data['besoins']) || isset($data['besoins_action'])) {
+                Log::info("🔍 [DEBUG BESOINS] Réponse GPT", [
+                    'besoins' => $data['besoins'] ?? 'NON DÉFINI',
+                    'besoins_action' => $data['besoins_action'] ?? 'NON DÉFINI',
+                ]);
+            }
+
+            // 🏢 POST-TRAITEMENT : Corriger les champs entreprise mal placés par GPT
+            $this->fixEnterpriseFields($transcription, $data);
+
+            // 4️⃣ Synchronisation client
+            // Sauvegarder les données du questionnaire de risque avant traitement
+            $questionnaireData = $data['questionnaire_risque'] ?? null;
+
+            if ($this->existingClientId) {
+                // Mise à jour d'un client existant (vérifier qu'il appartient au bon utilisateur)
+                $client = Client::where('id', $this->existingClientId)
+                    ->where('user_id', $this->audioRecord->user_id)
+                    ->firstOrFail();
+
+                // Gestion intelligente des besoins
+                $removedBesoins = []; // Pour supprimer les BAE correspondants
+                if (isset($data['besoins'])) {
+                    $currentBesoins = is_array($client->besoins) ? $client->besoins : [];
+                    $newBesoins = is_array($data['besoins']) ? $data['besoins'] : [];
+
+                    Log::info("🔍 [DEBUG BESOINS] Besoins actuels du client #{$client->id}", [
+                        'besoins_actuels' => $currentBesoins,
+                        'nouveaux_besoins' => $newBesoins,
+                    ]);
+
+                    // 🛡️ GARDE-FOU : Déterminer l'action (FORCER "add" par défaut)
+                    $action = $data['besoins_action'] ?? 'add';
+
+                    // 🚨 GARDE-FOU CRITIQUE : Si l'action est "replace" sans raison valide, forcer "add"
+                    if ($action === 'replace') {
+                        Log::warning("⚠️ [GARDE-FOU] GPT a retourné 'replace' - FORCÉ à 'add' pour protéger les besoins existants");
+                        $action = 'add';
+                    }
+
+                    switch ($action) {
+                        case 'remove':
+                            $removedBesoins = $newBesoins; // Sauvegarder les besoins à supprimer
+                            $data['besoins'] = array_values(array_diff($currentBesoins, $newBesoins));
+                            Log::info("🗑️ [BESOINS] Action: REMOVE", [
+                                'besoins_retirés' => $removedBesoins,
+                                'besoins_finaux' => $data['besoins'],
+                            ]);
+                            break;
+                        case 'add':
+                        default:
+                            // Par défaut: TOUJOURS ajouter aux besoins existants
+                            $data['besoins'] = array_values(array_unique(array_merge($currentBesoins, $newBesoins)));
+                            Log::info("➕ [BESOINS] Action: ADD", [
+                                'besoins_finaux' => $data['besoins'],
+                            ]);
+                            break;
+                    }
+                    unset($data['besoins_action']);
+                }
+
+                // Filtrer les valeurs vides et exclure questionnaire_risque, bae_* et enfants (gérés séparément)
+                $filteredData = [];
+                foreach ($data as $key => $value) {
+                    if ($key === 'questionnaire_risque') {
+                        continue; // géré séparément
+                    }
+                    if (in_array($key, ['bae_prevoyance', 'bae_retraite', 'bae_epargne'])) {
+                        continue; // géré séparément par BaeService
+                    }
+                    if ($key === 'enfants') {
+                        continue; // géré séparément par EnfantSyncService
+                    }
+                    if ($value === null || $value === '') {
+                        continue;
+                    }
+                    if (is_array($value) && empty($value)) {
+                        continue;
+                    }
+                    $filteredData[$key] = $value;
+                }
+
+                $client->fill($filteredData);
+                if ($client->isDirty()) {
+                    $client->save();
+                    Log::info("✅ Client #{$client->id} mis à jour");
+                }
+            } else {
+                // Création ou recherche automatique
+                // Sauvegarder les enfants pour les traiter après
+                $enfantsData = $data['enfants'] ?? null;
+
+                unset($data['besoins_action']);
+                unset($data['questionnaire_risque']); // Exclu car géré séparément
+                unset($data['bae_prevoyance']); // Exclu car géré séparément
+                unset($data['bae_retraite']); // Exclu car géré séparément
+                unset($data['bae_epargne']); // Exclu car géré séparément
+                unset($data['enfants']); // Exclu car géré séparément
+                $client = $clientSyncService->findOrCreateFromAnalysis($data, $this->audioRecord->user_id);
+                Log::info("✅ Client #{$client->id} synchronisé (créé ou trouvé)");
+
+                // Restaurer les enfants pour la synchronisation ultérieure
+                if ($enfantsData) {
+                    $data['enfants'] = $enfantsData;
+                }
+            }
+
+            // 4️⃣ bis - Sauvegarde du questionnaire de risque si présent dans les données
+            if ($questionnaireData) {
+                Log::info("📊 Détection de données de questionnaire de risque, sauvegarde...");
+                $analysisService->saveQuestionnaireRisque($client->id, ['questionnaire_risque' => $questionnaireData]);
+            }
+
+            // 4️⃣ ter - Synchronisation des données BAE (Prévoyance, Retraite, Épargne)
+            $baeService = new BaeService();
+
+            // Supprimer les BAE des besoins retirés
+            if (!empty($removedBesoins)) {
+                $baeService->removeBaeForBesoins($client, $removedBesoins);
+            }
+
+            // Synchroniser les BAE des besoins actuels
+            $baeService->syncBaeData($client, $data);
+
+            // 4️⃣ quater - Synchronisation des enfants
+            if (isset($data['enfants']) && is_array($data['enfants']) && !empty($data['enfants'])) {
+                Log::info("👶 Détection de données enfants, synchronisation...");
+                $enfantService = new EnfantSyncService();
+                $enfantService->syncEnfants($client, $data['enfants']);
+            }
+
+            // 5️⃣ Finalisation : marquer comme traité
+            $this->audioRecord->update([
+                'status' => 'done',
+                'transcription' => $transcription,
+                'client_id' => $client->id,
+                'processed_at' => now(),
+            ]);
+
+            Log::info("🎉 Traitement audio #{$this->audioRecord->id} terminé avec succès !");
+
+        } catch (Exception $e) {
+            Log::error("❌ Échec du traitement audio #{$this->audioRecord->id}: {$e->getMessage()}");
+            Log::error($e->getTraceAsString());
+
+            // Marquer comme échec seulement si c'est la dernière tentative
+            if ($this->attempts() >= $this->tries) {
+                $this->audioRecord->update([
+                    'status' => 'failed',
+                    'transcription' => "Erreur : " . $e->getMessage(),
+                ]);
+                Log::error("💀 Échec définitif après {$this->tries} tentatives");
+            }
+
+            // Re-throw pour que Laravel gère le retry
+            throw $e;
+        }
+    }
+
+    /**
+     * Corrige les champs entreprise mal placés par GPT
+     */
+    private function fixEnterpriseFields(string $transcription, array &$data): void
+    {
+        Log::info("🏢 [FIX ENTREPRISE] Correction des champs entreprise");
+
+        $text = mb_strtolower($transcription, 'UTF-8');
+
+        // 0️⃣ DÉTECTION DE LA NÉGATION - PRIORITÉ ABSOLUE
+        // Si le client dit "je ne suis PAS/PLUS chef d'entreprise", forcer à false
+        $negationPatterns = [
+            'chef_entreprise' => [
+                "/\b(ne|n'|pas|plus|jamais).{0,30}chef\s+d['']?entreprise/u",
+                "/\bchef\s+d['']?entreprise.{0,30}(ne|n'|pas|plus|non|jamais)/u",
+            ],
+            'travailleur_independant' => [
+                "/\b(ne|n'|pas|plus|jamais).{0,30}(travailleur\s+ind[ée]pendant|ind[ée]pendant|freelance)/u",
+                "/\b(travailleur\s+ind[ée]pendant|ind[ée]pendant|freelance).{0,30}(ne|n'|pas|plus|non|jamais)/u",
+            ],
+            'mandataire_social' => [
+                "/\b(ne|n'|pas|plus|jamais).{0,30}mandataire\s+social/u",
+                "/\bmandataire\s+social.{0,30}(ne|n'|pas|plus|non|jamais)/u",
+            ],
+        ];
+
+        foreach ($negationPatterns as $field => $patterns) {
+            foreach ($patterns as $pattern) {
+                if (preg_match($pattern, $text)) {
+                    Log::info("🏢 [FIX] NÉGATION détectée pour '$field' → false");
+                    $data[$field] = false;
+                    break; // Passer au champ suivant
+                }
+            }
+        }
+
+        // 1️⃣ Corriger si GPT a mis ces infos dans les mauvais champs
+        if (isset($data['profession']) && is_string($data['profession'])) {
+            $profession = mb_strtolower($data['profession'], 'UTF-8');
+
+            // Si profession contient "chef d'entreprise" → corriger
+            if (str_contains($profession, "chef d'entreprise") || str_contains($profession, "chef entreprise")) {
+                Log::info("🏢 [FIX] 'chef d'entreprise' trouvé dans profession → chef_entreprise: true");
+                $data['chef_entreprise'] = true;
+                unset($data['profession']); // Supprimer le champ incorrect
+            }
+
+            // Si profession contient "travailleur indépendant" → corriger
+            if (str_contains($profession, "travailleur") && str_contains($profession, "indépendant")) {
+                Log::info("🏢 [FIX] 'travailleur indépendant' trouvé dans profession → travailleur_independant: true");
+                $data['travailleur_independant'] = true;
+                unset($data['profession']);
+            }
+
+            // Si profession contient "mandataire social" → corriger
+            if (str_contains($profession, "mandataire") && str_contains($profession, "social")) {
+                Log::info("🏢 [FIX] 'mandataire social' trouvé dans profession → mandataire_social: true");
+                $data['mandataire_social'] = true;
+                unset($data['profession']);
+            }
+        }
+
+        // 2️⃣ Corriger situation_actuelle
+        if (isset($data['situation_actuelle']) && is_string($data['situation_actuelle'])) {
+            $situation = mb_strtolower($data['situation_actuelle'], 'UTF-8');
+
+            if (str_contains($situation, "travailleur") && str_contains($situation, "indépendant")) {
+                Log::info("🏢 [FIX] 'travailleur indépendant' trouvé dans situation_actuelle → travailleur_independant: true");
+                $data['travailleur_independant'] = true;
+                unset($data['situation_actuelle']);
+            }
+
+            if (str_contains($situation, "chef") && str_contains($situation, "entreprise")) {
+                Log::info("🏢 [FIX] 'chef d'entreprise' trouvé dans situation_actuelle → chef_entreprise: true");
+                $data['chef_entreprise'] = true;
+                unset($data['situation_actuelle']);
+            }
+        }
+
+        // 3️⃣ Analyser la transcription brute pour être sûr (SAUF si négation détectée)
+        $patterns = [
+            'chef_entreprise' => "/\bchef\s+d['\']?entreprise/u",
+            'travailleur_independant' => "/\b(travailleur\s+ind[ée]pendant|ind[ée]pendant|freelance|auto[-\s]?entrepreneur)/u",
+            'mandataire_social' => "/\bmandataire\s+social/u",
+        ];
+
+        foreach ($patterns as $field => $pattern) {
+            // Ne pas remplacer si déjà false (négation détectée)
+            if (isset($data[$field]) && $data[$field] === false) {
+                continue;
+            }
+
+            if (!isset($data[$field]) || $data[$field] !== true) {
+                if (preg_match($pattern, $text)) {
+                    Log::info("🏢 [FIX] Pattern '$field' trouvé dans transcription → $field: true");
+                    $data[$field] = true;
+                }
+            }
+        }
+
+        // 4️⃣ Détecter le statut juridique (SARL, SAS, etc.)
+        if (empty($data['statut'])) {
+            $statutPatterns = [
+                'sarl' => 'SARL',
+                'sas' => 'SAS',
+                'sasu' => 'SASU',
+                'eurl' => 'EURL',
+                'sci' => 'SCI',
+                'auto-entrepreneur' => 'Auto-entrepreneur',
+                'auto entrepreneur' => 'Auto-entrepreneur',
+                'micro-entreprise' => 'Micro-entreprise',
+                'micro entreprise' => 'Micro-entreprise',
+            ];
+
+            foreach ($statutPatterns as $needle => $label) {
+                if (str_contains($text, $needle)) {
+                    Log::info("🏢 [FIX] Statut '$label' détecté dans transcription");
+                    $data['statut'] = $label;
+                    break;
+                }
+            }
+        }
+
+        Log::info("🏢 [FIX ENTREPRISE] Résultat final", [
+            'chef_entreprise' => $data['chef_entreprise'] ?? 'non défini',
+            'travailleur_independant' => $data['travailleur_independant'] ?? 'non défini',
+            'mandataire_social' => $data['mandataire_social'] ?? 'non défini',
+            'statut' => $data['statut'] ?? 'non défini',
+        ]);
+    }
+
+    /**
+     * Gestion de l'échec définitif du job
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error("💀 Job ProcessAudioRecording #{$this->audioRecord->id} échoué définitivement");
+
+        $this->audioRecord->update([
+            'status' => 'failed',
+            'transcription' => "Échec définitif : " . $exception->getMessage(),
+        ]);
+    }
+}

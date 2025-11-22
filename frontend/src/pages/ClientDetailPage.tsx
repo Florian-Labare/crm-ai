@@ -3,14 +3,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
+import { RiskQuestionnaire } from "./RiskQuestionnaire";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ClientInfoSection } from "../components/ClientInfoSection";
 
 interface Conjoint {
   id: number;
   nom: string;
   nom_jeune_fille?: string;
   prenom: string;
-  datedenaissance?: string;
-  lieudenaissance?: string;
+  date_naissance?: string;
+  lieu_naissance?: string;
   nationalite?: string;
   profession?: string;
   chef_entreprise?: string;
@@ -26,17 +29,9 @@ interface Enfant {
   id: number;
   nom: string;
   prenom: string;
-  datedenaissance?: string;
+  date_naissance?: string;
   fiscalement_a_charge?: boolean;
   garde_alternee?: boolean;
-}
-
-interface Entreprise {
-  id: number;
-  chef_entreprise?: boolean;
-  statut?: string;
-  travailleur_independant?: boolean;
-  mandataire_social?: boolean;
 }
 
 interface SanteSouhait {
@@ -54,6 +49,73 @@ interface SanteSouhait {
   niveau_protheses_auditives?: number;
 }
 
+interface BaePrevoyance {
+  id: number;
+  client_id: number;
+  contrat_en_place?: string;
+  date_effet?: string;
+  cotisations?: number;
+  souhaite_couverture_invalidite?: boolean;
+  revenu_a_garantir?: number;
+  souhaite_couvrir_charges_professionnelles?: boolean;
+  montant_annuel_charges_professionnelles?: number;
+  garantir_totalite_charges_professionnelles?: boolean;
+  montant_charges_professionnelles_a_garantir?: number;
+  duree_indemnisation_souhaitee?: string;
+  capital_deces_souhaite?: number;
+  garanties_obseques?: number;
+  rente_enfants?: number;
+  rente_conjoint?: number;
+  payeur?: string;
+}
+
+interface BaeRetraite {
+  id: number;
+  client_id: number;
+  revenus_annuels?: number;
+  revenus_annuels_foyer?: number;
+  impot_revenu?: number;
+  nombre_parts_fiscales?: number;
+  tmi?: string;
+  impot_paye_n_1?: number;
+  age_depart_retraite?: number;
+  age_depart_retraite_conjoint?: number;
+  pourcentage_revenu_a_maintenir?: number;
+  contrat_en_place?: string;
+  bilan_retraite_disponible?: boolean;
+  complementaire_retraite_mise_en_place?: boolean;
+  designation_etablissement?: string;
+  cotisations_annuelles?: number;
+  titulaire?: string;
+}
+
+interface BaeEpargne {
+  id: number;
+  client_id: number;
+  epargne_disponible?: boolean;
+  montant_epargne_disponible?: number;
+  donation_realisee?: boolean;
+  donation_forme?: string;
+  donation_date?: string;
+  donation_montant?: number;
+  donation_beneficiaires?: string;
+  capacite_epargne_estimee?: number;
+  actifs_financiers_pourcentage?: number;
+  actifs_financiers_total?: number;
+  actifs_financiers_details?: string[];
+  actifs_immo_pourcentage?: number;
+  actifs_immo_total?: number;
+  actifs_immo_details?: string[];
+  actifs_autres_pourcentage?: number;
+  actifs_autres_total?: number;
+  actifs_autres_details?: string[];
+  passifs_total_emprunts?: number;
+  passifs_details?: string[];
+  charges_totales?: number;
+  charges_details?: string[];
+  situation_financiere_revenus_charges?: string;
+}
+
 interface Client {
   id: number;
   // Identité de base
@@ -61,12 +123,12 @@ interface Client {
   nom: string;
   nom_jeune_fille?: string;
   prenom: string;
-  datedenaissance?: string;
-  lieudenaissance?: string;
+  date_naissance?: string;
+  lieu_naissance?: string;
   nationalite?: string;
 
   // Situation
-  situationmatrimoniale?: string;
+  situation_matrimoniale?: string;
   date_situation_matrimoniale?: string;
   situation_actuelle?: string;
 
@@ -75,7 +137,7 @@ interface Client {
   date_evenement_professionnel?: string;
   risques_professionnels?: boolean;
   details_risques_professionnels?: string;
-  revenusannuels?: number;
+  revenus_annuels?: number;
 
   // Coordonnées
   adresse?: string;
@@ -92,7 +154,7 @@ interface Client {
   niveau_activites_sportives?: string;
 
   // Famille
-  nombreenfants?: number;
+  nombre_enfants?: number;
 
   // Besoins
   besoins?: string[] | null;
@@ -105,8 +167,14 @@ interface Client {
   // Relations
   conjoint?: Conjoint;
   enfants?: Enfant[];
-  entreprise?: Entreprise;
+  chef_entreprise?: boolean;
+  statut?: string;
+  travailleur_independant?: boolean;
+  mandataire_social?: boolean;
   santeSouhait?: SanteSouhait;
+  bae_prevoyance?: BaePrevoyance;
+  bae_retraite?: BaeRetraite;
+  bae_epargne?: BaeEpargne;
 
   // Timestamps
   created_at?: string;
@@ -118,6 +186,26 @@ const ClientDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents">("info");
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [generatingDocument, setGeneratingDocument] = useState(false);
+
+  // États pour les dialogues de confirmation
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const fetchClient = async () => {
     try {
@@ -131,21 +219,135 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
+  const fetchDocuments = async () => {
+    try {
+      const res = await api.get(`/clients/${id}/documents`);
+      setDocuments(res.data.data || []);
+    } catch (err) {
+      console.error("Erreur lors du chargement des documents :", err);
+      toast.error("Erreur lors du chargement des documents");
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await api.get('/document-templates');
+      setTemplates(res.data.data || []);
+    } catch (err) {
+      console.error("Erreur lors du chargement des templates :", err);
+      toast.error("Erreur lors du chargement des templates");
+    }
+  };
+
+  const handleGenerateDocument = async () => {
+    if (!selectedTemplateId) {
+      toast.error("Veuillez sélectionner un template");
+      return;
+    }
+
+    setGeneratingDocument(true);
+    try {
+      await api.post(`/clients/${id}/documents/generate`, {
+        template_id: selectedTemplateId,
+        format: 'docx',
+      });
+      toast.success("Document généré avec succès");
+      setShowGenerateModal(false);
+      setSelectedTemplateId(null);
+      fetchDocuments();
+    } catch (err: any) {
+      console.error("Erreur lors de la génération du document :", err);
+      toast.error(err.response?.data?.message || "Erreur lors de la génération du document");
+    } finally {
+      setGeneratingDocument(false);
+    }
+  };
+
+  const handleDownloadDocument = async (documentId: number) => {
+    try {
+      const res = await api.get(`/documents/${documentId}/download`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `document-${documentId}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Document téléchargé");
+    } catch (err) {
+      console.error("Erreur lors du téléchargement :", err);
+      toast.error("Erreur lors du téléchargement du document");
+    }
+  };
+
+  const handleSendDocumentByEmail = (documentId: number) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Envoyer par email',
+      message: 'Voulez-vous envoyer ce document par email au client ?',
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          await api.post(`/documents/${documentId}/send-email`);
+          toast.success("Document envoyé par email");
+          fetchDocuments();
+        } catch (err: any) {
+          console.error("Erreur lors de l'envoi :", err);
+          toast.error(err.response?.data?.message || "Erreur lors de l'envoi du document");
+        }
+      },
+    });
+  };
+
+  const handleDeleteDocument = (documentId: number) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Supprimer le document',
+      message: 'Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/documents/${documentId}`);
+          toast.success("Document supprimé");
+          fetchDocuments();
+        } catch (err) {
+          console.error("Erreur lors de la suppression :", err);
+          toast.error("Erreur lors de la suppression du document");
+        }
+      },
+    });
+  };
+
   useEffect(() => {
     fetchClient();
   }, [id]);
 
-  const handleDelete = async () => {
-    if (!confirm("Voulez-vous vraiment supprimer ce client ?")) return;
-
-    try {
-      await api.delete(`/clients/${id}`);
-      toast.success("Client supprimé avec succès");
-      setTimeout(() => navigate("/clients"), 1000);
-    } catch (err) {
-      console.error(err);
-      toast.error("Erreur lors de la suppression du client");
+  useEffect(() => {
+    if (activeTab === "documents") {
+      fetchDocuments();
+      fetchTemplates();
     }
+  }, [activeTab, id]);
+
+  const handleDelete = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Supprimer le client',
+      message: 'Êtes-vous sûr de vouloir supprimer ce client ? Toutes ses données seront définitivement perdues.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/clients/${id}`);
+          toast.success("Client supprimé avec succès");
+          setTimeout(() => navigate("/clients"), 1000);
+        } catch (err) {
+          console.error(err);
+          toast.error("Erreur lors de la suppression du client");
+        }
+      },
+    });
   };
 
   const handleExportPDF = async () => {
@@ -208,6 +410,32 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
+  const handleExportQuestionnairePdf = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/clients/${id}/questionnaires/export/pdf`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error('Erreur lors de l\'export du questionnaire');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `questionnaire_client_${client?.nom}_${client?.prenom}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Questionnaire exporté en PDF");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de l'export questionnaire");
+    }
+  };
+
   if (loading) return <div className="text-center mt-10">Chargement...</div>;
   if (!client) return <div className="text-center mt-10">Client introuvable.</div>;
 
@@ -227,8 +455,8 @@ const ClientDetailPage: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="p-6 max-w-4xl mx-auto bg-white shadow-md rounded-lg">
-        <div className="flex justify-between items-start mb-6">
+      <div className="p-6 max-w-5xl mx-auto bg-white shadow-md rounded-lg">
+        <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
               {client.civilite && `${client.civilite} `}{client.prenom} {client.nom?.toUpperCase()}
@@ -238,25 +466,17 @@ const ClientDetailPage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => navigate(`/clients/${client.id}/edit`)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {activeTab === "info" && (
+              <button
+                onClick={() => navigate(`/clients/${client.id}/edit`)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              <span>Éditer</span>
-            </button>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Éditer</span>
+              </button>
+            )}
             <button
               onClick={handleExportPDF}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
@@ -295,6 +515,14 @@ const ClientDetailPage: React.FC = () => {
               </svg>
               <span>Word</span>
             </button>
+            {activeTab === "questionnaires" && (
+              <button
+                onClick={handleExportQuestionnairePdf}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
+              >
+                <span>Export questionnaire PDF</span>
+              </button>
+            )}
             <button
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all"
@@ -304,384 +532,233 @@ const ClientDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* État Civil */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3">📋 État Civil</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-            {client.nom_jeune_fille && (
-              <p>
-                <strong>Nom de jeune fille :</strong> {client.nom_jeune_fille}
-              </p>
-            )}
-            <p>
-              <strong>Date de naissance :</strong> {formatDate(client.datedenaissance)}
-            </p>
-            <p>
-              <strong>Lieu de naissance :</strong> {client.lieudenaissance || "Non renseigné"}
-            </p>
-            <p>
-              <strong>Nationalité :</strong> {client.nationalite || "Non renseigné"}
-            </p>
-            <p>
-              <strong>Situation matrimoniale :</strong>{" "}
-              {client.situationmatrimoniale || "Non renseigné"}
-            </p>
-            {client.date_situation_matrimoniale && (
-              <p>
-                <strong>Date :</strong> {formatDate(client.date_situation_matrimoniale)}
-              </p>
-            )}
-            <p>
-              <strong>Situation actuelle :</strong> {client.situation_actuelle || "Non renseigné"}
-            </p>
-            <p>
-              <strong>Nombre d'enfants :</strong> {client.nombreenfants ?? "Non renseigné"}
-            </p>
-          </div>
+        <div className="flex border-b border-gray-200 mb-6">
+          {[
+            { key: "info", label: "Informations client" },
+            { key: "questionnaires", label: "Questionnaires" },
+            { key: "documents", label: "Documents" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as "info" | "questionnaires" | "documents")}
+              className={`px-5 py-3 text-sm font-semibold transition-colors ${
+                activeTab === tab.key ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Coordonnées */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3">📞 Coordonnées</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <p>
-              <strong>Adresse :</strong> {client.adresse || "Non renseignée"}
-            </p>
-            <p>
-              <strong>Code postal :</strong> {client.code_postal || "Non renseigné"}
-            </p>
-            <p>
-              <strong>Ville :</strong> {client.ville || "Non renseignée"}
-            </p>
-            <p>
-              <strong>Résidence fiscale :</strong> {client.residence_fiscale || "Non renseignée"}
-            </p>
-            <p>
-              <strong>Téléphone :</strong> {client.telephone || "Non renseigné"}
-            </p>
-            <p>
-              <strong>Email :</strong> {client.email || "Non renseigné"}
-            </p>
-          </div>
-        </div>
 
-        {/* Informations professionnelles */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3">💼 Informations professionnelles</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <p>
-              <strong>Profession :</strong> {client.profession || "Non renseignée"}
-            </p>
-            {client.date_evenement_professionnel && (
-              <p>
-                <strong>Date événement professionnel :</strong>{" "}
-                {formatDate(client.date_evenement_professionnel)}
-              </p>
-            )}
-            <p>
-              <strong>Revenus annuels :</strong> {formatCurrency(client.revenusannuels)}
-            </p>
-            <p>
-              <strong>Risques professionnels :</strong>{" "}
-              {client.risques_professionnels ? "Oui" : "Non"}
-            </p>
-            {client.details_risques_professionnels && (
-              <p className="col-span-2">
-                <strong>Détails des risques :</strong> {client.details_risques_professionnels}
-              </p>
-            )}
-          </div>
-        </div>
+        {activeTab === "info" && (
+          <ClientInfoSection
+            client={client}
+            formatDate={formatDate}
+            formatCurrency={formatCurrency}
+          />
+        )}
 
-        {/* Mode de vie */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-          <h3 className="font-semibold text-gray-700 mb-3">🏃 Mode de vie</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <p>
-              <strong>Fumeur :</strong> {client.fumeur ? "Oui" : "Non"}
-            </p>
-            <p>
-              <strong>Activités sportives :</strong>{" "}
-              {client.activites_sportives ? "Oui" : "Non"}
-            </p>
-            {client.details_activites_sportives && (
-              <p>
-                <strong>Détails des activités :</strong> {client.details_activites_sportives}
-              </p>
-            )}
-            {client.niveau_activites_sportives && (
-              <p>
-                <strong>Niveau :</strong> {client.niveau_activites_sportives}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Autres informations */}
-        {(client.charge_clientele || client.consentement_audio) && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">ℹ️ Autres informations</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              {client.charge_clientele && (
-                <p>
-                  <strong>Charge clientèle :</strong> {client.charge_clientele}
-                </p>
-              )}
-              {client.consentement_audio !== undefined && (
-                <p>
-                  <strong>Consentement audio :</strong>{" "}
-                  {client.consentement_audio ? "Oui" : "Non"}
-                </p>
-              )}
+        {activeTab === "questionnaires" && (
+          <div className="space-y-6">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+              <RiskQuestionnaire clientIdProp={id!} embedded />
             </div>
           </div>
         )}
 
-        {/* Conjoint */}
-        {client.conjoint && (
-          <div className="bg-purple-50 p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">💑 Conjoint</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-              <p>
-                <strong>Nom :</strong> {client.conjoint.nom}
-              </p>
-              <p>
-                <strong>Prénom :</strong> {client.conjoint.prenom}
-              </p>
-              {client.conjoint.nom_jeune_fille && (
-                <p>
-                  <strong>Nom de jeune fille :</strong> {client.conjoint.nom_jeune_fille}
-                </p>
-              )}
-              {client.conjoint.datedenaissance && (
-                <p>
-                  <strong>Date de naissance :</strong>{" "}
-                  {formatDate(client.conjoint.datedenaissance)}
-                </p>
-              )}
-              {client.conjoint.lieudenaissance && (
-                <p>
-                  <strong>Lieu de naissance :</strong> {client.conjoint.lieudenaissance}
-                </p>
-              )}
-              {client.conjoint.nationalite && (
-                <p>
-                  <strong>Nationalité :</strong> {client.conjoint.nationalite}
-                </p>
-              )}
-              {client.conjoint.profession && (
-                <p>
-                  <strong>Profession :</strong> {client.conjoint.profession}
-                </p>
-              )}
-              {client.conjoint.telephone && (
-                <p>
-                  <strong>Téléphone :</strong> {client.conjoint.telephone}
-                </p>
-              )}
-              {client.conjoint.adresse && (
-                <p className="col-span-2">
-                  <strong>Adresse :</strong> {client.conjoint.adresse}
-                </p>
-              )}
-              {client.conjoint.risques_professionnels && (
-                <p>
-                  <strong>Risques professionnels :</strong> Oui
-                </p>
-              )}
-              {client.conjoint.details_risques_professionnels && (
-                <p className="col-span-2">
-                  <strong>Détails des risques :</strong>{" "}
-                  {client.conjoint.details_risques_professionnels}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Enfants */}
-        {client.enfants && client.enfants.length > 0 && (
-          <div className="bg-green-50 p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">
-              👶 Enfants ({client.enfants.length})
-            </h3>
-            <div className="space-y-3">
-              {client.enfants.map((enfant, index) => (
-                <div
-                  key={enfant.id}
-                  className="bg-white p-3 rounded border border-green-200"
+        {activeTab === "documents" && (
+          <div className="space-y-6">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Documents réglementaires</h2>
+                <button
+                  onClick={() => setShowGenerateModal(true)}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                    <p>
-                      <strong>Enfant {index + 1} :</strong> {enfant.prenom} {enfant.nom}
-                    </p>
-                    {enfant.datedenaissance && (
-                      <p>
-                        <strong>Date de naissance :</strong>{" "}
-                        {formatDate(enfant.datedenaissance)}
-                      </p>
-                    )}
-                    <p>
-                      <strong>À charge fiscalement :</strong>{" "}
-                      {enfant.fiscalement_a_charge ? "Oui" : "Non"}
-                    </p>
-                    {enfant.garde_alternee && (
-                      <p>
-                        <strong>Garde alternée :</strong> Oui
-                      </p>
-                    )}
-                  </div>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Générer un document réglementaire</span>
+                </button>
+              </div>
+
+              {documents.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">Aucun document</h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Cliquez sur le bouton ci-dessus pour générer votre premier document réglementaire.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc: any) => (
+                    <div key={doc.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{doc.document_template?.name}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{doc.document_template?.description}</p>
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                            <span>Généré le {new Date(doc.created_at).toLocaleDateString('fr-FR')}</span>
+                            <span>Par {doc.user?.name || 'Utilisateur'}</span>
+                            {doc.sent_by_email && (
+                              <span className="flex items-center space-x-1 text-green-600">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>Envoyé par email</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex space-x-2 ml-4">
+                          <button
+                            onClick={() => handleDownloadDocument(doc.id)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition-all flex items-center space-x-1 text-sm"
+                            title="Télécharger"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                          </button>
+                          {!doc.sent_by_email && (
+                            <button
+                              onClick={() => handleSendDocumentByEmail(doc.id)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition-all flex items-center space-x-1 text-sm"
+                              title="Envoyer par email"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition-all flex items-center space-x-1 text-sm"
+                            title="Supprimer"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Entreprise */}
-        {client.entreprise && (
-          <div className="bg-orange-50 p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">🏢 Entreprise</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <p>
-                <strong>Chef d'entreprise :</strong>{" "}
-                {client.entreprise.chef_entreprise ? "Oui" : "Non"}
-              </p>
-              {client.entreprise.statut && (
-                <p>
-                  <strong>Statut :</strong> {client.entreprise.statut}
-                </p>
-              )}
-              <p>
-                <strong>Travailleur indépendant :</strong>{" "}
-                {client.entreprise.travailleur_independant ? "Oui" : "Non"}
-              </p>
-              <p>
-                <strong>Mandataire social :</strong>{" "}
-                {client.entreprise.mandataire_social ? "Oui" : "Non"}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Modal pour générer un document */}
+        {showGenerateModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            {/* Backdrop avec blur */}
+            <div
+              className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-all duration-300"
+              onClick={() => {
+                setShowGenerateModal(false);
+                setSelectedTemplateId(null);
+              }}
+            />
 
-        {/* Santé - Souhaits */}
-        {client.santeSouhait && (
-          <div className="bg-red-50 p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-gray-700 mb-3">❤️ Santé - Souhaits</h3>
-            <div className="space-y-3">
-              {client.santeSouhait.contrat_en_place && (
-                <p className="text-sm">
-                  <strong>Contrat en place :</strong> {client.santeSouhait.contrat_en_place}
-                </p>
-              )}
-              {client.santeSouhait.budget_mensuel_maximum && (
-                <p className="text-sm">
-                  <strong>Budget mensuel maximum :</strong>{" "}
-                  {formatCurrency(client.santeSouhait.budget_mensuel_maximum)}
-                </p>
-              )}
+            {/* Modale */}
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto transform transition-all duration-300 animate-slideIn">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-gray-800">Sélectionner un template</h2>
+                  <button
+                    onClick={() => {
+                      setShowGenerateModal(false);
+                      setSelectedTemplateId(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                {client.santeSouhait.niveau_hospitalisation !== undefined &&
-                  client.santeSouhait.niveau_hospitalisation !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Hospitalisation</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_hospitalisation}/10
-                      </p>
+                <div className="space-y-3">
+                  {templates.map((template: any) => (
+                    <div
+                      key={template.id}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                        selectedTemplateId === template.id
+                          ? 'border-indigo-600 bg-indigo-50'
+                          : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 mt-1">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            selectedTemplateId === template.id
+                              ? 'border-indigo-600 bg-indigo-600'
+                              : 'border-gray-300'
+                          }`}>
+                            {selectedTemplateId === template.id && (
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 12 12">
+                                <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <div className="ml-3 flex-1">
+                          <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                          {template.description && (
+                            <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+                          )}
+                          <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                            {template.category}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                {client.santeSouhait.niveau_chambre_particuliere !== undefined &&
-                  client.santeSouhait.niveau_chambre_particuliere !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Chambre particulière</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_chambre_particuliere}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_medecin_generaliste !== undefined &&
-                  client.santeSouhait.niveau_medecin_generaliste !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Médecin généraliste</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_medecin_generaliste}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_analyses_imagerie !== undefined &&
-                  client.santeSouhait.niveau_analyses_imagerie !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Analyses & imagerie</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_analyses_imagerie}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_auxiliaires_medicaux !== undefined &&
-                  client.santeSouhait.niveau_auxiliaires_medicaux !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Auxiliaires médicaux</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_auxiliaires_medicaux}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_pharmacie !== undefined &&
-                  client.santeSouhait.niveau_pharmacie !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Pharmacie</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_pharmacie}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_dentaire !== undefined &&
-                  client.santeSouhait.niveau_dentaire !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Dentaire</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_dentaire}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_optique !== undefined &&
-                  client.santeSouhait.niveau_optique !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Optique</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_optique}/10
-                      </p>
-                    </div>
-                  )}
-                {client.santeSouhait.niveau_protheses_auditives !== undefined &&
-                  client.santeSouhait.niveau_protheses_auditives !== null && (
-                    <div className="bg-white p-2 rounded">
-                      <p className="text-xs text-gray-600">Prothèses auditives</p>
-                      <p className="font-semibold">
-                        {client.santeSouhait.niveau_protheses_auditives}/10
-                      </p>
-                    </div>
-                  )}
+                  ))}
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowGenerateModal(false);
+                      setSelectedTemplateId(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleGenerateDocument}
+                    disabled={!selectedTemplateId || generatingDocument}
+                    className={`px-6 py-2 rounded-lg text-white transition-all ${
+                      !selectedTemplateId || generatingDocument
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    }`}
+                  >
+                    {generatingDocument ? 'Génération...' : 'Générer le document'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {client.besoins && client.besoins.length > 0 && (
-          <div className="bg-blue-50 p-4 rounded-lg mb-6">
-            <h3 className="font-semibold text-gray-700 mb-3">🎯 Besoins exprimés</h3>
-            <div className="flex flex-wrap gap-2">
-              {client.besoins.map((besoin, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
-                >
-                  {besoin}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Dialogue de confirmation */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          type={confirmDialog.type}
+        />
       </div>
     </>
   );

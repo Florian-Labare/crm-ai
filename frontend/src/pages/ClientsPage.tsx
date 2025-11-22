@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 interface Client {
   id: number;
@@ -15,6 +16,19 @@ const ClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // État pour le dialogue de confirmation
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchClients();
@@ -33,17 +47,23 @@ const ClientsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Voulez-vous vraiment supprimer ce client ?")) return;
-
-    try {
-      await api.delete(`/clients/${id}`);
-      setClients((prev) => prev.filter((c) => c.id !== id)); // ✅ mise à jour immédiate
-      toast.success("Client supprimé avec succès");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erreur lors de la suppression du client");
-    }
+  const handleDelete = (id: number) => {
+    const client = clients.find((c) => c.id === id);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Supprimer le client',
+      message: `Êtes-vous sûr de vouloir supprimer ${client?.prenom} ${client?.nom} ? Cette action est irréversible.`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/clients/${id}`);
+          setClients((prev) => prev.filter((c) => c.id !== id));
+          toast.success("Client supprimé avec succès");
+        } catch (err) {
+          console.error(err);
+          toast.error("Erreur lors de la suppression du client");
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -104,6 +124,16 @@ const ClientsPage: React.FC = () => {
           ))}
         </ul>
       )}
+
+      {/* Dialogue de confirmation */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type="danger"
+      />
       </div>
     </>
   );

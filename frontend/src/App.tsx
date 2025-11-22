@@ -6,6 +6,7 @@ import ClientEditPage from "./pages/ClientEditPage";
 import ClientForm from "./components/ClientForm";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import { RiskQuestionnaire } from "./pages/RiskQuestionnaire";
 
 function Navigation() {
   const location = useLocation();
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="/clients/new" element={<ProtectedRoute><ClientForm /></ProtectedRoute>} />
               <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailPage /></ProtectedRoute>} />
               <Route path="/clients/:id/edit" element={<ProtectedRoute><ClientEditPage /></ProtectedRoute>} />
+              <Route path="/clients/:clientId/questionnaire-risque" element={<ProtectedRoute><RiskQuestionnaire /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

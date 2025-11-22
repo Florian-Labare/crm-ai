@@ -15,12 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('nom')->nullable();
             $table->string('prenom')->nullable();
-            $table->string('datedenaissance')->nullable();
-            $table->string('lieudenaissance')->nullable();
-            $table->string('situationmatrimoniale')->nullable();
+            $table->string('date_naissance')->nullable();
+            $table->string('lieu_naissance')->nullable();
+            $table->string('situation_matrimoniale')->nullable();
             $table->string('profession')->nullable();
-            $table->decimal('revenusannuels', 12, 2)->nullable();
-            $table->integer('nombreenfants')->nullable();
+            $table->decimal('revenus_annuel', 12, 2)->nullable();
+            $table->integer('nombre_end')->nullable();
             $table->text('besoins')->nullable();
             $table->string('transcription_path')->nullable();
             $table->boolean('consentement_audio')->default(false);

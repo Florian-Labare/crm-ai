@@ -12,18 +12,22 @@ export default function ClientForm() {
     nom: "",
     nom_jeune_fille: "",
     prenom: "",
-    datedenaissance: "",
-    lieudenaissance: "",
+    date_naissance: "",
+    lieu_naissance: "",
     nationalite: "",
     telephone: "",
     email: "",
     adresse: "",
     code_postal: "",
     ville: "",
-    situationmatrimoniale: "",
+    situation_matrimoniale: "",
     profession: "",
-    revenusannuels: "",
-    nombreenfants: "",
+    revenus_annuels: "",
+    nombre_enfants: "",
+    chef_entreprise: false,
+    statut: "",
+    travailleur_independant: false,
+    mandataire_social: false,
   });
   const [besoins, setBesoins] = useState<string[]>([]);
   const [newBesoin, setNewBesoin] = useState("");
@@ -31,7 +35,7 @@ export default function ClientForm() {
   const navigate = useNavigate();
 
   // Afficher le champ nom de jeune fille si Madame et Marié(e)
-  const showNomJeuneFille = form.civilite === "Madame" && form.situationmatrimoniale === "Marié(e)";
+  const showNomJeuneFille = form.civilite === "Madame" && form.situation_matrimoniale === "Marié(e)";
 
   const handleAddBesoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,8 +321,8 @@ export default function ClientForm() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date de naissance</label>
                     <input
                       type="date"
-                      value={form.datedenaissance}
-                      onChange={(e) => setForm({ ...form, datedenaissance: e.target.value })}
+                      value={form.date_naissance}
+                      onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                     />
                   </div>
@@ -326,16 +330,16 @@ export default function ClientForm() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Lieu de naissance</label>
                     <input
                       placeholder="Paris, France"
-                      value={form.lieudenaissance}
-                      onChange={(e) => setForm({ ...form, lieudenaissance: e.target.value })}
+                      value={form.lieu_naissance}
+                      onChange={(e) => setForm({ ...form, lieu_naissance: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Situation matrimoniale</label>
                     <select
-                      value={form.situationmatrimoniale}
-                      onChange={(e) => setForm({ ...form, situationmatrimoniale: e.target.value })}
+                      value={form.situation_matrimoniale}
+                      onChange={(e) => setForm({ ...form, situation_matrimoniale: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
                     >
                       <option value="">Sélectionner...</option>
@@ -352,8 +356,8 @@ export default function ClientForm() {
                       type="number"
                       min="0"
                       placeholder="0"
-                      value={form.nombreenfants}
-                      onChange={(e) => setForm({ ...form, nombreenfants: e.target.value })}
+                      value={form.nombre_enfants}
+                      onChange={(e) => setForm({ ...form, nombre_enfants: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                     />
                   </div>
@@ -385,9 +389,57 @@ export default function ClientForm() {
                       min="0"
                       step="0.01"
                       placeholder="45000"
-                      value={form.revenusannuels}
-                      onChange={(e) => setForm({ ...form, revenusannuels: e.target.value })}
+                      value={form.revenus_annuels}
+                      onChange={(e) => setForm({ ...form, revenus_annuels: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Entreprise */}
+              <div className="border-l-4 border-amber-400 pl-4">
+                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7l9-4 9 4-9 4-9-4zm0 6l9 4 9-4m-9 4v6" />
+                  </svg>
+                  Informations entreprise
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-gray-700">
+                    <span>Chef d'entreprise</span>
+                    <input
+                      type="checkbox"
+                      checked={form.chef_entreprise}
+                      onChange={(e) => setForm({ ...form, chef_entreprise: e.target.checked })}
+                      className="h-5 w-5 rounded text-amber-600 focus:ring-amber-500"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-gray-700">
+                    <span>Travailleur indépendant</span>
+                    <input
+                      type="checkbox"
+                      checked={form.travailleur_independant}
+                      onChange={(e) => setForm({ ...form, travailleur_independant: e.target.checked })}
+                      className="h-5 w-5 rounded text-amber-600 focus:ring-amber-500"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-gray-700">
+                    <span>Mandataire social</span>
+                    <input
+                      type="checkbox"
+                      checked={form.mandataire_social}
+                      onChange={(e) => setForm({ ...form, mandataire_social: e.target.checked })}
+                      className="h-5 w-5 rounded text-amber-600 focus:ring-amber-500"
+                    />
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Statut (SARL, SAS...)</label>
+                    <input
+                      placeholder="Ex : SAS"
+                      value={form.statut}
+                      onChange={(e) => setForm({ ...form, statut: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
                     />
                   </div>
                 </div>

@@ -1,0 +1,25 @@
+# Docker Compose override pour utiliser Laravel Octane avec Swoole
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.octane.yml up -d
+
+services:
+  # --- BACKEND avec OCTANE (Swoole) ---
+  backend:
+    ports:
+      - "${APP_PORT:-8000}:8000"  # Octane utilise le port 8000 par défaut
+
+    environment:
+      OCTANE_SERVER: swoole
+      OCTANE_HTTPS: false
+      OCTANE_MAX_REQUESTS: 500
+      OCTANE_WORKERS: auto
+      OCTANE_TASK_WORKERS: auto
+
+    # Override la commande pour démarrer Octane au lieu d'Apache
+    command: >
+      sh -c "
+        chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache &&
+        chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache &&
+        php artisan config:cache &&
+        php artisan route:cache &&
+        php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000 --workers=auto --task-workers=auto --max-requests=500
+      "

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 interface Client {
   id: number;
@@ -12,7 +13,7 @@ interface Client {
   telephone?: string;
   profession?: string;
   ville?: string;
-  situationmatrimoniale?: string;
+  situation_matrimoniale?: string;
   besoins?: string[];
   created_at?: string;
 }
@@ -26,6 +27,19 @@ const HomePage: React.FC = () => {
     avecBesoins: 0,
   });
   const navigate = useNavigate();
+
+  // État pour le dialogue de confirmation
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchClients();
@@ -59,20 +73,25 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number, nom: string, prenom: string) => {
-    if (!confirm(`Voulez-vous vraiment supprimer ${prenom} ${nom} ?`)) return;
+  const handleDelete = (id: number, nom: string, prenom: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Supprimer le client',
+      message: `Êtes-vous sûr de vouloir supprimer ${prenom} ${nom} ? Cette action est irréversible.`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/clients/${id}`);
+          setClients((prev) => prev.filter((c) => c.id !== id));
+          toast.success("Client supprimé avec succès");
 
-    try {
-      await api.delete(`/clients/${id}`);
-      setClients((prev) => prev.filter((c) => c.id !== id));
-      toast.success("Client supprimé avec succès");
-
-      // Recalculer les stats
-      setStats((prev) => ({ ...prev, total: prev.total - 1 }));
-    } catch (err) {
-      console.error(err);
-      toast.error("Erreur lors de la suppression du client");
-    }
+          // Recalculer les stats
+          setStats((prev) => ({ ...prev, total: prev.total - 1 }));
+        } catch (err) {
+          console.error(err);
+          toast.error("Erreur lors de la suppression du client");
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -411,9 +430,9 @@ const HomePage: React.FC = () => {
 
                         {/* Situation */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {client.situationmatrimoniale ? (
+                          {client.situation_matrimoniale ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {client.situationmatrimoniale}
+                              {client.situation_matrimoniale}
                             </span>
                           ) : (
                             <span className="text-xs text-gray-400">
@@ -424,27 +443,48 @@ const HomePage: React.FC = () => {
 
                         {/* Besoins */}
                         <td className="px-6 py-4">
-                          {client.besoins && client.besoins.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {client.besoins.slice(0, 2).map((besoin, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700"
-                                >
-                                  {besoin}
-                                </span>
-                              ))}
-                              {client.besoins.length > 2 && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                  +{client.besoins.length - 2}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">
-                              Aucun besoin
-                            </span>
-                          )}
+                          {(() => {
+                            // Nettoyer et décoder les besoins
+                            let besoins: string[] = [];
+                            if (client.besoins) {
+                              if (typeof client.besoins === 'string') {
+                                try {
+                                  besoins = JSON.parse(client.besoins);
+                                } catch {
+                                  besoins = [client.besoins];
+                                }
+                              } else if (Array.isArray(client.besoins)) {
+                                besoins = client.besoins;
+                              }
+                            }
+
+                            // Capitaliser la première lettre
+                            const formatBesoin = (b: string) => {
+                              return b.charAt(0).toUpperCase() + b.slice(1).toLowerCase();
+                            };
+
+                            return besoins && besoins.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {besoins.slice(0, 2).map((besoin, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700"
+                                  >
+                                    {formatBesoin(besoin)}
+                                  </span>
+                                ))}
+                                {besoins.length > 2 && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                    +{besoins.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">
+                                Aucun besoin
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         {/* Actions */}
@@ -527,6 +567,16 @@ const HomePage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Dialogue de confirmation */}
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          type="danger"
+        />
       </div>
     </>
   );

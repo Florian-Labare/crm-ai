@@ -197,16 +197,16 @@
                 <span class="field-value">{{ $client->prenom }}</span>
             </div>
             @endif
-            @if($client->datedenaissance)
+            @if($client->date_naissance)
             <div class="field">
                 <span class="field-label">Date de naissance :</span>
-                <span class="field-value">{{ \Carbon\Carbon::parse($client->datedenaissance)->format('d/m/Y') }}</span>
+                <span class="field-value">{{ \Carbon\Carbon::parse($client->date_naissance)->format('d/m/Y') }}</span>
             </div>
             @endif
-            @if($client->lieudenaissance)
+            @if($client->lieu_naissance)
             <div class="field">
                 <span class="field-label">Lieu de naissance :</span>
-                <span class="field-value">{{ $client->lieudenaissance }}</span>
+                <span class="field-value">{{ $client->lieu_naissance }}</span>
             </div>
             @endif
             @if($client->nationalite)
@@ -262,10 +262,10 @@
     <!-- SITUATION PERSONNELLE -->
     <div class="section">
         <div class="section-title">SITUATION PERSONNELLE</div>
-        @if($client->situationmatrimoniale)
+        @if($client->situation_matrimoniale)
         <div class="field">
             <span class="field-label">Situation matrimoniale :</span>
-            <span class="field-value">{{ $client->situationmatrimoniale }}</span>
+            <span class="field-value">{{ $client->situation_matrimoniale }}</span>
         </div>
         @endif
         @if($client->date_situation_matrimoniale)
@@ -280,10 +280,10 @@
             <span class="field-value">{{ $client->situation_actuelle }}</span>
         </div>
         @endif
-        @if($client->nombreenfants !== null)
+        @if($client->nombre_enfants !== null)
         <div class="field">
             <span class="field-label">Nombre d'enfants :</span>
-            <span class="field-value">{{ $client->nombreenfants }}</span>
+            <span class="field-value">{{ $client->nombre_enfants }}</span>
         </div>
         @endif
 
@@ -301,10 +301,10 @@
             <span class="field-value">{{ $client->conjoint->prenom }}</span>
         </div>
         @endif
-        @if($client->conjoint->datedenaissance)
+        @if($client->conjoint->date_naissance)
         <div class="field">
             <span class="field-label">Date de naissance :</span>
-            <span class="field-value">{{ \Carbon\Carbon::parse($client->conjoint->datedenaissance)->format('d/m/Y') }}</span>
+            <span class="field-value">{{ \Carbon\Carbon::parse($client->conjoint->date_naissance)->format('d/m/Y') }}</span>
         </div>
         @endif
         @endif
@@ -322,7 +322,7 @@
                 @foreach($client->enfants as $enfant)
                 <tr>
                     <td>{{ $enfant->prenom }}</td>
-                    <td>{{ $enfant->datedenaissance ? \Carbon\Carbon::parse($enfant->datedenaissance)->format('d/m/Y') : '-' }}</td>
+                    <td>{{ $enfant->date_naissance ? \Carbon\Carbon::parse($enfant->date_naissance)->format('d/m/Y') : '-' }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -345,10 +345,10 @@
             <span class="field-value">{{ \Carbon\Carbon::parse($client->date_evenement_professionnel)->format('d/m/Y') }}</span>
         </div>
         @endif
-        @if($client->revenusannuels)
+        @if($client->revenus_annuels)
         <div class="field">
             <span class="field-label">Revenus annuels :</span>
-            <span class="field-value">{{ number_format($client->revenusannuels, 0, ',', ' ') }} €</span>
+            <span class="field-value">{{ number_format($client->revenus_annuels, 0, ',', ' ') }} €</span>
         </div>
         @endif
         <div class="field">

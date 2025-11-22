@@ -5,34 +5,42 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
 
 class CorsMiddleware
 {
+    /**
+     * Handle an incoming request.
+     */
     public function handle(Request $request, Closure $next): Response
     {
-        // Gérer les requêtes OPTIONS en premier (preflight)
-        if ($request->getMethod() === 'OPTIONS') {
-            return response('', 200)
-                ->header('Access-Control-Allow-Origin', 'http://localhost:5173')
-                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-                ->header('Access-Control-Max-Age', '3600');
+        $allowedOrigins = [
+            'http://localhost:5173',           // ✅ Dev (Vite)
+            'https://ton-domaine.fr',          // ✅ Prod
+            'https://app.ton-domaine.fr',      // ✅ Sous-domaine prod
+        ];
+
+        $origin = $request->headers->get('Origin');
+        $response = $request->getMethod() === 'OPTIONS'
+            ? response('', 200)
+            : $next($request);
+
+        // On autorise seulement les origines connues
+        if (in_array($origin, $allowedOrigins, true)) {
+            $this->addCorsHeaders($response, $origin);
         }
-
-        // Traiter la requête
-        $response = $next($request);
-
-        // Ajouter les headers CORS à toutes les réponses
-        $this->addHeaders($response);
 
         return $response;
     }
 
-    private function addHeaders(Response $response): void
+    /**
+     * Ajoute les en-têtes CORS à la réponse.
+     */
+    private function addCorsHeaders(Response $response, string $origin): void
     {
-        $response->headers->set('Access-Control-Allow-Origin', 'http://localhost:5173');
+        $response->headers->set('Access-Control-Allow-Origin', $origin);
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        $response->headers->set('Access-Control-Allow-Credentials', 'true');
+        $response->headers->set('Access-Control-Max-Age', '3600');
     }
 }

@@ -28,10 +28,16 @@ services:
       DB_DATABASE: ${DB_DATABASE:-crm_ai}
       DB_USERNAME: ${DB_USERNAME:-root}
       DB_PASSWORD: ${DB_PASSWORD:-root}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      CACHE_STORE: ${CACHE_STORE:-redis}
       TRANSCRIPTION_MODE: ${TRANSCRIPTION_MODE:-openai}
 
     depends_on:
       - db
+      - redis
 
   # --- BASE DE DONNÉES ---
   db:
@@ -48,6 +54,22 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
 
+  # --- REDIS (Cache & Queues) ---
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   # --- PHPMYADMIN ---
   phpmyadmin:
     image: phpmyadmin:latest
@@ -62,6 +84,48 @@ services:
       UPLOAD_LIMIT: 100M
     depends_on:
       - db
+
+  # --- QUEUE WORKER (Traitement asynchrone) ---
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: laravel_queue_worker
+    restart: unless-stopped
+
+    # Même configuration que le backend
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/.env:/var/www/html/.env
+
+    # Variables d'environnement identiques au backend
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-crm_ai}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      CACHE_STORE: ${CACHE_STORE:-redis}
+      TRANSCRIPTION_MODE: ${TRANSCRIPTION_MODE:-openai}
+
+    # Lancer le queue worker au démarrage (avec redis)
+    command: sh -c "sleep 5 && php artisan queue:work redis --verbose --tries=3 --timeout=300"
+
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   # --- FRONTEND (Vite/React/Vue/Autre) ---
   frontend:
@@ -85,3 +149,4 @@ services:
 # --- VOLUMES ---
 volumes:
   mariadb_data:
+  redis_data:

@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Console\Commands\DeduplicateClients;
 use App\Http\Middleware\CorsMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -19,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // ✅ CORS doit être en premier pour gérer les preflight et les erreurs
         $middleware->prepend(CorsMiddleware::class);
     })
+    ->withCommands([
+        DeduplicateClients::class,
+    ])
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response) {
             // Ajouter les headers CORS à toutes les réponses d'erreur

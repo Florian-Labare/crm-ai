@@ -2,98 +2,87 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
 use App\Models\AudioRecord;
+use App\Jobs\ProcessAudioRecording;
 use Illuminate\Http\Request;
-use App\Services\AnalysisService;
 use Illuminate\Http\JsonResponse;
-use App\Services\ClientSyncService;
-use App\Services\TranscriptionService;
-use Illuminate\Support\Facades\Storage;
 
 class AudioController extends Controller
 {
-    public function upload(
-        Request $request,
-        TranscriptionService $transcriptionService,
-        AnalysisService $analysisService,
-        ClientSyncService $clientSyncService
-    ): JsonResponse {
+    /**
+     * Upload d'un fichier audio et traitement asynchrone
+     */
+    public function upload(Request $request): JsonResponse
+    {
         $request->validate([
-            'audio' => 'required|file|mimes:mp3,wav,ogg,webm|max:10240',
-            'client_id' => 'nullable|integer|exists:clients,id',
+            'audio' => 'required|file|mimes:mp3,wav,ogg,webm,m4a,mpeg|max:20480',
+            'client_id' => 'nullable|integer',
         ]);
-    
+
+        // Vérifier que le client appartient bien à l'utilisateur connecté (si fourni)
+        if ($request->has('client_id') && $request->input('client_id')) {
+            $clientExists = \App\Models\Client::where('id', $request->input('client_id'))
+                ->where('user_id', auth()->id())
+                ->exists();
+
+            if (!$clientExists) {
+                return response()->json([
+                    'message' => 'Client non trouvé ou accès non autorisé',
+                    'errors' => ['client_id' => ['Le client spécifié n\'existe pas ou ne vous appartient pas']]
+                ], 422);
+            }
+        }
+
         // 🔊 1. Enregistrement du fichier audio
         $path = $request->file('audio')->store('audio_uploads', 'public');
-    
-        // 🧠 2. Transcription du vocal
-        $transcription = $transcriptionService->transcribe(storage_path("app/public/$path"));
-    
-        // 💬 3. Analyse du texte via GPT
-        $data = $analysisService->extractClientData($transcription);
-    
-        // 🔍 4. Si un client_id est fourni → on met à jour CE client
-        if ($request->filled('client_id')) {
-            $client = Client::findOrFail($request->input('client_id'));
 
-            // 🎯 Gestion intelligente des besoins
-            if (isset($data['besoins']) && isset($data['besoins_action'])) {
-                $currentBesoins = is_array($client->besoins) ? $client->besoins : [];
-                $newBesoins = is_array($data['besoins']) ? $data['besoins'] : [];
-
-                switch ($data['besoins_action']) {
-                    case 'add':
-                        // Ajouter les nouveaux besoins sans doublon
-                        $data['besoins'] = array_values(array_unique(array_merge($currentBesoins, $newBesoins)));
-                        break;
-
-                    case 'remove':
-                        // Retirer les besoins mentionnés
-                        $data['besoins'] = array_values(array_diff($currentBesoins, $newBesoins));
-                        break;
-
-                    case 'replace':
-                    default:
-                        // Remplacer complètement
-                        $data['besoins'] = $newBesoins;
-                        break;
-                }
-
-                // Retirer besoins_action des données à sauvegarder
-                unset($data['besoins_action']);
-            }
-
-            // Filtrer les données pour ne garder que les champs réellement renseignés
-            // On retire : null, chaînes vides, tableaux vides
-            $filteredData = array_filter($data, function($value) {
-                if ($value === null) return false;
-                if ($value === '') return false;
-                if (is_array($value) && empty($value)) return false;
-                return true;
-            });
-
-            $client->fill($filteredData);
-            if ($client->isDirty()) $client->save();
-        } else {
-            // 🆕 Sinon, création ou MAJ automatique selon les infos extraites
-            unset($data['besoins_action']); // Pas besoin pour une création
-            $client = $clientSyncService->findOrCreateFromAnalysis($data);
-        }
-    
-        // ✅ 5. Sauvegarde de l’audio dans la table audio_records
-        AudioRecord::create([
+        // 📝 2. Créer l'enregistrement avec status "pending"
+        $audioRecord = AudioRecord::create([
+            'user_id' => auth()->id(),
             'path' => $path,
-            'status' => 'done',
-            'client_id' => $client->id,
+            'status' => 'pending',
+            'client_id' => $request->input('client_id'), // null si nouveau client
         ]);
-    
+
+        // 🚀 3. Dispatcher le job asynchrone
+        ProcessAudioRecording::dispatch($audioRecord, $request->input('client_id'));
+
+        // ✅ 4. Retourner immédiatement la réponse
         return response()->json([
-            'message' => 'Analyse terminée',
-            'client' => $client,
-            'transcription' => $transcription,
-            'data' => $data,
-        ]);
+            'message' => 'Audio en cours de traitement',
+            'audio_record_id' => $audioRecord->id,
+            'status' => 'pending',
+        ], 202); // 202 Accepted = traitement asynchrone accepté
     }
-    
+
+    /**
+     * Vérifier le statut d'un enregistrement audio
+     */
+    public function status(int $id): JsonResponse
+    {
+        // Vérifier que l'enregistrement audio appartient bien à l'utilisateur connecté
+        $audioRecord = AudioRecord::with('client')
+            ->where('user_id', auth()->id())
+            ->findOrFail($id);
+
+        $response = [
+            'id' => $audioRecord->id,
+            'status' => $audioRecord->status,
+            'processed_at' => $audioRecord->processed_at,
+        ];
+
+        // Si le traitement est terminé, inclure les données
+        if ($audioRecord->status === 'done' && $audioRecord->client) {
+            $response['client'] = $audioRecord->client;
+            $response['transcription'] = $audioRecord->transcription;
+        }
+
+        // Si échec, inclure l'erreur
+        if ($audioRecord->status === 'failed') {
+            $response['error'] = $audioRecord->transcription; // Le message d'erreur est stocké ici
+        }
+
+        return response()->json($response);
+    }
+
 }

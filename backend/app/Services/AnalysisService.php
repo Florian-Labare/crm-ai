@@ -37,271 +37,1002 @@ class AnalysisService
                         - Tu dois produire un JSON contenant uniquement les champs mentionnés ou inférés.
                         - Ne jamais inventer de données qui n'existent pas dans la transcription.
 
-                        🔤🔤🔤 RÈGLE #1 ABSOLUE ET PRIORITAIRE - ÉPELLATION 🔤🔤🔤
-                        ⚠️ CETTE RÈGLE SURPASSE TOUTES LES AUTRES ⚠️
+                        🎯 OBJECTIF ABSOLU :
+                        - Transforme chaque transcription en un JSON propre, valide et limité exclusivement aux informations fournies par le client.
+                        - Ne déduis jamais une information depuis une question du conseiller ou une option suggérée ; seule la réponse explicite du client compte.
+                        - En cas de doute ou si l'information n'est pas donnée, n'inclus pas le champ concerné.
+                        - La sortie finale doit être STRICTEMENT le JSON (aucun texte autour, pas de commentaire).
 
-                        L'ÉPELLATION LETTRE PAR LETTRE EST LA RÈGLE SUPRÊME ET ANNULE TOUTE AUTRE INTERPRÉTATION.
+                        🧭 DÉTECTION AUTOMATIQUE DES DOMAINES :
+                        - Identifie si le client s'exprime sur la Santé, la Prévoyance, la Retraite/PER, l'Épargne/Assurance-vie, l'Emprunteur ou plusieurs domaines simultanément.
+                        - Chaque domaine correspond à une section JSON précise : sante_souhait (santé), bae_prevoyance, bae_retraite, bae_epargne, emprunteur (si besoin futur).
+                        - Remplis uniquement les champs des sections explicitement évoquées par le client et laisse les autres sections absentes du JSON.
+                        - Exemples :
+                          • “Je veux couvrir mes arrêts de travail” → domaine prévoyance → renseigne bae_prevoyance.
+                          • “Je veux préparer ma retraite à 62 ans” → domaine retraite → renseigne bae_retraite.
+                          • “J’épargne 500 € par mois” → domaine épargne → renseigne bae_epargne.
+                          • “Je veux une meilleure mutuelle” → domaine santé → renseigne sante_souhait.
+                          • “Je fais un prêt immobilier” → domaine emprunteur (champ dédié s’il existe).
 
-                        - Quand un utilisateur épelle un champ (nom, prénom, ville, adresse, email, profession, etc.), c'est QU'IL VEUT ABSOLUMENT que tu utilises EXACTEMENT ces lettres.
-                        - L'épellation ÉCRASE et REMPLACE toute interprétation phonétique, sémantique ou contextuelle.
-                        - IGNORE complètement ce que tu "penses" avoir compris : si c'est épelé, UTILISE L'ÉPELLATION.
+                        🚫 RAPPEL CRITIQUE :
+                        - Toutes les phrases du conseiller (questions, présentations, propositions de choix, transitions) doivent être ignorées.
+                        - Une information n'est valide que si elle provient directement d'une phrase du client (y compris “oui/non” explicites).
+                        - Si l’information n’est pas clairement attribuée au client, ne pas l’extraire.
 
-                        Formes d'épellation à détecter :
-                        1. Lettres espacées : "L A B A R E" → "Labare"
-                        2. Avec le mot "espace" : "R U E espace D E espace L A espace P A I X" → "Rue de la Paix"
-                        3. Phonétique explicite : "M comme Michel, A comme Anatole, R comme Raoul" → "Mar..."
-                        4. Chiffres épelés : "7 5 0 0 1" → "75001" ou "0 6 1 2 3 4 5 6 7 8" → "0612345678"
-                        5. Mix lettres/mots : "rue D E espace L A espace R É P U B L I Q U E" → "rue de la République"
+                        🎯🎯🎯 RÈGLE #0 ABSOLUE - DISTINCTION CONSEILLER vs CLIENT 🎯🎯🎯
+                        ⚠️ RÈGLE SUPRÊME - À APPLIQUER AVANT TOUTE AUTRE ⚠️
 
-                        Exemples CRITIQUES d'épellation à respecter :
-                        * "mon nom c'est L A B A R E" → {"nom": "Labare"} et PAS {"nom": "La Barre"} ou autre interprétation
-                        * "mon prénom F L O R I A N" → {"prenom": "Florian"}
-                        * "j'habite à P A R I S" → {"ville": "Paris"}
-                        * "rue V I C T O R espace H U G O" → "rue Victor Hugo"
-                        * "mon email c'est f l o r i a n arobase gmail point com" → "florian@gmail.com"
-                        * "code postal 7 5 0 2 0" → {"code_postal": "75020"}
-                        * "profession D É V E L O P P E U R" → {"profession": "Développeur"}
+                        CONTEXTE : La transcription contient un DIALOGUE entre un CONSEILLER et un CLIENT.
 
-                        SI TU DÉTECTES UNE ÉPELLATION → UTILISE-LA TEXTUELLEMENT, POINT FINAL.
-                        PAS DE REFORMULATION, PAS D'INTERPRÉTATION, PAS DE "CORRECTION".
+                        🚫 TU NE DOIS EXTRAIRE DES INFORMATIONS QUE DEPUIS LES PAROLES DU CLIENT 🚫
+                        ✅ TU DOIS IGNORER COMPLÈTEMENT LES QUESTIONS/PAROLES DU CONSEILLER ✅
 
-                        📧📞🏠 CHAMPS ULTRA-SENSIBLES - ÉPELLATION MAXIMALE 📧📞🏠
+                        RÈGLES DE DISTINCTION :
 
-                        Ces champs sont CRITIQUES et l'épellation y est ENCORE PLUS IMPORTANTE :
+                        1️⃣ **DÉTECTION DU CONSEILLER** (À IGNORER)
+                        Le conseiller se reconnaît par :
+                        - Questions posées : "Quel est votre nom ?", "Quelle est votre date de naissance ?", "Êtes-vous fumeur ?"
+                        - Formulations professionnelles : "Pouvez-vous me donner...", "J'aurais besoin de...", "Pourriez-vous préciser..."
+                        - Utilisation du vouvoiement "vous" en posant des questions
+                        - Énumération d'options : "Êtes-vous prudent, équilibré ou dynamique ?", "Court terme, moyen terme ou long terme ?"
+                        - Phrases comme : "Passons à la section suivante", "Très bien", "D'accord", "Parfait"
 
-                        **EMAIL** :
-                        - L'email est LE champ le plus sensible à l'épellation
-                        - CHAQUE LETTRE épelée doit être utilisée EXACTEMENT
+                        2️⃣ **DÉTECTION DU CLIENT** (À ANALYSER)
+                        Le client se reconnaît par :
+                        - Réponses affirmatives : "Je m'appelle...", "Mon nom est...", "Je suis...", "Oui", "Non"
+                        - Pronoms personnels à la première personne : "je", "mon", "ma", "mes", "j'ai", "je suis"
+                        - Informations personnelles données : "Florian", "Je suis né le...", "J'habite à..."
+                        - Descriptions personnelles : "Je suis prudent", "J'aime...", "Je préfère..."
 
-                        🔴🔴🔴 RÈGLE ULTRA CRITIQUE - EMAIL ET AROBASE @ 🔴🔴🔴
+                        3️⃣ **EXEMPLES CRITIQUES**
 
-                        ⚠️ PRIORITÉ ABSOLUE #1 : DÉTECTION D'EMAIL ⚠️
+                        ❌ À IGNORER (paroles du conseiller) :
+                        - "Quel est votre nom ?" → RIEN à extraire
+                        - "Êtes-vous fumeur ?" → RIEN à extraire
+                        - "Quelle est votre tolérance au risque ? Faible, modérée ou élevée ?" → RIEN à extraire
+                        - "Connaissez-vous les SCPI ?" → RIEN à extraire
+                        - "Si votre investissement baisse de 25%, que feriez-vous ?" → RIEN à extraire
 
-                        Quand l'utilisateur dit "email", "mail", "adresse email", "adresse mail" :
-                        → Il va TOUJOURS épeler l'adresse caractère par caractère
-                        → Tu DOIS extraire cet email dans le champ "email"
+                        ✅ À ANALYSER (réponses du client) :
+                        - "Je m'appelle Florian Labare" → {"nom": "Labare", "prenom": "Florian"}
+                        - "Non, je ne fume pas" → {"fumeur": false}
+                        - "Je suis chef d'entreprise et mandataire social" → {"chef_entreprise": true, "mandataire_social": true}
+                        - "Je suis travailleur indépendant en SARL" → {"travailleur_independant": true, "statut": "SARL"}
 
-                        RÈGLE AROBASE :
-                        - "arobase" = @
-                        - "at" = @
-                        - "a commercial" = @
-                        - "arrobase" = @
-                        - PAS d'autre façon de dire @ à l'oral !
+                        4️⃣ **CAS MIXTES** (dialogue conseiller + client)
 
-                        RÈGLE POINT :
-                        - "point" = .
-                        - "dot" = .
+                        Exemple de dialogue :
+                        ```
+                        Conseiller: "Quel est votre horizon d'investissement ? Court, moyen ou long terme ?"
+                        Client: "Long terme, j'investis pour ma retraite dans 15 ans"
+                        ```
+                        → IGNORER la question du conseiller
 
-                        RÈGLE TIRET :
-                        - "tiret" = -
-                        - "tiret du 8" = -
-                        - "trait d'union" = -
+                        Exemple 2 :
+                        ```
+                        Conseiller: "Êtes-vous fumeur ?"
+                        Client: "Oui"
+                        ```
+                        → Extraire : {"fumeur": true}
 
-                        RÈGLE UNDERSCORE :
-                        - "underscore" = _
-                        - "tiret bas" = _
-                        - "souligné" = _
+                        Exemple 3 :
+                        ```
+                        Conseiller: "Connaissez-vous les obligations, les actions, les SCPI ?"
+                        Client: "Je connais les actions et les obligations, mais pas les SCPI"
+                        ```
+                        → NE PAS extraire connaissance_opci_scpi car le client dit ne PAS connaître
 
-                        EXEMPLES D'EMAILS ÉPELÉS (TRÈS IMPORTANT) :
-                        ✅ "mon email f l o r i a n arobase gmail point com" → {"email": "florian@gmail.com"}
-                        ✅ "email f l o r i a n at gmail point com" → {"email": "florian@gmail.com"}
-                        ✅ "j e a n tiret p i e r r e arobase free point fr" → {"email": "jean-pierre@free.fr"}
-                        ✅ "contact arobase entreprise point com" → {"email": "contact@entreprise.com"}
-                        ✅ "m a r i e at yahoo point fr" → {"email": "marie@yahoo.fr"}
-                        ✅ "info arobase societe point com" → {"email": "info@societe.com"}
-                        ✅ "f l o r i a n point l a b a r e arobase gmail point com" → {"email": "florian.labare@gmail.com"}
-                        ✅ "j tiret p tiret d u p o n t at hotmail point fr" → {"email": "j-p-dupont@hotmail.fr"}
-                        ✅ "m a r i e underscore d u r a n d arobase yahoo point fr" → {"email": "marie_durand@yahoo.fr"}
-                        ✅ "s a l e s at entreprise point com" → {"email": "sales@entreprise.com"}
-                        ✅ "mon mail c'est a b c arobase test point fr" → {"email": "abc@test.fr"}
-                        ✅ "vous pouvez me joindre sur p i e r r e point d u r a n d arobase orange point fr" → {"email": "pierre.durand@orange.fr"}
+                        5️⃣ **ATTENTION AUX PIÈGES**
 
-                        RÈGLE CRITIQUE : SUPPRIME TOUS LES ESPACES dans le résultat final de l'email !
+                        ⚠️ Si le conseiller dit "Êtes-vous né en 1985 ?" et que le client répond "Oui"
+                        → {"date_naissance": "1985-01-01"} SEULEMENT si l'année complète est confirmée par le client
 
-                        ❌ ERREUR À NE JAMAIS FAIRE :
-                        - NE JAMAIS écrire "arobase" dans l'email → utilise @
-                        - NE JAMAIS écrire "point" dans l'email → utilise .
-                        - NE JAMAIS laisser des espaces → supprime-les tous
+                        ⚠️ Si le conseiller énumère des options et que le client choisit
+                        Conseiller: "Prudent, équilibré ou dynamique ?"
+                        Client: "Dynamique"
 
-                        **TÉLÉPHONE** :
-                        - Si épelé chiffre par chiffre : "0 6 1 2 3 4 5 6 7 8" → "0612345678"
-                        - Si groupé : "06 12 34 56 78" → "0612345678"
-                        - SUPPRIME LES ESPACES dans le résultat final
+                        ⚠️ Ne JAMAIS extraire d'informations depuis une simple question du conseiller sans réponse du client
 
-                        **ADRESSE / VILLE / CODE POSTAL** :
-                        - Ces champs géographiques sont souvent épelés pour la précision
-                        - "ville P A R I S" → {"ville": "Paris"}
-                        - "code postal 7 5 0 2 0" → {"code_postal": "75020"}
-                        - "132 rue P E L L E P O R T" → {"adresse": "132 rue Pelleport"}
+                        6️⃣ **ORTHOGRAPHE & ÉPELLATION (CRITIQUE)**
+                        - Le client peut épeler son nom, une ville, une adresse ou un email lettre par lettre : "D I J O N", "D comme Denis, U comme Ursule, P comme Pierre, O comme Olivier, N comme Nicolas".
+                        - Tu dois TOUJOURS reconstruire le mot final à partir de ces lettres et l'utiliser pour remplir le champ correspondant.
+                        - Supprime les séparateurs (espaces, tirets, "comme") et respecte la casse française habituelle (nom propre capitalisé).
+                        - Exemples :
+                          • "Mon nom c'est L A B A R R E" → {"nom": "Labarré"} (garde les accents si clairement prononcés).
+                          • "La ville c'est D I J O N" → {"ville": "Dijon"}.
+                          • "Email : f comme francis, l comme léa, a comme anna, b arrobase exemple point com" → {"email": "flab@example.com"}.
+                        - Si une lettre est répétée ou corrigée ("non, j'épelle D U P O N T"), prends la dernière version.
 
-                        SI UN DE CES CHAMPS EST ÉPELÉ → C'EST LA PRIORITÉ ABSOLUE #1
+                        📌 RÈGLE D'OR : EN CAS DE DOUTE, NE PAS EXTRAIRE
+                        Si tu ne peux pas distinguer clairement qui parle → N'extrais PAS l'information
 
-                        ⚠️⚠️⚠️ RÈGLE CRITIQUE #1 - CHAMPS NON MENTIONNÉS ⚠️⚠️⚠️
-                        🚫 NE JAMAIS INVENTER DE DONNÉES 🚫
+                        📋📋📋 RÈGLE DE DÉTECTION DE CONTEXTE/SECTION 📋📋📋
+                        ⚠️ ACTIVATION AUTOMATIQUE DU QUESTIONNAIRE DE RISQUE ⚠️
 
-                        RÈGLE ABSOLUE ET PRIORITAIRE :
-                        - Si un champ n'est **pas explicitement mentionné** dans la transcription, ne l'inclus **ABSOLUMENT PAS** dans le JSON.
-                        - N'inclus JAMAIS un champ avec une valeur vide (""), null, ou par défaut.
-                        - NE JAMAIS faire de suppositions ou déductions sur des informations non dites.
-                        - NE JAMAIS inventer ou compléter des informations manquantes.
+                        PRINCIPE : Quand le conseiller annonce une nouvelle section ou un nouveau thème, cela active un CONTEXTE qui guide l'extraction des données suivantes.
 
-                        Exemples CRITIQUES :
-                        ✅ BON : Si seul le nom est dit → {"nom": "Dupont"}
-                        ❌ MAUVAIS : {"nom": "Dupont", "prenom": ""}
+                        🏢 **RÈGLES IMPORTANTES - INFORMATIONS ENTREPRISE** 🏢
+                        ⚠️ PRIORITÉ ABSOLUE - Ces champs DOIVENT être extraits systématiquement ⚠️
 
-                        ✅ BON : Si rien n'est dit sur la situation actuelle → {}
-                        ❌ MAUVAIS : {"situation_actuelle": "locataire"} (INVENTÉ !)
+                        Tu dois TOUJOURS capturer les informations suivantes sur l'activité professionnelle du client :
 
-                        ✅ BON : Si seul "je suis fumeur" est dit → {"fumeur": true}
-                        ❌ MAUVAIS : {"fumeur": true, "activites_sportives": false} (le false est INVENTÉ !)
+                        **⚠️ ATTENTION - INTERDICTION STRICTE ⚠️**
 
-                        ✅ BON : Si "j'ai deux enfants" → {"nombreenfants": 2}
-                        ❌ MAUVAIS : {"nombreenfants": 2, "situationmatrimoniale": "marié"} (SUPPOSÉ !)
+                        🚫 INTERDICTIONS ABSOLUES :
+                        - NE JAMAIS mettre "chef d'entreprise" dans le champ "profession"
+                        - NE JAMAIS mettre "chef d'entreprise" dans le champ "situation_actuelle"
+                        - NE JAMAIS mettre "travailleur indépendant" dans le champ "profession"
+                        - NE JAMAIS mettre "travailleur indépendant" dans le champ "situation_actuelle"
+                        - NE JAMAIS mettre "mandataire social" dans le champ "profession"
+                        - NE JAMAIS mettre "mandataire social" dans le champ "situation_actuelle"
+                        - NE JAMAIS mettre ces infos dans "details_risques_professionnels"
 
-                        Cette règle est ABSOLUE pour éviter d'écraser les données existantes et d'inventer des informations.
-                        TU NE DOIS EXTRAIRE QUE CE QUI EST EXPLICITEMENT DIT, RIEN D'AUTRE.
+                        ✅ UTILISER OBLIGATOIREMENT :
+                        - "chef_entreprise" (boolean true/false) pour le statut de chef d'entreprise
+                        - "travailleur_independant" (boolean true/false) pour le statut d'indépendant
+                        - "mandataire_social" (boolean true/false) pour le statut de mandataire
+                        - "profession" UNIQUEMENT pour le MÉTIER (ex: "plombier", "architecte", "consultant", "médecin")
+                        - "situation_actuelle" UNIQUEMENT pour "salarié", "retraité", "étudiant", "demandeur d'emploi"
 
-                        ⚠️⚠️⚠️ RÈGLE CRITIQUE - FORMAT DES DATES ⚠️⚠️⚠️
-                        TOUTES LES DATES DOIVENT ÊTRE AU FORMAT ISO : AAAA-MM-JJ (année-mois-jour)
+                        **Champs entreprise obligatoires :**
+                        - "chef_entreprise" (boolean) : true si le client dit être chef d'entreprise, diriger/gérer une entreprise
+                        - "statut" (string) : SARL, SAS, SASU, EURL, SCI, EI, EIRL, Auto-entrepreneur, Micro-entreprise, etc.
+                        - "travailleur_independant" (boolean) : true si freelance, indépendant, à son compte
+                        - "mandataire_social" (boolean) : true si le client est mandataire social
 
-                        ❌ INTERDIT : JJ/MM/AAAA ou DD/MM/YYYY ou tout autre format
-                        ✅ OBLIGATOIRE : AAAA-MM-JJ (ex: 1972-01-20, 2025-10-30)
+                        **Exemples CORRECTS d'extraction entreprise :**
+                        - "Je suis chef d'entreprise"
+                          ✅ CORRECT : {"chef_entreprise": true}
+                          ❌ INCORRECT : {"profession": "chef d'entreprise"}
 
-                        Exemples de conversion :
-                        - Si l'utilisateur dit "20 janvier 1972" → "1972-01-20"
-                        - Si l'utilisateur dit "5 mars 1985" → "1985-03-05"
-                        - Si l'utilisateur dit "15 décembre 2000" → "2000-12-15"
+                        - "Je suis travailleur indépendant"
+                          ✅ CORRECT : {"travailleur_independant": true}
+                          ❌ INCORRECT : {"profession": "travailleur indépendant"}
 
-                        Cette règle s'applique à TOUS les champs de date :
-                        - datedenaissance
-                        - date_situation_matrimoniale
-                        - date_evenement_professionnel
+                        - "Je suis mandataire social"
+                          ✅ CORRECT : {"mandataire_social": true}
+                          ❌ INCORRECT : {"profession": "mandataire social"}
 
-                        Format attendu (uniquement avec les champs trouvés) :
-                        {
-                        // Identité de base
-                        "civilite": "string (Monsieur ou Madame)",
-                        "nom": "string",
-                        "nom_jeune_fille": "string (pour les femmes mariées, seulement si Madame et mariée)",
-                        "prenom": "string",
-                        "datedenaissance": "string (AAAA-MM-JJ UNIQUEMENT, ex: 1972-01-20)",
-                        "lieudenaissance": "string",
-                        "nationalite": "string",
+                        - "Je suis chef d'entreprise, travailleur indépendant et mandataire social"
+                          ✅ CORRECT : {"chef_entreprise": true, "travailleur_independant": true, "mandataire_social": true}
+                          ❌ INCORRECT : {"profession": "chef d'entreprise", "situation_actuelle": "travailleur indépendant"}
 
-                        // Situation
-                        "situationmatrimoniale": "string (célibataire, marié, pacsé, divorcé, veuf)",
-                        "date_situation_matrimoniale": "string (AAAA-MM-JJ UNIQUEMENT, ex: 2015-06-20)",
-                        "situation_actuelle": "string (locataire, propriétaire, hébergé, etc.) ⚠️ UNIQUEMENT si EXPLICITEMENT mentionné",
+                        - "Je suis plombier, chef d'entreprise en SARL"
+                          ✅ CORRECT : {"profession": "plombier", "chef_entreprise": true, "statut": "SARL"}
+                          ❌ INCORRECT : {"profession": "chef d'entreprise"}
 
-                        // Professionnel
-                        "profession": "string",
-                        "date_evenement_professionnel": "string (AAAA-MM-JJ UNIQUEMENT, ex: 2020-01-15)",
-                        "risques_professionnels": boolean (true/false),
-                        "details_risques_professionnels": "string (nature des risques si mentionnés)",
-                        "revenusannuels": "number (montant en euros)",
+                        - "Je dirige ma SARL" → {"chef_entreprise": true, "statut": "SARL"}
+                        - "Je ne suis pas chef d'entreprise" → {"chef_entreprise": false}
 
-                        // Coordonnées
-                        "adresse": "string",
-                        "code_postal": "string",
-                        "ville": "string",
-                        "residence_fiscale": "string",
-                        "telephone": "string",
-                        "email": "string",
+                        🎯 RÈGLES - BESOINS (RÈGLE CRITIQUE - NE JAMAIS ÉCRASER) :
 
-                        // Mode de vie
-                        "fumeur": boolean (true/false),
-                        "activites_sportives": boolean (true/false),
-                        "details_activites_sportives": "string (type de sport si mentionné)",
-                        "niveau_activites_sportives": "string (loisir, compétition, professionnel)",
+                        ⚠️ RÈGLE ABSOLUE : NE JAMAIS FAIRE DISPARAÎTRE UN BESOIN EXISTANT ⚠️
 
-                        // Famille
-                        "nombreenfants": "number",
+                        - Pour "besoins", retourne un TABLEAU contenant UNIQUEMENT le(s) nouveau(x) besoin(s) mentionné(s) dans CETTE transcription
+                        - Pour "besoins_action", utilise TOUJOURS "add" PAR DÉFAUT (sauf cas exceptionnels ci-dessous)
 
-                        // Besoins
-                        "besoins": ["array de strings"],
-                        "besoins_action": "add|remove|replace",
+                        **ACTIONS DISPONIBLES :**
+                          * "add" (COMPORTEMENT PAR DÉFAUT - 99% DES CAS) : Ajoute le(s) nouveau(x) besoin(s) aux besoins existants
+                            → Dans le tableau "besoins", mets SEULEMENT le(s) nouveau(x) besoin(s), PAS les anciens
 
-                        // Autres
-                        "consentement_audio": boolean (true si le client consent à l'enregistrement),
-                        "charge_clientele": "string (clientèle privée, professionnelle, entreprise)"
-                        }
+                          * "remove" (RARE) : Retire un besoin existant
+                            → UNIQUEMENT si le client dit explicitement "je n'ai PLUS besoin de X", "je ne veux PLUS de X", "retirer X", "supprimer X"
 
-                        📧 EMAILS DICTÉS - RAPPEL DES RÈGLES :
+                          * "replace" (EXTRÊMEMENT RARE - Presque JAMAIS) : Remplace TOUS les besoins
+                            → UNIQUEMENT si le client dit "mes besoins sont UNIQUEMENT X", "je veux SEULEMENT X", "je ne veux QUE X"
+                            → Ne JAMAIS utiliser "replace" si le client mentionne simplement un nouveau besoin
 
-                        ⚠️ RAPPEL : L'ÉPELLATION PRIME SUR TOUT (voir règles ci-dessus)
+                        ⚠️ RÈGLE CRITIQUE :
+                        - Si le client dit "J'ai besoin d'une prévoyance" → {"besoins": ["prévoyance"], "besoins_action": "add"}
+                        - Si le client parle de prévoyance sans dire "besoin" → {"besoins": ["prévoyance"], "besoins_action": "add"}
+                        - Les besoins existants (retraite, épargne, mutuelle) NE DOIVENT PAS disparaître !
+                        - Le système ajoutera automatiquement "prévoyance" à la liste existante
 
-                        🔴🔴🔴 AROBASE = @ 🔴🔴🔴
-                        Quand on ÉPELLE ou DICTE un email à l'oral :
-                        - On dit "arobase" pour le symbole @
-                        - On dit "at" pour le symbole @
+                        **📚 EXEMPLES DÉTAILLÉS - COMMENT NE JAMAIS ÉCRASER LES BESOINS :**
 
-                        Il n'y a PAS d'autre façon de dire @ à l'oral !
+                        **SITUATION 1 - Client a déjà ["retraite", "mutuelle"], puis dit "J'ai besoin d'une prévoyance" :**
+                        ❌ MAUVAIS : {"besoins": ["prévoyance"], "besoins_action": "replace"} ❌ → retraite et mutuelle DISPARAISSENT !
+                        ❌ MAUVAIS : {"besoins": ["retraite", "mutuelle", "prévoyance"], "besoins_action": "replace"} ❌ → risque de doublon
+                        ✅ BON : {"besoins": ["prévoyance"], "besoins_action": "add"} ✅ → prévoyance s'AJOUTE à retraite et mutuelle
 
-                        Tu DOIS convertir systématiquement :
-                          * "arobase" → @
-                          * "at" → @
+                        **SITUATION 2 - Client a déjà ["prévoyance"], puis dit "Je veux garantir 3000€ en cas d'invalidité" :**
+                        ❌ MAUVAIS : Ne rien retourner car prévoyance existe déjà
+                        ✅ BON : {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"revenu_a_garantir": 3000}} ✅
+                        → Même si prévoyance existe, on le réaffirme et on ajoute les données
 
-                        Autres conversions des termes oraux :
-                          * "point" → .
-                          * "tiret" ou "tiret du 8" → -
-                          * "underscore" ou "tiret bas" → _
-                          * "slash" → /
+                        **SITUATION 3 - Client a déjà ["retraite", "épargne"], puis parle de "retraite à 62 ans" :**
+                        ❌ MAUVAIS : {"besoins": ["retraite"], "besoins_action": "replace"} ❌ → épargne DISPARAÎT !
+                        ✅ BON : {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"age_depart_retraite": 62}} ✅
+                        → retraite est réaffirmé (add), épargne reste
 
-                        Exemples de conversion SANS épellation :
-                          * "florian point labare arobase gmail point com" → "florian.labare@gmail.com"
-                          * "contact tiret commercial arobase entreprise point fr" → "contact-commercial@entreprise.fr"
+                        **SITUATION 4 - Client a déjà ["mutuelle", "prévoyance"], puis dit "Je n'ai PLUS besoin de prévoyance" :**
+                        ✅ BON : {"besoins": ["prévoyance"], "besoins_action": "remove"} ✅
+                        → UNIQUEMENT dans ce cas, prévoyance est retiré, mutuelle reste
 
-                        Exemples AVEC épellation (PRIORITÉ ABSOLUE) :
-                          * "f l o r i a n arobase gmail point com" → "florian@gmail.com"
-                          * "j e a n tiret p i e r r e arobase free point fr" → "jean-pierre@free.fr"
-                          * "m point d u p o n t arobase société point com" → "m.dupont@societe.com"
-                          * "info underscore c o n t a c t arobase entreprise point fr" → "info_contact@entreprise.fr"
+                        **SITUATION 5 - Client a déjà ["retraite", "mutuelle"], puis dit "Mes besoins sont UNIQUEMENT la prévoyance" :**
+                        ✅ BON : {"besoins": ["prévoyance"], "besoins_action": "replace"} ✅
+                        → Le mot "UNIQUEMENT" indique un remplacement total
 
-                        RÈGLES STRICTES pour email :
-                        - Supprime TOUS les espaces dans l'email final
-                        - Si épelé → utilise CHAQUE lettre exactement comme énoncée
-                        - Si épelé partiellement → combine épellation + termes oraux
-                        - AUCUNE "correction" ou reformulation permise
+                        🟢 RÈGLE D'OR - ACTION "add" (utilise dans 99% des cas) :
+                        - "J'ai besoin d'une prévoyance" → {"besoins": ["prévoyance"], "besoins_action": "add"}
+                        - "J'ai également besoin d'une retraite" → {"besoins": ["retraite"], "besoins_action": "add"}
+                        - "En plus, j'aimerais une épargne" → {"besoins": ["épargne"], "besoins_action": "add"}
+                        - "Et aussi une mutuelle" → {"besoins": ["mutuelle"], "besoins_action": "add"}
+                        - "Je veux garantir 3000€ en cas d'invalidité" → {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {...}}
+                        - "Je souhaite partir à la retraite à 62 ans" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {...}}
+                        - "Mon TMI est de 30%" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"tmi": "30%"}}
+                        - "Le revenu foyer est de 80000€" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"revenus_annuels_foyer": 80000}}
 
-                        🏠 RÈGLE SPÉCIALE - ADRESSES DICTÉES :
-                        - Les adresses comportent souvent des types de voies ET des noms épelés. Tu dois gérer les deux.
-                        - Reconnaître les types de voies (garde-les en toutes lettres) :
-                          * rue, avenue, boulevard, allée, impasse, place, cours, chemin, route, voie, square, passage, quai, esplanade, cité, villa, hameau, lotissement, résidence
-                        - Si le NOM de la voie est épelé, reconstitue-le correctement en gardant le type de voie.
-                        - Exemples de conversion :
-                          * "12 rue V I C T O R espace H U G O" → "12 rue Victor Hugo"
-                          * "5 avenue D E espace L A espace R É P U B L I Q U E" → "5 avenue de la République"
-                          * "33 boulevard J E A N espace J A U R È S" → "33 boulevard Jean Jaurès"
-                          * "8 allée D E S espace R O S E S" → "8 allée des Roses"
-                          * "rue de la P A I X" → "rue de la Paix"
-                          * "avenue M O N T A I G N E" → "avenue Montaigne"
-                          * "15 impasse S A I N T tiret M I C H E L" → "15 impasse Saint-Michel"
-                        - Garde les numéros de rue (même s'ils sont dictés) : "12", "5 bis", "33 ter"
-                        - Reconstitue correctement les articles et prépositions : "de", "la", "le", "les", "du", "des"
-                        - Les noms composés avec tiret doivent être préservés : "Saint-Michel", "Jean-Jaurès"
-                        - Ajoute les majuscules appropriées aux noms propres de rues.
+                        🔴 ACTION "remove" (RARE - utilise UNIQUEMENT si négation explicite) :
+                        - "Je n'ai PLUS besoin de retraite" → {"besoins": ["retraite"], "besoins_action": "remove"}
+                        - "Je n'ai PAS besoin d'épargne" → {"besoins": ["épargne"], "besoins_action": "remove"}
+                        - "Je ne veux PLUS de prévoyance" → {"besoins": ["prévoyance"], "besoins_action": "remove"}
+                        - "Retirez la mutuelle" → {"besoins": ["mutuelle"], "besoins_action": "remove"}
+                        - "Supprimez l'épargne" → {"besoins": ["épargne"], "besoins_action": "remove"}
 
-                        📝 RÈGLES GÉNÉRALES :
-                        - Si tu ne trouves pas une valeur, n'inclus pas la clé correspondante.
-                        - Si des nombres sont cités en mots ("trente-six mille cinq cents euros"), convertis-les en chiffres ("36500").
-                        - Rappel : TOUS les champs peuvent être épelés (voir RÈGLE #1 ci-dessus)
+                        🟡 ACTION "replace" (EXTRÊMEMENT RARE - utilise UNIQUEMENT si "UNIQUEMENT", "SEULEMENT", "QUE") :
+                        - "Mes besoins sont UNIQUEMENT la mutuelle et la prévoyance" → {"besoins": ["mutuelle", "prévoyance"], "besoins_action": "replace"}
+                        - "Je veux SEULEMENT une retraite" → {"besoins": ["retraite"], "besoins_action": "replace"}
+                        - "Je ne veux QUE la mutuelle" → {"besoins": ["mutuelle"], "besoins_action": "replace"}
 
-                        🎯 RÈGLES - BESOINS :
-                        - Pour "besoins", retourne un TABLEAU de besoins (ex: ["mutuelle", "prévoyance", "assurance habitation"]).
-                        - Pour "besoins_action", détecte l'intention :
-                          * "add" si le client dit "ajouter", "rajouter", "j'ai aussi besoin de", "en plus", etc.
-                          * "remove" si le client dit "retirer", "supprimer", "enlever", "plus besoin de", etc.
-                          * "replace" si le client reformule tous ses besoins ou dit "mes besoins sont", "j'ai besoin de", etc. (sans mot-clé d'ajout)
+                        **RÈGLE IMPORTANTE pour BAE + NÉGATION :**
+                        - Si le client dit "je n'ai plus besoin de retraite", retourne {"besoins": ["retraite"], "besoins_action": "remove"} SANS l'objet bae_retraite
+                        - NE PAS créer d'objet BAE (bae_prevoyance, bae_retraite, bae_epargne) si le besoin est retiré
 
                         ✅ RÈGLES - BOOLÉENS :
-                        - Pour les champs booléens (risques_professionnels, fumeur, activites_sportives, consentement_audio), utilise true/false.
+                        - Pour les champs booléens (risques_professionnels, fumeur, activites_sportives, consentement_audio, chef_entreprise, travailleur_independant, mandataire_social), utilise true/false.
                         - Pour "fumeur", détecte "je fume", "je suis fumeur", "non-fumeur" (false si "non"), etc.
                         - Pour "activites_sportives", détecte la mention de sports ou activités physiques.
+                        - Pour "chef_entreprise", "travailleur_independant", "mandataire_social", voir section dédiée ci-dessus.
 
                         ⚠️ IMPORTANT :
                         - Si aucune mention de besoins, n'inclus pas ces champs.
                         - Ne réponds **que** avec un JSON valide, sans texte explicatif.
                         - Privilégie TOUJOURS l'épellation sur l'interprétation phonétique.
+
+                        📋 SCHÉMA JSON - NOMS EXACTS DES CHAMPS À UTILISER 📋
+                        ⚠️ UTILISE OBLIGATOIREMENT CES NOMS DE CHAMPS EXACTS (avec underscores) ⚠️
+
+                        **Informations personnelles :**
+                        - "civilite" (string) : "M.", "Mme", "Mlle"
+                        - "nom" (string) : nom de famille
+                        - "nom_jeune_fille" (string) : nom de jeune fille si applicable
+                        - "prenom" (string) : prénom
+                        - "date_naissance" (string) : format "YYYY-MM-DD" ou "DD/MM/YYYY"
+                        - "lieu_naissance" (string) : ville de naissance
+                        - "nationalite" (string) : nationalité
+
+                        **Situation familiale :**
+                        - "situation_matrimoniale" (string) : "Marié(e)", "Célibataire", "Divorcé(e)", "Veuf(ve)", "Pacsé(e)", "Concubinage"
+                        - "date_situation_matrimoniale" (string) : date du mariage/pacs/divorce
+                        - "nombre_enfants" (integer) : nombre d'enfants (NE PAS UTILISER - utilise "enfants" à la place)
+                        - "enfants" (array) : tableau d'objets enfants avec leurs informations détaillées (voir structure ci-dessous)
+
+                        **Situation professionnelle et logement :**
+                        - "situation_actuelle" (string) : "Salarié(e)", "Retraité(e)", "Étudiant(e)", "Demandeur d'emploi", "Propriétaire", "Locataire"
+                        - "profession" (string) : métier exact (ex: "plombier", "médecin", "architecte")
+                        - "date_evenement_professionnel" (string) : date d'un événement professionnel
+                        - "risques_professionnels" (boolean) : true/false
+                        - "details_risques_professionnels" (string) : détails sur les risques
+                        - "revenus_annuels" (string) : revenus annuels
+
+                        **Informations entreprise (ATTENTION: voir règles spécifiques ci-dessus) :**
+                        - "chef_entreprise" (boolean) : true si chef d'entreprise
+                        - "statut" (string) : "SARL", "SAS", "SASU", "EURL", "SCI", "Auto-entrepreneur", etc.
+                        - "travailleur_independant" (boolean) : true si indépendant/freelance
+                        - "mandataire_social" (boolean) : true si mandataire social
+
+                        **⚠️ GESTION DE LA NÉGATION POUR LES CHAMPS BOOLÉENS ⚠️**
+                        - Si le client dit "je ne suis PAS chef d'entreprise" → {"chef_entreprise": false}
+                        - Si le client dit "je ne suis PLUS travailleur indépendant" → {"travailleur_independant": false}
+                        - Si le client dit "NON" à une question → mettre le champ à false
+                        - TOUJOURS détecter la négation (ne...pas, ne...plus, n'est pas, non, jamais)
+
+                        **Coordonnées :**
+                        - "adresse" (string) : numéro et nom de rue SEULEMENT (ex: "37 rue de la Prévoyance")
+                        - "code_postal" (string) : code postal (ex: "21000")
+                        - "ville" (string) : ville (ex: "Dijon")
+                        - "residence_fiscale" (string) : pays de résidence fiscale
+                        - "telephone" (string) : numéro de téléphone
+                        - "email" (string) : adresse email
+
+                        **Santé et loisirs :**
+                        - "fumeur" (boolean) : true/false
+                        - "activites_sportives" (boolean) : true/false
+                        - "details_activites_sportives" (string) : détails sur les activités
+                        - "niveau_activites_sportives" (string) : niveau de pratique
+
+                        **Besoins :**
+                        - "besoins" (array) : tableau de besoins (ex: ["mutuelle", "prévoyance", "retraite", "épargne"])
+                        - "besoins_action" (string) : "add", "remove", ou "replace"
+
+                        **Autres :**
+                        - "charge_clientele" (string) : charge de clientèle
+                        - "consentement_audio" (boolean) : consentement pour l'enregistrement
+
+                        📌 STRUCTURE ENFANTS (TABLEAU D'OBJETS) :
+                        ⚠️ RÈGLE CRITIQUE : Dès que le client mentionne ses enfants, tu DOIS extraire un tableau "enfants" avec les détails de chaque enfant ⚠️
+
+                        **Structure d'un objet enfant :**
+                        - "nom" (string) : nom de famille de l'enfant
+                        - "prenom" (string) : prénom de l'enfant
+                        - "date_naissance" (string) : format "YYYY-MM-DD" ou "DD/MM/YYYY"
+                        - "fiscalement_a_charge" (boolean) : true si l'enfant est fiscalement à charge
+                        - "garde_alternee" (boolean) : true si l'enfant est en garde alternée
+
+                        **Exemples de détection d'enfants :**
+
+                        Exemple 1 - Nombre d'enfants mentionné :
+                        Client: "J'ai 2 enfants"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "enfants": [{}, {}]
+                        }
+                        ```
+                        → Crée un tableau avec 2 objets vides qui seront remplis lors des prochaines phrases
+
+                        Exemple 2 - Un enfant avec détails :
+                        Client: "Mon fils s'appelle Lucas Dupont, né le 15 mars 2015, il est à ma charge"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "enfants": [
+                            {
+                              "prenom": "Lucas",
+                              "nom": "Dupont",
+                              "date_naissance": "2015-03-15",
+                              "fiscalement_a_charge": true
+                            }
+                          ]
+                        }
+                        ```
+
+                        Exemple 3 - Plusieurs enfants avec détails :
+                        Client: "J'ai 2 enfants. Le premier s'appelle Emma, née en 2012, à charge. Le deuxième c'est Louis, né en 2018, en garde alternée"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "enfants": [
+                            {
+                              "prenom": "Emma",
+                              "date_naissance": "2012-01-01",
+                              "fiscalement_a_charge": true
+                            },
+                            {
+                              "prenom": "Louis",
+                              "date_naissance": "2018-01-01",
+                              "garde_alternee": true
+                            }
+                          ]
+                        }
+                        ```
+
+                        Exemple 4 - Enfant avec garde alternée :
+                        Client: "Ma fille Sophie a 10 ans et est en garde alternée"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "enfants": [
+                            {
+                              "prenom": "Sophie",
+                              "garde_alternee": true
+                            }
+                          ]
+                        }
+                        ```
+
+                        **RÈGLES IMPORTANTES POUR LES ENFANTS :**
+                        1. Si le client mentionne "j'ai X enfants", crée un tableau de X objets (même vides au début)
+                        2. Quand le client donne des détails sur un enfant (prénom, âge, etc.), ajoute ces informations dans l'objet correspondant
+                        3. Si le client parle de "mon premier enfant", "mon deuxième enfant", c'est l'index 0, 1, etc. dans le tableau
+                        4. Si un enfant est "à charge", "fiscalement rattaché", "à ma charge" → fiscalement_a_charge: true
+                        5. Si un enfant est "une semaine sur deux", "garde partagée", "garde alternée" → garde_alternee: true
+                        6. Si seul le prénom est mentionné, ne pas inventer le nom de famille (le système utilisera celui du client)
+                        7. Si l'âge est mentionné sans date exacte, déduis l'année de naissance approximative
+                        8. TOUJOURS retourner un tableau, même pour un seul enfant : {"enfants": [{...}]}
+
+                        📌 CHAMPS BAE (PRÉVOYANCE / RETRAITE / ÉPARGNE) À UTILISER STRICTEMENT :
+                        **bae_prevoyance** :
+                        - "contrat_en_place", "date_effet", "cotisations"
+                        - "souhaite_couverture_invalidite" (true/false), "revenu_a_garantir"
+                        - "souhaite_couvrir_charges_professionnelles" (true/false), "montant_annuel_charges_professionnelles", "garantir_totalite_charges_professionnelles" (true/false), "montant_charges_professionnelles_a_garantir"
+                        - "duree_indemnisation_souhaitee", "capital_deces_souhaite", "garanties_obseques"
+                        - "rente_enfants", "rente_conjoint", "payeur"
+
+                        **bae_retraite** :
+                        - "revenus_annuels", "revenus_annuels_foyer", "impot_revenu", "nombre_parts_fiscales", "tmi", "impot_paye_n_1"
+                        - "age_depart_retraite", "age_depart_retraite_conjoint", "pourcentage_revenu_a_maintenir"
+                        - "contrat_en_place", "bilan_retraite_disponible" (true/false), "complementaire_retraite_mise_en_place" (true/false)
+                        - "designation_etablissement", "cotisations_annuelles", "titulaire"
+
+                        **bae_epargne** :
+                        - "epargne_disponible" (true/false), "montant_epargne_disponible"
+                        - "donation_realisee" (true/false), "donation_forme", "donation_date", "donation_montant", "donation_beneficiaires"
+                        - "capacite_epargne_estimee"
+                        - "actifs_financiers_pourcentage", "actifs_financiers_total", "actifs_financiers_details" (tableau/JSON)
+                        - "actifs_immo_pourcentage", "actifs_immo_total", "actifs_immo_details"
+                        - "actifs_autres_pourcentage", "actifs_autres_total", "actifs_autres_details"
+                        - "passifs_total_emprunts", "passifs_details", "charges_totales", "charges_details"
+                        - "situation_financiere_revenus_charges"
+
+                        👉 N'utilise AUCUN autre champ pour ces sections. Si une information n'est pas présente, n'ajoute pas la clé correspondante.
+
+                        🎯 RÈGLE IMPORTANTE - DÉTECTION "SECTION : CHAMP" 🎯
+                        ⚠️ DÉTECTION CONTEXTUELLE DES CHAMPS PAR SECTION ⚠️
+
+                        Si le client mentionne le nom d'une section (prévoyance, retraite, épargne, santé) suivi d'informations, tu dois :
+                        1. Identifier automatiquement la section mentionnée
+                        2. Détecter les champs correspondants dans cette section
+                        3. Remplir automatiquement les champs de la table BAE correspondante
+
+                        **Exemples de détection "section : champ" :**
+
+                        🛡️ PRÉVOYANCE :
+                        - "Prévoyance : je veux garantir 3000€" → {"besoins": ["prévoyance"], "bae_prevoyance": {"revenu_a_garantir": 3000}}
+                        - "Pour la prévoyance, capital décès de 200000€" → {"besoins": ["prévoyance"], "bae_prevoyance": {"capital_deces_souhaite": 200000}}
+                        - "Prévoyance : rente conjoint 1000€, rente enfants 500€" → {"besoins": ["prévoyance"], "bae_prevoyance": {"rente_conjoint": 1000, "rente_enfants": 500}}
+                        - "En prévoyance, je cotise 150€ par mois" → {"besoins": ["prévoyance"], "bae_prevoyance": {"cotisations": 150}}
+
+                        🏖️ RETRAITE :
+                        - "Retraite : je veux partir à 62 ans" → {"besoins": ["retraite"], "bae_retraite": {"age_depart_retraite": 62}}
+                        - "Pour la retraite, je veux maintenir 75% de mes revenus" → {"besoins": ["retraite"], "bae_retraite": {"pourcentage_revenu_a_maintenir": 75}}
+                        - "Retraite : mes revenus sont 50000€ par an" → {"besoins": ["retraite"], "bae_retraite": {"revenus_annuels": 50000}}
+                        - "En retraite, je cotise 200€ par mois" → {"besoins": ["retraite"], "bae_retraite": {"cotisations_annuelles": 2400}}
+
+                        💰 ÉPARGNE :
+                        - "Épargne : j'ai 50000€ disponibles" → {"besoins": ["épargne"], "bae_epargne": {"epargne_disponible": true, "montant_epargne_disponible": 50000}}
+                        - "Pour l'épargne, je peux mettre 500€ par mois de côté" → {"besoins": ["épargne"], "bae_epargne": {"capacite_epargne_estimee": 500}}
+                        - "Épargne : j'ai un crédit de 150000€" → {"besoins": ["épargne"], "bae_epargne": {"passifs_details": ["crédit: 150000"]}}
+                        - "En épargne, j'ai une assurance vie de 30000€" → {"besoins": ["épargne"], "bae_epargne": {"actifs_financiers_details": ["assurance vie: 30000"]}}
+
+                        **RÈGLE : Détection flexible**
+                        Ces formulations doivent TOUTES être détectées :
+                        - "Section : information"
+                        - "Pour la section, information"
+                        - "En section, information"
+                        - "Concernant la section, information"
+                        - "Sur la section, information"
+
+                        🔥 RÈGLE CRITIQUE - REMPLISSAGE EXHAUSTIF DES CHAMPS 🔥
+                        ⚠️ QUAND UNE SECTION EST MENTIONNÉE, REMPLIS LE MAXIMUM DE CHAMPS ⚠️
+
+                        **PRINCIPE FONDAMENTAL DE REMPLISSAGE EXHAUSTIF :**
+                        Dès qu'une section BAE est mentionnée (prévoyance, retraite, épargne), tu DOIS :
+
+                        1. ✅ Analyser TOUTE la transcription (pas seulement la phrase après la mention de la section)
+                        2. ✅ Chercher TOUTES les informations qui pourraient correspondre aux champs de cette section
+                        3. ✅ Remplir le MAXIMUM de champs possibles, même s'ils sont mentionnés ailleurs dans la conversation
+                        4. ✅ Déduire des informations du contexte quand c'est possible
+                        5. ✅ Laisser null uniquement les champs pour lesquels tu n'as AUCUNE information
+
+                        **Exemples de remplissage exhaustif :**
+
+                        Exemple 1 - PRÉVOYANCE avec contexte global :
+                        Transcription : "Je m'appelle Jean Dupont, je suis marié avec 2 enfants. Mes revenus annuels sont de 50000€.
+                        Prévoyance : je veux me protéger en cas d'invalidité. Je souhaite aussi un capital décès."
+
+                        ✅ JSON attendu (remplissage exhaustif) :
+                        {
+                          "nom": "Dupont",
+                          "prenom": "Jean",
+                          "situation_matrimoniale": "Marié(e)",
+                          "nombre_enfants": 2,
+                          "besoins": ["prévoyance"],
+                          "bae_prevoyance": {
+                            "souhaite_couverture_invalidite": true,
+                            "capital_deces_souhaite": 50000  // Déduit : 1x le revenu annuel comme capital décès classique
+                            // Tu peux aussi déduire des rentes enfants en fonction du nombre d'enfants mentionné
+                          }
+                        }
+
+                        Exemple 2 - RETRAITE avec revenus mentionnés ailleurs :
+                        Transcription : "Je gagne 60000€ par an. Je suis cadre dans une grande entreprise. Mon impôt était de 8000€ l'année dernière.
+                        Pour la retraite, je veux partir à 62 ans."
+
+                        ✅ JSON attendu (remplissage exhaustif) :
+                        {
+                          "besoins": ["retraite"],
+                          "bae_retraite": {
+                            "revenus_annuels": 60000,  // Mentionné au début
+                            "impot_paye_n_1": 8000,    // Mentionné au milieu
+                            "age_depart_retraite": 62,  // Mentionné avec "retraite"
+                            "pourcentage_revenu_a_maintenir": 75  // Valeur par défaut courante si non mentionnée
+                          }
+                        }
+
+                        Exemple 3 - ÉPARGNE avec patrimoine dispersé :
+                        Transcription : "J'ai une résidence principale qui vaut 300000€. Je paie 1200€ de loyer... non pardon je suis propriétaire.
+                        J'ai aussi une assurance vie de 30000€ et 20000€ sur un livret A.
+                        Épargne : j'aimerais optimiser mon patrimoine. J'ai un crédit immobilier de 150000€ restant."
+
+                        ✅ JSON attendu (remplissage exhaustif) :
+                        {
+                          "besoins": ["épargne"],
+                          "bae_epargne": {
+                            "epargne_disponible": true,
+                            "montant_epargne_disponible": 50000,  // 30000 + 20000
+                            "actifs_financiers_total": 50000,
+                            "actifs_financiers_details": ["assurance vie: 30000", "livret A: 20000"],
+                            "actifs_immo_total": 300000,
+                            "actifs_immo_details": ["résidence principale: 300000"],
+                            "passifs_total_emprunts": 150000,
+                            "passifs_details": ["crédit immobilier: 150000"]
+                          }
+                        }
+
+                        **❌ ERREUR À ÉVITER :**
+                        ❌ Ne remplis PAS seulement les champs mentionnés juste après le nom de la section
+                        ❌ Ne crée PAS d'objets BAE vides ou avec un seul champ si tu as plus d'informations dans la transcription
+
+                        ✅ COMPORTEMENT ATTENDU :
+                        ✅ Parcours TOUTE la transcription pour chaque section mentionnée
+                        ✅ Recoupe les informations entre les différentes parties de la conversation
+                        ✅ Remplis tous les champs pour lesquels tu trouves une information, même implicite
+
+                        🧠 MAPPING SÉMANTIQUE EXHAUSTIF - RECONNAISSANCE AUTOMATIQUE DE TOUS LES CHAMPS 🧠
+                        ⚠️ RÈGLE CRITIQUE : Tu dois reconnaître automatiquement TOUS les champs de TOUTES les tables SANS que la section soit mentionnée ⚠️
+
+                        **PRINCIPE :**
+                        Analyse le VOCABULAIRE et la SÉMANTIQUE pour détecter automatiquement à quelle table et quel champ appartient une information, même si le client ne mentionne pas le nom de la section/table.
+
+                        **👤 MAPPING CLIENT (table principale) :**
+                        - "civilité" / "Monsieur" / "Madame" / "Mademoiselle" → civilite
+                        - "nom" / "nom de famille" / "je m'appelle" → nom
+                        - "nom de jeune fille" / "nom de naissance" → nom_jeune_fille
+                        - "prénom" → prenom
+                        - "date de naissance" / "né le" / "je suis né" / "anniversaire" → date_naissance
+                        - "lieu de naissance" / "né à" / "ville de naissance" → lieu_naissance
+                        - "nationalité" / "je suis français" / "nationalité française" → nationalite
+                        - "marié" / "célibataire" / "divorcé" / "pacsé" / "concubinage" / "veuf" / "situation matrimoniale" → situation_matrimoniale
+                        - "date de mariage" / "marié depuis" / "date du pacs" → date_situation_matrimoniale
+                        - "salarié" / "retraité" / "étudiant" / "demandeur d'emploi" / "propriétaire" / "locataire" / "situation actuelle" → situation_actuelle
+                        - "profession" / "métier" / "je suis" / "je travaille comme" → profession
+                        - "risques professionnels" / "métier dangereux" / "exposé à des risques" → risques_professionnels: true
+                        - "détails risques" → details_risques_professionnels
+                        - "revenus annuels" / "je gagne" / "salaire annuel" / "revenus" → revenus_annuels
+                        - "adresse" / "j'habite" / "rue" / "avenue" / "boulevard" → adresse
+                        - "code postal" / "CP" → code_postal
+                        - "ville" → ville
+                        - "résidence fiscale" / "résident fiscal" / "pays de résidence" → residence_fiscale
+                        - "téléphone" / "numéro" / "portable" / "mobile" → telephone
+                        - "email" / "mail" / "adresse mail" / "courriel" → email
+                        - "fumeur" / "je fume" / "non-fumeur" / "tabac" → fumeur
+                        - "activités sportives" / "sport" / "je fais du sport" → activites_sportives: true
+                        - "détails sport" / "quel sport" → details_activites_sportives
+                        - "niveau sport" / "occasionnel" / "régulier" / "intensif" → niveau_activites_sportives
+                        - "nombre d'enfants" / "X enfants" / "j'ai X enfants" → nombre_enfants
+                        - "chef d'entreprise" / "dirigeant" / "je dirige" → chef_entreprise: true
+                        - "statut juridique" / "SARL" / "SAS" / "SASU" / "EURL" / "auto-entrepreneur" → statut
+                        - "travailleur indépendant" / "freelance" / "indépendant" → travailleur_independant: true
+                        - "mandataire social" → mandataire_social: true
+
+                        **💑 MAPPING CONJOINT :**
+                        - "conjoint" + "nom" / "nom de mon conjoint" / "nom de ma conjointe" → conjoint.nom
+                        - "conjoint" + "nom de jeune fille" → conjoint.nom_jeune_fille
+                        - "conjoint" + "prénom" / "prénom de mon conjoint" → conjoint.prenom
+                        - "conjoint" + "date de naissance" / "né le" → conjoint.date_naissance
+                        - "conjoint" + "lieu de naissance" → conjoint.lieu_naissance
+                        - "conjoint" + "nationalité" → conjoint.nationalite
+                        - "conjoint" + "profession" / "métier de mon conjoint" / "il/elle travaille" → conjoint.profession
+                        - "conjoint" + "chef d'entreprise" → conjoint.chef_entreprise: true
+                        - "conjoint" + "risques professionnels" → conjoint.risques_professionnels: true
+                        - "conjoint" + "téléphone" / "numéro de mon conjoint" → conjoint.telephone
+                        - "conjoint" + "adresse" → conjoint.adresse
+
+                        **👶 MAPPING ENFANTS :**
+                        - "enfant" + "nom" / "nom de mon enfant" → enfant.nom
+                        - "enfant" + "prénom" → enfant.prenom
+                        - "enfant" + "date de naissance" / "né le" → enfant.date_naissance
+                        - "fiscalement à charge" / "rattaché fiscalement" / "à charge" → enfant.fiscalement_a_charge: true
+                        - "garde alternée" / "une semaine sur deux" / "garde partagée" → enfant.garde_alternee: true
+
+                        **🏥 MAPPING SANTÉ/MUTUELLE (sante_souhait) :**
+                        - "contrat mutuelle" / "mutuelle actuelle" / "assurance santé" → sante_souhait.contrat_en_place
+                        - "budget mutuelle" / "budget santé" / "je peux payer X€" → sante_souhait.budget_mensuel_maximum
+                        - "hospitalisation" / "niveau hospitalisation" / "en cas d'hospitalisation" → sante_souhait.niveau_hospitalisation
+                        - "chambre particulière" / "chambre individuelle" → sante_souhait.niveau_chambre_particuliere
+                        - "médecin généraliste" / "généraliste" / "docteur" → sante_souhait.niveau_medecin_generaliste
+                        - "analyses" / "imagerie" / "radio" / "IRM" / "scanner" → sante_souhait.niveau_analyses_imagerie
+                        - "auxiliaires médicaux" / "kinésithérapeute" / "kiné" / "ostéopathe" → sante_souhait.niveau_auxiliaires_medicaux
+                        - "pharmacie" / "médicaments" / "ordonnance" → sante_souhait.niveau_pharmacie
+                        - "dentaire" / "dentiste" / "soins dentaires" → sante_souhait.niveau_dentaire
+                        - "optique" / "lunettes" / "verres" / "lentilles" → sante_souhait.niveau_optique
+                        - "prothèses auditives" / "appareil auditif" / "audition" → sante_souhait.niveau_protheses_auditives
+
+                        **🛡️ MAPPING PRÉVOYANCE (bae_prevoyance) :**
+                        - "contrat prévoyance" / "contrat en place" / "contrat actuel" → bae_prevoyance.contrat_en_place
+                        - "date d'effet" / "date de début" / "depuis quand" / "à partir de" → bae_prevoyance.date_effet
+                        - "cotisations prévoyance" / "je cotise" / "je paie" / "montant mensuel" → bae_prevoyance.cotisations
+                        - "invalidité" / "ITT" / "incapacité" / "arrêt de travail" / "couverture invalidité" → bae_prevoyance.souhaite_couverture_invalidite: true
+                        - "garantir X€" / "revenu à garantir" / "maintenir mon revenu" / "maintenir X€ par mois" → bae_prevoyance.revenu_a_garantir
+                        - "charges professionnelles" / "frais professionnels" / "couvrir mes charges pro" → bae_prevoyance.souhaite_couvrir_charges_professionnelles: true
+                        - "montant charges professionnelles" / "X€ de charges pro" → bae_prevoyance.montant_annuel_charges_professionnelles
+                        - "totalité des charges" / "toutes mes charges" → bae_prevoyance.garantir_totalite_charges_professionnelles: true
+                        - "montant à garantir charges" → bae_prevoyance.montant_charges_professionnelles_a_garantir
+                        - "durée d'indemnisation" / "combien de temps" / "jusqu'à la retraite" / "pendant X ans" → bae_prevoyance.duree_indemnisation_souhaitee
+                        - "capital décès" / "garantie décès" / "en cas de décès" / "capital en cas de décès" → bae_prevoyance.capital_deces_souhaite
+                        - "obsèques" / "frais d'obsèques" / "funérailles" / "garantie obsèques" → bae_prevoyance.garanties_obseques
+                        - "rente enfants" / "rente pour mes enfants" / "protéger mes enfants" / "rente éducation" → bae_prevoyance.rente_enfants
+                        - "rente conjoint" / "rente pour mon conjoint" / "protéger mon conjoint" → bae_prevoyance.rente_conjoint
+                        - "qui paie" / "payeur" / "l'entreprise paie" / "employeur" → bae_prevoyance.payeur
+
+                        **🏖️ MAPPING RETRAITE (bae_retraite) :**
+                        - "revenus annuels" / "je gagne X€ par an" / "mes revenus" / "salaire annuel" → bae_retraite.revenus_annuels
+                        - "revenus du foyer" / "revenus foyer" / "revenu foyer" / "revenus conjoint" / "revenus totaux du foyer" / "revenus globaux" → bae_retraite.revenus_annuels_foyer
+                        - "impôts" / "impôt sur le revenu" / "IR" / "montant d'impôts" → bae_retraite.impot_revenu
+                        - "nombre de parts fiscales" / "parts fiscales" / "X parts" / "parts" → bae_retraite.nombre_parts_fiscales
+                        - "TMI" / "tranche marginale" / "tranche d'imposition" / "je suis à 30%" / "taux marginal" → bae_retraite.tmi
+                        - "impôt payé l'année dernière" / "impôts N-1" / "j'ai payé X€ d'impôts" → bae_retraite.impot_paye_n_1
+                        - "âge de départ" / "partir à X ans" / "retraite à X ans" / "je veux partir à" → bae_retraite.age_depart_retraite
+                        - "âge conjoint" / "mon conjoint part à X ans" / "retraite conjoint" → bae_retraite.age_depart_retraite_conjoint
+                        - "maintenir X%" / "pourcentage à maintenir" / "conserver X% de mes revenus" / "X% de mes revenus" → bae_retraite.pourcentage_revenu_a_maintenir
+                        - "PER" / "PERP" / "contrat retraite" / "plan d'épargne retraite" / "contrat en place" → bae_retraite.contrat_en_place
+                        - "bilan retraite" / "relevé de carrière" / "j'ai mon relevé" → bae_retraite.bilan_retraite_disponible: true
+                        - "complémentaire retraite" / "produit en place" / "j'ai déjà un produit" → bae_retraite.complementaire_retraite_mise_en_place: true
+                        - "chez X" / "assureur" / "établissement" / "banque" / "organisme" → bae_retraite.designation_etablissement
+                        - "cotisations annuelles" / "je cotise X€ par an" / "versement annuel" / "versements" → bae_retraite.cotisations_annuelles
+                        - "titulaire" / "au nom de" / "souscripteur" / "bénéficiaire" → bae_retraite.titulaire
+
+                        **💰 MAPPING ÉPARGNE (bae_epargne) :**
+                        - "épargne disponible" / "j'ai X€ d'épargne" / "économies" / "j'ai de l'épargne" → bae_epargne.epargne_disponible: true, montant_epargne_disponible
+                        - "montant épargne" / "X€ d'épargne" → bae_epargne.montant_epargne_disponible
+                        - "donation" / "don" / "j'ai donné" / "transmission" / "j'ai fait une donation" → bae_epargne.donation_realisee: true
+                        - "forme de donation" / "donation en" → bae_epargne.donation_forme
+                        - "date donation" / "donation de" → bae_epargne.donation_date
+                        - "montant donation" / "X€ de donation" → bae_epargne.donation_montant
+                        - "bénéficiaires donation" / "donné à" / "pour mes enfants" → bae_epargne.donation_beneficiaires
+                        - "capacité d'épargne" / "je peux mettre X€ de côté" / "j'épargne X€ par mois" / "je peux épargner" → bae_epargne.capacite_epargne_estimee
+                        - "actifs financiers pourcentage" / "X% en actifs financiers" → bae_epargne.actifs_financiers_pourcentage
+                        - "actifs financiers total" / "total actifs financiers" → bae_epargne.actifs_financiers_total
+                        - "assurance vie" / "AV" / "contrat vie" → bae_epargne.actifs_financiers_details: ["assurance vie: X"]
+                        - "PEA" / "plan d'épargne en actions" → bae_epargne.actifs_financiers_details: ["PEA: X"]
+                        - "livret A" / "livret" / "LDDS" / "livret développement durable" → bae_epargne.actifs_financiers_details: ["livret A: X"]
+                        - "actifs immobiliers pourcentage" / "X% en immobilier" → bae_epargne.actifs_immo_pourcentage
+                        - "actifs immobiliers total" / "total immobilier" → bae_epargne.actifs_immo_total
+                        - "résidence principale" / "ma maison" / "mon appartement" / "ma résidence" → bae_epargne.actifs_immo_details: ["résidence principale: X"]
+                        - "résidence secondaire" / "maison de vacances" / "maison secondaire" → bae_epargne.actifs_immo_details: ["résidence secondaire: X"]
+                        - "bien locatif" / "appartement en location" / "investissement locatif" / "location" → bae_epargne.actifs_immo_details: ["bien locatif: X"]
+                        - "actifs autres pourcentage" → bae_epargne.actifs_autres_pourcentage
+                        - "actifs autres total" → bae_epargne.actifs_autres_total
+                        - "passifs total" / "total des emprunts" / "total des crédits" / "dettes totales" → bae_epargne.passifs_total_emprunts
+                        - "crédit immobilier" / "emprunt" / "prêt immobilier" / "crédit maison" / "emprunt immobilier" → bae_epargne.passifs_details: ["crédit immobilier: X"]
+                        - "crédit consommation" / "prêt auto" / "crédit voiture" → bae_epargne.passifs_details: ["crédit consommation: X"]
+                        - "charges totales" / "total des charges" → bae_epargne.charges_totales
+                        - "loyer" / "je paie X€ de loyer" / "location" → bae_epargne.charges_details: ["loyer: X"]
+                        - "électricité" / "facture électricité" / "EDF" → bae_epargne.charges_details: ["électricité: X"]
+                        - "eau" / "facture eau" → bae_epargne.charges_details: ["eau: X"]
+                        - "situation financière" / "ma situation" → bae_epargne.situation_financiere_revenus_charges
+
+                        **EXEMPLES DE DÉTECTION SÉMANTIQUE AUTOMATIQUE :**
+
+                        Exemple 1 - Revenu foyer (PROBLÈME RÉSOLU) :
+                        Transcription : "Le revenu foyer est de 80000 euros."
+
+                        ✅ Détection automatique :
+                        {
+                          "bae_retraite": {
+                            "revenus_annuels_foyer": 80000
+                          }
+                        }
+                        → Les mots "revenu foyer" / "revenus foyer" déclenchent automatiquement bae_retraite.revenus_annuels_foyer
+
+                        Exemple 2 - Parts fiscales :
+                        Transcription : "Le nombre de parts fiscales me concernant est de 2."
+
+                        ✅ Détection automatique :
+                        {
+                          "bae_retraite": {
+                            "nombre_parts_fiscales": 2
+                          }
+                        }
+                        → "nombre de parts fiscales" / "parts fiscales" / "parts" → bae_retraite.nombre_parts_fiscales
+
+                        Exemple 3 - Rente conjoint :
+                        Transcription : "Je voudrais une rente conjoint de 1500 euros."
+
+                        ✅ Détection automatique :
+                        {
+                          "bae_prevoyance": {
+                            "rente_conjoint": 1500
+                          }
+                        }
+                        → "rente conjoint" → bae_prevoyance.rente_conjoint
+
+                        Exemple 4 - Crédit immobilier :
+                        Transcription : "J'ai un crédit immobilier de 180000 euros restant."
+
+                        ✅ Détection automatique :
+                        {
+                          "bae_epargne": {
+                            "passifs_total_emprunts": 180000,
+                            "passifs_details": ["crédit immobilier: 180000"]
+                          }
+                        }
+                        → "crédit immobilier" → bae_epargne.passifs_details
+
+                        Exemple 5 - Multi-contexte :
+                        Transcription : "Mon TMI est de 30%. Je peux épargner 400 euros par mois. Je voudrais un capital décès de 150000 euros. Le revenu foyer est de 90000 euros."
+
+                        ✅ Détection automatique multi-sections :
+                        {
+                          "bae_retraite": {
+                            "tmi": "30%",
+                            "revenus_annuels_foyer": 90000
+                          },
+                          "bae_epargne": {
+                            "capacite_epargne_estimee": 400
+                          },
+                          "bae_prevoyance": {
+                            "capital_deces_souhaite": 150000
+                          }
+                        }
+                        → Chaque vocabulaire déclenche automatiquement sa section et son champ
+
+                        Exemple 6 - Informations conjoint :
+                        Transcription : "Mon conjoint s'appelle Marie Dupont, elle travaille comme médecin."
+
+                        ✅ Détection automatique :
+                        {
+                          "conjoint": {
+                            "prenom": "Marie",
+                            "nom": "Dupont",
+                            "profession": "médecin"
+                          }
+                        }
+                        → "conjoint" + contexte → table conjoint automatiquement
+
+                        Exemple 7 - Budget mutuelle :
+                        Transcription : "Mon budget santé est de 150 euros par mois."
+
+                        ✅ Détection automatique :
+                        {
+                          "besoins": ["mutuelle"],
+                          "sante_souhait": {
+                            "budget_mensuel_maximum": 150
+                          }
+                        }
+                        → "budget santé" → sante_souhait.budget_mensuel_maximum
+
+                        ⚠️ RÈGLE IMPORTANTE - DÉTECTION MULTI-CONTEXTE :
+                        Si plusieurs vocabulaires de sections différentes sont détectés dans la même transcription, tu DOIS créer/mettre à jour TOUTES les sections concernées, même si elles ne sont pas explicitement mentionnées.
+
+                        🚨🚨🚨 RAPPEL ULTRA-CRITIQUE AVANT LA SECTION BAE 🚨🚨🚨
+                        ⛔ NE JAMAIS FAIRE DISPARAÎTRE UN BESOIN EXISTANT ⛔
+
+                        Dans TOUS les exemples ci-dessous avec {"besoins": ["X"]}, l'action implicite est TOUJOURS "add" !
+                        - {"besoins": ["prévoyance"]} signifie {"besoins": ["prévoyance"], "besoins_action": "add"}
+                        - {"besoins": ["retraite"]} signifie {"besoins": ["retraite"], "besoins_action": "add"}
+                        - {"besoins": ["épargne"]} signifie {"besoins": ["épargne"], "besoins_action": "add"}
+
+                        Le système ajoutera automatiquement ces besoins à la liste existante SANS supprimer les autres !
+
+                        Si le client a déjà ["retraite"] et parle de prévoyance → retourne {"besoins": ["prévoyance"], "besoins_action": "add"}
+                        Résultat final géré par le backend : ["retraite", "prévoyance"] ✅
+
+                        🎯 RÈGLES SPÉCIALES - DÉTECTION BESOINS BAE (Prévoyance, Retraite, Épargne) 🎯
+                        ⚠️ SYSTÈME INTELLIGENT DE DÉTECTION AUTOMATIQUE DE CONTEXTE ⚠️
+
+                        **PRINCIPE FONDAMENTAL :**
+                        Tu dois détecter AUTOMATIQUEMENT le contexte/la section à partir des MOTS-CLÉS et des informations mentionnées, MÊME SI le client ne dit pas explicitement "j'ai besoin de".
+
+                        **🛡️ DÉTECTION CONTEXTE PRÉVOYANCE :**
+                        Mots-clés déclencheurs : invalidité, ITT, incapacité, arrêt de travail, décès, garanties décès, capital décès, obsèques, rente conjoint, rente enfants, charges professionnelles à couvrir, protection, accident, maladie grave, indemnités journalières
+
+                        Exemples (⚠️ TOUS avec "besoins_action": "add" pour ne PAS écraser les besoins existants) :
+                        - "Je veux garantir 3000€ par mois en cas d'invalidité" → {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"souhaite_couverture_invalidite": true, "revenu_a_garantir": 3000}}
+                        - "Je souhaite un capital décès de 200000€" → {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"capital_deces_souhaite": 200000}}
+                        - "Je veux protéger mes enfants avec une rente de 500€" → {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"rente_enfants": 500}}
+                        - "J'ai des charges professionnelles de 10000€ par an à garantir" → {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"montant_annuel_charges_professionnelles": 10000}}
+
+                        **🏖️ DÉTECTION CONTEXTE RETRAITE :**
+                        Mots-clés déclencheurs : retraite, pension, PER, PERP, complément retraite, départ retraite, maintenir revenus retraite, préparer retraite, âge de départ, trimestres, régime retraite
+
+                        Exemples (⚠️ TOUS avec "besoins_action": "add" pour ne PAS écraser les besoins existants) :
+                        - "Je veux partir à la retraite à 62 ans" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"age_depart_retraite": 62}}
+                        - "Je souhaite maintenir 70% de mes revenus" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"pourcentage_revenu_a_maintenir": 70}}
+                        - "J'ai un PER chez Generali" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"contrat_en_place": "PER", "designation_etablissement": "Generali"}}
+                        - "Je cotise 300€ par mois pour ma retraite" → {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"cotisations_annuelles": 3600}}
+
+                        **💰 DÉTECTION CONTEXTE ÉPARGNE :**
+                        Mots-clés déclencheurs : épargne, patrimoine, placements, investissements, assurance vie, PEA, livret, actifs, résidence principale, résidence secondaire, immobilier, locatif, crédit, emprunt, donation, succession, capacité d'épargne
+
+                        Exemples (⚠️ TOUS avec "besoins_action": "add" pour ne PAS écraser les besoins existants) :
+                        - "J'ai 50000€ d'épargne disponible" → {"besoins": ["épargne"], "besoins_action": "add", "bae_epargne": {"epargne_disponible": true, "montant_epargne_disponible": 50000}}
+                        - "Je peux épargner 500€ par mois" → {"besoins": ["épargne"], "besoins_action": "add", "bae_epargne": {"capacite_epargne_estimee": 500}}
+                        - "J'ai une assurance vie de 30000€" → {"besoins": ["épargne"], "besoins_action": "add", "bae_epargne": {"actifs_financiers_details": ["assurance vie: 30000"]}}
+                        - "Ma résidence principale vaut 300000€" → {"besoins": ["épargne"], "besoins_action": "add", "bae_epargne": {"actifs_immo_details": ["résidence principale: 300000"]}}
+                        - "J'ai un crédit immobilier de 150000€" → {"besoins": ["épargne"], "besoins_action": "add", "bae_epargne": {"passifs_details": ["crédit immobilier: 150000"]}}
+                        - "Je paie 1000€ de loyer par mois" → {"besoins": ["épargne"], "besoins_action": "add", "bae_epargne": {"charges_details": ["loyer: 1000"]}}
+
+                        **🩺 DÉTECTION CONTEXTE SANTÉ/MUTUELLE :**
+                        Mots-clés déclencheurs : mutuelle, santé, hospitalisation, soins, dentaire, optique, médecin, pharmacie, remboursement santé, sécurité sociale, tiers payant
+
+                        Exemples (⚠️ TOUS avec "besoins_action": "add") :
+                        - "Je veux une bonne couverture optique" → {"besoins": ["mutuelle"], "besoins_action": "add"}
+                        - "Mon budget santé est de 100€ par mois" → {"besoins": ["mutuelle"], "besoins_action": "add"}
+
+                        **RÈGLE IMPORTANTE - DÉTECTION MULTI-CONTEXTE :**
+                        Si le client mentionne plusieurs contextes dans la même phrase, retourne TOUS les besoins avec "besoins_action": "add" :
+                        - "Je veux préparer ma retraite et protéger mes enfants" → {"besoins": ["retraite", "prévoyance"], "besoins_action": "add", "bae_retraite": {...}, "bae_prevoyance": {...}}
+                        - "J'ai 50000€ d'épargne et je veux partir à 62 ans" → {"besoins": ["épargne", "retraite"], "besoins_action": "add", "bae_epargne": {...}, "bae_retraite": {...}}
+
+                        **DÉTECTION AUTOMATIQUE DES BESOINS (TOUJOURS avec "besoins_action": "add") :**
+                        - "J'ai besoin d'une prévoyance" → {"besoins": ["prévoyance"], "besoins_action": "add"}
+                        - "J'ai besoin d'une épargne retraite" → {"besoins": ["retraite"], "besoins_action": "add"}
+                        - "J'ai besoin d'épargner" / "épargne" → {"besoins": ["épargne"], "besoins_action": "add"}
+                        - "Je souhaite préparer ma retraite" → {"besoins": ["retraite"], "besoins_action": "add"}
+                        - "Je veux me protéger" → {"besoins": ["prévoyance"], "besoins_action": "add"}
+
+                        **STRUCTURE JSON POUR BAE :**
+                        Les données BAE doivent être dans un objet séparé avec la clé correspondante :
+
+                        📋 **bae_prevoyance** (objet ou null) :
+                        Extraire si mention de : prévoyance, protection, invalidité, décès, ITT, garanties, rente conjoint/enfants
+                        Champs possibles :
+                        - "contrat_en_place" (string) : nom du contrat existant
+                        - "date_effet" (date) : date d'effet du contrat
+                        - "cotisations" (decimal) : montant des cotisations
+                        - "souhaite_couverture_invalidite" (boolean)
+                        - "revenu_a_garantir" (decimal) : revenu mensuel à garantir
+                        - "souhaite_couvrir_charges_professionnelles" (boolean)
+                        - "montant_annuel_charges_professionnelles" (decimal)
+                        - "garantir_totalite_charges_professionnelles" (boolean)
+                        - "montant_charges_professionnelles_a_garantir" (decimal)
+                        - "duree_indemnisation_souhaitee" (string) : ex "3 ans", "jusqu'à la retraite"
+                        - "capital_deces_souhaite" (decimal)
+                        - "garanties_obseques" (decimal)
+                        - "rente_enfants" (decimal)
+                        - "rente_conjoint" (decimal)
+                        - "payeur" (string) : qui paie les cotisations
+
+                        📋 **bae_retraite** (objet ou null) :
+                        Extraire si mention de : retraite, épargne retraite, pension, PER, complément retraite
+                        Champs possibles :
+                        - "revenus_annuels" (decimal)
+                        - "revenus_annuels_foyer" (decimal)
+                        - "impot_revenu" (decimal)
+                        - "nombre_parts_fiscales" (decimal)
+                        - "tmi" (string) : Tranche Marginale d'Imposition
+                        - "impot_paye_n_1" (decimal)
+                        - "age_depart_retraite" (integer)
+                        - "age_depart_retraite_conjoint" (integer)
+                        - "pourcentage_revenu_a_maintenir" (decimal) : % du revenu actuel à maintenir
+                        - "contrat_en_place" (string)
+                        - "bilan_retraite_disponible" (boolean)
+                        - "complementaire_retraite_mise_en_place" (boolean)
+                        - "designation_etablissement" (string)
+                        - "cotisations_annuelles" (decimal)
+                        - "titulaire" (string)
+
+                        📋 **bae_epargne** (objet ou null) :
+                        Extraire si mention de : épargne, patrimoine, actifs, placements, investissements, donations
+                        Champs possibles :
+                        - "epargne_disponible" (boolean)
+                        - "montant_epargne_disponible" (decimal)
+                        - "donation_realisee" (boolean)
+                        - "donation_forme" (string)
+                        - "donation_date" (date)
+                        - "donation_montant" (decimal)
+                        - "donation_beneficiaires" (string)
+                        - "capacite_epargne_estimee" (decimal) : capacité d'épargne mensuelle
+                        - "actifs_financiers_pourcentage" (decimal)
+                        - "actifs_financiers_total" (decimal)
+                        - "actifs_financiers_details" (array) : ["assurance vie: 50000", "PEA: 20000"]
+                        - "actifs_immo_pourcentage" (decimal)
+                        - "actifs_immo_total" (decimal)
+                        - "actifs_immo_details" (array) : ["résidence principale: 300000"]
+                        - "actifs_autres_pourcentage" (decimal)
+                        - "actifs_autres_total" (decimal)
+                        - "actifs_autres_details" (array)
+                        - "passifs_total_emprunts" (decimal)
+                        - "passifs_details" (array) : ["crédit immobilier: 150000"]
+                        - "charges_totales" (decimal)
+                        - "charges_details" (array) : ["loyer: 1000", "électricité: 150"]
+                        - "situation_financiere_revenus_charges" (text)
+
+                        **EXEMPLES CONCRETS :**
+
+                        Exemple 1 - Besoin de prévoyance :
+                        Client: "J'ai besoin d'une prévoyance, je veux garantir 3000€ par mois en cas d'invalidité"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "besoins": ["prévoyance"],
+                          "bae_prevoyance": {
+                            "souhaite_couverture_invalidite": true,
+                            "revenu_a_garantir": 3000
+                          }
+                        }
+                        ```
+
+                        Exemple 2 - Besoin de retraite :
+                        Client: "Je veux préparer ma retraite, je compte partir à 62 ans et maintenir 70% de mes revenus"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "besoins": ["retraite"],
+                          "bae_retraite": {
+                            "age_depart_retraite": 62,
+                            "pourcentage_revenu_a_maintenir": 70
+                          }
+                        }
+                        ```
+
+                        Exemple 3 - Besoin d'épargne :
+                        Client: "J'ai 50000€ d'épargne disponible et je peux épargner 500€ par mois"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "besoins": ["épargne"],
+                          "bae_epargne": {
+                            "epargne_disponible": true,
+                            "montant_epargne_disponible": 50000,
+                            "capacite_epargne_estimee": 500
+                          }
+                        }
+                        ```
+
+                        Exemple 4 - Plusieurs besoins :
+                        Client: "J'ai besoin d'une prévoyance et de préparer ma retraite"
+                        ✅ JSON attendu :
+                        ```json
+                        {
+                          "besoins": ["prévoyance", "retraite"],
+                          "bae_prevoyance": {},
+                          "bae_retraite": {}
+                        }
+                        ```
+
+                        **RÈGLE IMPORTANTE :**
+                        - Si le client mentionne un besoin (prévoyance/retraite/épargne) SANS donner de détails, retourne quand même un objet vide {} pour ce BAE
+                        - Cela permettra au système de créer l'entrée en base et de la compléter plus tard
+                        - Si le client ne mentionne PAS le besoin, ne crée PAS l'objet (null ou absent du JSON)
+
+                        🚫 NE JAMAIS UTILISER CES NOMS COURTS 🚫
+                        - "marie" ❌ → utilise "situation_matrimoniale" ✅
+                        - "celibataire" ❌ → utilise "situation_matrimoniale" ✅
+                        - "divorce" ❌ → utilise "situation_matrimoniale" ✅
+                        - "veuf" ❌ → utilise "situation_matrimoniale" ✅
+                        - "proprietaire", "locataire" ❌ → ces champs n'existent pas en BDD
+
+                        ⚠️ EXCEPTION IMPORTANTE :
+                        - "enfants" ✅ → utilise TOUJOURS "enfants" comme un TABLEAU d'objets (voir structure ci-dessus)
+                        - Ne JAMAIS utiliser "enfants" comme un nombre, utilise "nombre_enfants" pour cela
+
+                        ═══════════════════════════════════════════════════════════════════════
+                        🚨 AVERTISSEMENT FINAL CRITIQUE - RÈGLE ABSOLUE SUR LES BESOINS 🚨
+                        ═══════════════════════════════════════════════════════════════════════
+
+                        ⛔ NE JAMAIS INCLURE "besoins_action": "replace" ⛔
+                        ⛔ TOUJOURS UTILISER "besoins_action": "add" PAR DÉFAUT ⛔
+
+                        Si le client dit : "Pour ma prévoyance, la rente conjoint est de X€"
+                        Et qu'il a DÉJÀ les besoins ["retraite", "épargne"] :
+
+                        ❌ NE PAS RETOURNER :
+                        {
+                          "besoins": ["prévoyance"],
+                          "besoins_action": "replace"
+                        }
+                        → Ceci ferait DISPARAÎTRE les besoins "retraite" et "épargne" ! ❌
+
+                        ✅ RETOURNER CECI :
+                        {
+                          "besoins": ["prévoyance"],
+                          "besoins_action": "add",
+                          "bae_prevoyance": {"rente_conjoint": X}
+                        }
+                        → Le système ajoutera automatiquement "prévoyance" aux besoins existants ✅
+                        → Résultat final : ["retraite", "épargne", "prévoyance"] ✅
+
+                        🔴 UTILISE "remove" UNIQUEMENT SI :
+                        - Le client dit "je n'ai PLUS besoin de X"
+                        - Le client dit "je ne veux PLUS de X"
+                        - Le client dit "retirez X" ou "supprimez X"
+
+                        ⚠️ EN CAS DE DOUTE, UTILISE TOUJOURS "add" ⚠️
+
                         PROMPT
                     ],
                     ['role' => 'user', 'content' => $prompt],
@@ -329,6 +1060,82 @@ class AnalysisService
                 return [];
             }
 
+            // 🗺️ MAPPING DES ANCIENS NOMS VERS LES NOUVEAUX (au cas où GPT utilise encore les anciens)
+            $fieldMapping = [
+                'datedenaissance' => 'date_naissance',
+                'lieudenaissance' => 'lieu_naissance',
+                'situationmatrimoniale' => 'situation_matrimoniale',
+                'revenusannuels' => 'revenus_annuels',
+                'nombreenfants' => 'nombre_enfants',
+                // Note: 'enfants' n'est plus mappé vers 'nombre_enfants' car il est maintenant un tableau d'objets
+            ];
+
+            foreach ($fieldMapping as $oldName => $newName) {
+                if (isset($data[$oldName]) && !isset($data[$newName])) {
+                    $data[$newName] = $data[$oldName];
+                    unset($data[$oldName]);
+                }
+            }
+
+            // 🗺️ MAPPING SPÉCIAL pour "enfants" :
+            // - Si 'enfants' est un nombre (integer) → le convertir en 'nombre_enfants'
+            // - Si 'enfants' est un tableau → le garder tel quel (nouveau système)
+            if (isset($data['enfants'])) {
+                if (is_numeric($data['enfants'])) {
+                    // Ancien système: enfants est un nombre → convertir en nombre_enfants
+                    if (!isset($data['nombre_enfants'])) {
+                        $data['nombre_enfants'] = (int) $data['enfants'];
+                    }
+                    unset($data['enfants']);
+                }
+                // Sinon, garder le tableau enfants tel quel
+            }
+
+            // 🗺️ MAPPING SPÉCIAL POUR "marie" → "situation_matrimoniale"
+            // GPT retourne parfois "marie": true au lieu de "situation_matrimoniale": "Marié(e)"
+            if (isset($data['marie'])) {
+                if ($data['marie'] === true) {
+                    $data['situation_matrimoniale'] = 'Marié(e)';
+                } elseif ($data['marie'] === false) {
+                    $data['situation_matrimoniale'] = 'Célibataire';
+                }
+                unset($data['marie']);
+            }
+
+            // 🗺️ MAPPING SPÉCIAL POUR "celibataire" → "situation_matrimoniale"
+            if (isset($data['celibataire']) && $data['celibataire'] === true) {
+                $data['situation_matrimoniale'] = 'Célibataire';
+                unset($data['celibataire']);
+            }
+
+            // 🗺️ MAPPING SPÉCIAL POUR "divorce" → "situation_matrimoniale"
+            if (isset($data['divorce']) && $data['divorce'] === true) {
+                $data['situation_matrimoniale'] = 'Divorcé(e)';
+                unset($data['divorce']);
+            }
+
+            // 🗺️ MAPPING SPÉCIAL POUR "veuf" → "situation_matrimoniale"
+            if (isset($data['veuf']) && $data['veuf'] === true) {
+                $data['situation_matrimoniale'] = 'Veuf(ve)';
+                unset($data['veuf']);
+            }
+
+            // 🗺️ MAPPING SPÉCIAL POUR "proprietaire" → "situation_actuelle"
+            if (isset($data['proprietaire'])) {
+                if ($data['proprietaire'] === true) {
+                    $data['situation_actuelle'] = 'Propriétaire';
+                }
+                unset($data['proprietaire']);
+            }
+
+            // 🗺️ MAPPING SPÉCIAL POUR "locataire" → "situation_actuelle"
+            if (isset($data['locataire'])) {
+                if ($data['locataire'] === true) {
+                    $data['situation_actuelle'] = 'Locataire';
+                }
+                unset($data['locataire']);
+            }
+
             // 🔧 POST-PROCESSING SPÉCIAL - CORRECTION EMAIL INCOMPLET
             // Si GPT a raté l'extraction du @, on essaie de le récupérer depuis la transcription
             if (isset($data['email']) && !empty($data['email']) && !str_contains($data['email'], '@')) {
@@ -344,7 +1151,7 @@ class AnalysisService
             // Les champs non mentionnés ne seront pas envoyés au controller
 
             // 📅 Normalisation des dates - conversion au format ISO YYYY-MM-DD
-            $dateFields = ['datedenaissance', 'date_situation_matrimoniale', 'date_evenement_professionnel'];
+            $dateFields = ['date_naissance', 'date_situation_matrimoniale', 'date_evenement_professionnel'];
             foreach ($dateFields as $field) {
                 if (isset($data[$field]) && !empty($data[$field])) {
                     $data[$field] = $this->normalizeDateToISO($data[$field]);
@@ -367,33 +1174,153 @@ class AnalysisService
             }
 
             // 🔢 Normalisation des nombres
-            if (isset($data['revenusannuels'])) {
-                $data['revenusannuels'] = is_numeric($data['revenusannuels'])
-                    ? (float) $data['revenusannuels']
+            if (isset($data['revenus_annuels'])) {
+                $data['revenus_annuels'] = is_numeric($data['revenus_annuels'])
+                    ? (float) $data['revenus_annuels']
                     : null;
             }
-            if (isset($data['nombreenfants'])) {
-                $data['nombreenfants'] = is_numeric($data['nombreenfants'])
-                    ? (int) $data['nombreenfants']
+            if (isset($data['nombre_enfants'])) {
+                $data['nombre_enfants'] = is_numeric($data['nombre_enfants'])
+                    ? (int) $data['nombre_enfants']
                     : null;
             }
 
-            // ✅ Normalisation des booléens
-            $booleanFields = ['fumeur', 'activites_sportives', 'risques_professionnels', 'consentement_audio'];
-            foreach ($booleanFields as $field) {
-                if (isset($data[$field])) {
-                    $data[$field] = filter_var($data[$field], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            // 👶 Debug: vérifier si les enfants existent avant normalisation
+            Log::info("👶 [DEBUG ENFANTS] Avant normalisation", [
+                'isset_enfants' => isset($data['enfants']),
+                'is_array' => isset($data['enfants']) ? is_array($data['enfants']) : 'N/A',
+                'keys' => array_keys($data),
+            ]);
+
+            // 👶 Normalisation du tableau enfants
+            if (isset($data['enfants']) && is_array($data['enfants'])) {
+                Log::info("👶 [ENFANTS] Normalisation du tableau enfants", ['count' => count($data['enfants'])]);
+                $normalizedEnfants = [];
+                foreach ($data['enfants'] as $index => $enfant) {
+                    if (!is_array($enfant)) {
+                        Log::warning("👶 [ENFANTS] Enfant #{$index} ignoré (pas un tableau)");
+                        continue; // Ignorer les enfants non-objets
+                    }
+
+                    Log::info("👶 [ENFANTS] Normalisation enfant #{$index}", ['data' => $enfant]);
+                    $normalizedEnfant = [];
+
+                    // Normaliser chaque champ de l'enfant
+                    if (isset($enfant['nom']) && !empty($enfant['nom'])) {
+                        $normalizedEnfant['nom'] = trim($enfant['nom']);
+                    }
+
+                    if (isset($enfant['prenom']) && !empty($enfant['prenom'])) {
+                        $normalizedEnfant['prenom'] = trim($enfant['prenom']);
+                    }
+
+                    if (isset($enfant['date_naissance']) && !empty($enfant['date_naissance'])) {
+                        $normalizedDate = $this->normalizeDateToISO($enfant['date_naissance']);
+                        if ($normalizedDate) {
+                            $normalizedEnfant['date_naissance'] = $normalizedDate;
+                        }
+                    }
+
+                    if (isset($enfant['fiscalement_a_charge'])) {
+                        $normalized = $this->normalizeBoolean($enfant['fiscalement_a_charge']);
+                        if ($normalized !== null) {
+                            $normalizedEnfant['fiscalement_a_charge'] = $normalized;
+                        }
+                    }
+
+                    if (isset($enfant['garde_alternee'])) {
+                        $normalized = $this->normalizeBoolean($enfant['garde_alternee']);
+                        if ($normalized !== null) {
+                            $normalizedEnfant['garde_alternee'] = $normalized;
+                        }
+                    }
+
+                    // Ajouter l'enfant normalisé (même vide - pour garder l'index)
+                    $normalizedEnfants[] = $normalizedEnfant;
+                    Log::info("👶 [ENFANTS] Enfant #{$index} normalisé", ['normalized' => $normalizedEnfant]);
+                }
+
+                // Remplacer le tableau enfants par le tableau normalisé
+                if (!empty($normalizedEnfants)) {
+                    $data['enfants'] = $normalizedEnfants;
+                    // Déduire nombre_enfants si pas déjà défini
+                    if (!isset($data['nombre_enfants'])) {
+                        $data['nombre_enfants'] = count($normalizedEnfants);
+                    }
+                    Log::info("✅ [ENFANTS] Normalisation terminée", ['count' => count($normalizedEnfants)]);
+                } else {
+                    Log::warning("⚠️ [ENFANTS] Aucun enfant normalisé - suppression du champ");
+                    unset($data['enfants']);
                 }
             }
+
+            // ✅ Normalisation des booléens
+            $booleanFields = [
+                'fumeur',
+                'activites_sportives',
+                'risques_professionnels',
+                'consentement_audio',
+                'chef_entreprise',
+                'travailleur_independant',
+                'mandataire_social',
+            ];
+            foreach ($booleanFields as $field) {
+                if (array_key_exists($field, $data)) {
+                    $normalized = $this->normalizeBoolean($data[$field]);
+                    if ($normalized === null) {
+                        unset($data[$field]);
+                    } else {
+                        $data[$field] = $normalized;
+                    }
+                }
+            }
+
+            // 🛑 Gère explicitement les négations/affirmations orales (oui/non)
+            $this->applyBooleanNegationsFromTranscript($transcription, $data);
+
+            // 🔁 Sécurise les drapeaux entreprise grâce à la transcription brute
+            $this->hydrateEnterpriseFieldsFromTranscript($transcription, $data);
+
+            // 🏠 Déduit code postal / ville quand l'adresse contient déjà tout
+            $this->hydrateAddressComponents($data);
 
             // 🎯 Normalisation des besoins
             if (isset($data['besoins'])) {
                 // S'assurer que besoins est un tableau
                 if (is_string($data['besoins'])) {
-                    $data['besoins'] = [$data['besoins']];
+                    // Si c'est une chaîne JSON, la décoder
+                    $decoded = json_decode($data['besoins'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $data['besoins'] = $decoded;
+                    } else {
+                        // Sinon, mettre la chaîne dans un tableau
+                        $data['besoins'] = [$data['besoins']];
+                    }
                 } elseif (!is_array($data['besoins'])) {
                     $data['besoins'] = [];
                 }
+
+                // Nettoyer chaque besoin (supprimer espaces inutiles, normaliser)
+                $data['besoins'] = array_map(function($besoin) {
+                    if (is_string($besoin)) {
+                        // Si un besoin est lui-même une chaîne JSON, le décoder
+                        $decoded = json_decode($besoin, true);
+                        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                            return $decoded;
+                        }
+                        return trim($besoin);
+                    }
+                    return $besoin;
+                }, $data['besoins']);
+
+                // Aplatir le tableau si nécessaire (si on a des sous-tableaux)
+                $data['besoins'] = array_reduce($data['besoins'], function($carry, $item) {
+                    if (is_array($item)) {
+                        return array_merge($carry, $item);
+                    }
+                    $carry[] = $item;
+                    return $carry;
+                }, []);
             } else {
                 $data['besoins'] = null;
             }
@@ -545,6 +1472,332 @@ class AnalysisService
     }
 
     /**
+     * Normalise les entrées booléennes, y compris les réponses orales (oui/non).
+     */
+    private function normalizeBoolean(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value !== 0.0;
+        }
+
+        if (is_string($value)) {
+            $normalized = trim(mb_strtolower($value, 'UTF-8'));
+            $normalized = trim($normalized, " \t\n\r\0\x0B.,;:!?");
+
+            $truthy = ['true', '1', 'oui', 'yes', 'vrai', 'ok'];
+            $falsy = ['false', '0', 'non', 'no', 'faux'];
+
+            if (in_array($normalized, $truthy, true)) {
+                return true;
+            }
+
+            if (in_array($normalized, $falsy, true)) {
+                return false;
+            }
+
+            if (preg_match('/\boui\b/u', $normalized)) {
+                return true;
+            }
+
+            if (preg_match('/\bnon\b/u', $normalized)) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Analyse la transcription pour comprendre les affirmations/négations sur les champs booléens.
+     */
+    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void
+    {
+        $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
+
+        $fieldPatterns = [
+            'fumeur' => [
+                'negative' => [
+                    "/je\s+ne\s+suis\s+pas\s+fumeur/u",
+                    "/je\s+ne\s+suis\s+plus\s+fumeur/u",
+                    "/je\s+ne\s+fume\s+pas/u",
+                    "/je\s+ne\s+fume\s+plus/u",
+                    "/je\s+ne\s+fume\s+jamais/u",
+                    "/je\s+suis\s+non[-\s]?fumeur/u",
+                ],
+                'positive' => [
+                    "/je\s+suis\s+fumeur/u",
+                    "/je\s+fume\b/u",
+                ],
+            ],
+            'activites_sportives' => [
+                'negative' => [
+                    "/je\s+ne\s+fais\s+pas\s+de?\s+sport/u",
+                    "/je\s+ne\s+fais\s+plus\s+de?\s+sport/u",
+                    "/je\s+ne\s+pratique\s+pas\s+de?\s+sport/u",
+                    "/aucune?\s+activité\s+sportive/u",
+                ],
+                'positive' => [
+                    "/je\s+fais\s+du\s+sport/u",
+                    "/je\s+pratique\s+un\s+sport/u",
+                    "/je\s+fais\s+de\s+l['e]\s+sport/u",
+                ],
+            ],
+            'risques_professionnels' => [
+                'negative' => [
+                    "/je\s+n['e]\s+ai\s+pas\s+de?\s+risques?\s+professionnels/u",
+                    "/aucun\s+risque\s+professionnel/u",
+                    "/pas\s+de?\s+risques?\s+professionnels/u",
+                ],
+                'positive' => [
+                    "/j['e]\s+ai\s+des?\s+risques?\s+professionnels/u",
+                    "/je\s+suis\s+exposé\s+à\s+des?\s+risques?\s+professionnels/u",
+                ],
+            ],
+            'chef_entreprise' => [
+                'negative' => [
+                    "/je\s+(?:ne\s+)?suis\s+pas\s+(?:un\s+|une\s+)?chef\s+d['’\s]?entreprise/u",
+                    "/je\s+(?:ne\s+)?suis\s+plus\s+(?:un\s+|une\s+)?chef\s+d['’\s]?entreprise/u",
+                    "/on\s+(?:n['e]\s+)?est\s+pas\s+(?:chef\s+d['’\s]?entreprise)/u",
+                    "/on\s+(?:n['e]\s+)?est\s+plus\s+(?:chef\s+d['’\s]?entreprise)/u",
+                    "/pas\s+chef\s+d['’\s]?entreprise/u",
+                    "/plus\s+chef\s+d['’\s]?entreprise/u",
+                    "/ni\s+chef\s+d['’\s]?entreprise/u",
+                ],
+                'positive' => [
+                    "/\bchef\s+d['’\s]?entreprise/u",
+                    "/je\s+dirige\s+(?:ma|mon|une)\s+(?:entreprise|société)/u",
+                    "/je\s+gère\s+(?:ma|mon|une)\s+(?:propre\s+)?entreprise/u",
+                ],
+            ],
+            'travailleur_independant' => [
+                'negative' => [
+                    "/je\s+(?:ne\s+)?suis\s+pas\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/je\s+(?:ne\s+)?suis\s+plus\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/on\s+(?:n['e]\s+)?est\s+pas\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/on\s+(?:n['e]\s+)?est\s+plus\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/pas\s+ind[ée]pendant/u",
+                    "/plus\s+travailleur\s+ind[ée]pendant/u",
+                    "/ni\s+travailleur\s+ind[ée]pendant/u",
+                ],
+                'positive' => [
+                    "/\btravailleur\s+ind[ée]pendant/u",
+                    "/\bind[ée]pendant\b/u",
+                    "/je\s+travaille\s+(?:à|a)\s+mon\s+compte/u",
+                    "/\bfreelance\b/u",
+                    "/\bauto[-\s]?entrepreneur/u",
+                    "/\bmicro[-\s]?entrepreneur/u",
+                    "/profession\s+(?:libérale|liberale)/u",
+                ],
+            ],
+            'mandataire_social' => [
+                'negative' => [
+                    "/je\s+(?:ne\s+)?suis\s+pas\s+mandataire\s+social/u",
+                    "/je\s+(?:ne\s+)?suis\s+plus\s+mandataire\s+social/u",
+                    "/on\s+(?:n['e]\s+)?est\s+pas\s+mandataire\s+social/u",
+                    "/on\s+(?:n['e]\s+)?est\s+plus\s+mandataire\s+social/u",
+                    "/pas\s+mandataire\s+social/u",
+                    "/plus\s+mandataire\s+social/u",
+                    "/ni\s+mandataire\s+social/u",
+                ],
+                'positive' => [
+                    "/\bmandataire\s+social/u",
+                ],
+            ],
+        ];
+
+        foreach ($fieldPatterns as $field => $patterns) {
+            foreach ($patterns['negative'] as $regex) {
+                if (preg_match($regex, $text)) {
+                    $data[$field] = false;
+                    continue 2;
+                }
+            }
+
+            if (!empty($patterns['positive'])) {
+                foreach ($patterns['positive'] as $regex) {
+                    if (preg_match($regex, $text)) {
+                        if (!array_key_exists($field, $data) || $data[$field] === null) {
+                            $data[$field] = true;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Détecte les mentions vocales d'informations entreprise pour fiabiliser les drapeaux.
+     */
+    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void
+    {
+        $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
+
+        $patterns = [
+            'chef_entreprise' => [
+                'positive' => [
+                    "/\bchef\s+d['’\s]?entreprise/u",
+                    "/je\s+dirige\s+(?:ma|mon|une)\s+(?:entreprise|société)/u",
+                    "/je\s+gère\s+(?:ma|mon|une)\s+(?:propre\s+)?entreprise/u",
+                    "/(?:ma|mon)\s+(?:propre\s+)?entreprise/u",
+                ],
+                'negative' => [
+                    "/je\s+(?:ne\s+)?suis\s+pas\s+(?:un\s+|une\s+)?chef\s+d['’\s]?entreprise/u",
+                    "/je\s+(?:ne\s+)?suis\s+plus\s+(?:un\s+|une\s+)?chef\s+d['’\s]?entreprise/u",
+                    "/on\s+(?:n['e]\s+)?est\s+pas\s+(?:chef\s+d['’\s]?entreprise)/u",
+                    "/on\s+(?:n['e]\s+)?est\s+plus\s+(?:chef\s+d['’\s]?entreprise)/u",
+                    "/pas\s+chef\s+d['’\s]?entreprise/u",
+                    "/plus\s+chef\s+d['’\s]?entreprise/u",
+                    "/ni\s+chef\s+d['’\s]?entreprise/u",
+                ],
+            ],
+            'travailleur_independant' => [
+                'positive' => [
+                    "/\btravailleur\s+ind[ée]pendant/u",
+                    "/\bind[ée]pendant\b/u",
+                    "/je\s+travaille\s+(?:à|a)\s+mon\s+compte/u",
+                    "/\bfreelance\b/u",
+                    "/\bauto[-\s]?entrepreneur/u",
+                    "/\bmicro[-\s]?entrepreneur/u",
+                    "/profession\s+(?:libérale|liberale)/u",
+                ],
+                'negative' => [
+                    "/je\s+(?:ne\s+)?suis\s+pas\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/je\s+(?:ne\s+)?suis\s+plus\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/on\s+(?:n['e]\s+)?est\s+pas\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/on\s+(?:n['e]\s+)?est\s+plus\s+(?:travailleur\s+)?ind[ée]pendant/u",
+                    "/pas\s+ind[ée]pendant/u",
+                    "/plus\s+travailleur\s+ind[ée]pendant/u",
+                    "/ni\s+travailleur\s+ind[ée]pendant/u",
+                ],
+            ],
+            'mandataire_social' => [
+                'positive' => [
+                    "/\bmandataire\s+social/u",
+                ],
+                'negative' => [
+                    "/je\s+(?:ne\s+)?suis\s+pas\s+mandataire\s+social/u",
+                    "/je\s+(?:ne\s+)?suis\s+plus\s+mandataire\s+social/u",
+                    "/on\s+(?:n['e]\s+)?est\s+pas\s+mandataire\s+social/u",
+                    "/on\s+(?:n['e]\s+)?est\s+plus\s+mandataire\s+social/u",
+                    "/pas\s+mandataire\s+social/u",
+                    "/plus\s+mandataire\s+social/u",
+                    "/ni\s+mandataire\s+social/u",
+                ],
+            ],
+        ];
+
+        foreach ($patterns as $field => $regexes) {
+            // Tient compte des négations explicites EN PRIORITÉ
+            foreach ($regexes['negative'] as $negativeRegex) {
+                if (preg_match($negativeRegex, $text)) {
+                    Log::info("🔍 [ENTREPRISE] Pattern négatif trouvé pour $field", ['pattern' => $negativeRegex]);
+                    $data[$field] = false;
+                    continue 2; // Skip ce champ et passer au suivant
+                }
+            }
+
+            // Chercher les patterns positifs (TOUJOURS vérifier, même si GPT a déjà extrait false)
+            $matched = false;
+            foreach ($regexes['positive'] as $positiveRegex) {
+                if (preg_match($positiveRegex, $text)) {
+                    Log::info("✅ [ENTREPRISE] Pattern positif trouvé pour $field", ['pattern' => $positiveRegex]);
+                    $data[$field] = true;
+                    $matched = true;
+                    break; // Pattern trouvé, passer au champ suivant
+                }
+            }
+
+            if (!$matched) {
+                Log::info("❌ [ENTREPRISE] Aucun pattern trouvé pour $field");
+            }
+
+            // Si aucun pattern positif trouvé et que le champ n'existe pas encore, le laisser undefined
+            // (ne pas forcer à false, car l'absence d'information ≠ false)
+        }
+
+        Log::info('🔍 [ENTREPRISE] Résultat après analyse', [
+            'chef_entreprise' => $data['chef_entreprise'] ?? 'non défini',
+            'travailleur_independant' => $data['travailleur_independant'] ?? 'non défini',
+            'mandataire_social' => $data['mandataire_social'] ?? 'non défini',
+            'statut' => $data['statut'] ?? 'non défini',
+        ]);
+
+        if (empty($data['statut'])) {
+            $statutKeywords = [
+                'sarl' => 'SARL',
+                'sas' => 'SAS',
+                'sasu' => 'SASU',
+                'eurl' => 'EURL',
+                'sci' => 'SCI',
+                'ei' => 'EI',
+                'eirl' => 'EIRL',
+                'auto-entrepreneur' => 'Auto-entrepreneur',
+                'auto entrepreneur' => 'Auto-entrepreneur',
+                'micro-entreprise' => 'Micro-entreprise',
+                'micro entreprise' => 'Micro-entreprise',
+                'profession libérale' => 'Profession libérale',
+            ];
+
+            foreach ($statutKeywords as $needle => $label) {
+                $pattern = '/\b' . preg_quote($needle, '/') . '\b/u';
+                if (preg_match($pattern, $text)) {
+                    $data['statut'] = $label;
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Analyse l'adresse complète et isole code postal / ville si besoin.
+     */
+    private function hydrateAddressComponents(array &$data): void
+    {
+        if (empty($data['adresse'])) {
+            return;
+        }
+
+        $address = trim($data['adresse']);
+        if ($address === '') {
+            return;
+        }
+
+        $postalMatches = [];
+        if (preg_match_all('/\b(\d{5})\b(?:\s+([A-Za-zÀ-ÖØ-öø-ÿ\'\-\s]+))?/u', $address, $postalMatches, PREG_SET_ORDER)) {
+            $match = end($postalMatches);
+
+            if (!empty($match[1]) && (empty($data['code_postal']) || strlen((string) $data['code_postal']) < 5)) {
+                $normalizedPostal = $this->normalizePostalCode($match[1]);
+                if ($normalizedPostal) {
+                    $data['code_postal'] = $normalizedPostal;
+                }
+            }
+
+            if (empty($data['ville']) && !empty($match[2])) {
+                $cityCandidate = trim(preg_replace('/[^A-Za-zÀ-ÖØ-öø-ÿ\'\-\s]/u', '', $match[2]));
+                if ($cityCandidate !== '') {
+                    $data['ville'] = $cityCandidate;
+                }
+            }
+        }
+
+        if (empty($data['ville'])) {
+            $segments = preg_split('/[,;\\n]/u', $address);
+            $lastSegment = trim(end($segments));
+            $lastSegment = preg_replace('/^\d{5}\s*/', '', $lastSegment);
+
+            if ($lastSegment !== '' && !preg_match('/\d{3,}/', $lastSegment)) {
+                $data['ville'] = $lastSegment;
+            }
+        }
+    }
+
+    /**
      * Tente de corriger un email incomplet en analysant la transcription originale
      *
      * @param string $transcription Transcription vocale complète
@@ -632,6 +1885,99 @@ class AnalysisService
         } catch (\Throwable $e) {
             Log::error('Erreur lors de la correction d\'email', ['error' => $e->getMessage()]);
             return null;
+        }
+    }
+
+    /**
+     * Sauvegarde les données du questionnaire de risque si présentes dans les données extraites
+     *
+     * @param int $clientId ID du client
+     * @param array $data Données extraites contenant potentiellement questionnaire_risque
+     * @return void
+     */
+    public function saveQuestionnaireRisque(int $clientId, array $data): void
+    {
+        try {
+            // Vérifier si des données de questionnaire de risque sont présentes
+            if (!isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {
+                Log::info('Aucune donnée de questionnaire de risque à sauvegarder', ['client_id' => $clientId]);
+                return;
+            }
+
+            $questionnaireData = $data['questionnaire_risque'];
+
+            // Vérifier qu'il y a au moins des données financières ou de connaissances
+            if (empty($questionnaireData['financier']) && empty($questionnaireData['connaissances'])) {
+                Log::info('Données de questionnaire vides, abandon', ['client_id' => $clientId]);
+                return;
+            }
+
+            Log::info('💾 Sauvegarde du questionnaire de risque', [
+                'client_id' => $clientId,
+                'has_financier' => !empty($questionnaireData['financier']),
+                'has_connaissances' => !empty($questionnaireData['connaissances'])
+            ]);
+
+            // Créer ou récupérer le questionnaire principal
+            $questionnaire = \App\Models\QuestionnaireRisque::firstOrCreate(
+                ['client_id' => $clientId],
+                [
+                    'score_global' => 0,
+                    'profil_calcule' => 'Prudent',
+                    'recommandation' => '',
+                ]
+            );
+
+            // Sauvegarder les données financières/comportementales si présentes
+            if (!empty($questionnaireData['financier']) && is_array($questionnaireData['financier'])) {
+                $financierData = array_filter($questionnaireData['financier'], function($value) {
+                    return !is_null($value) && $value !== '';
+                });
+
+                if (!empty($financierData)) {
+                    $questionnaire->financier()->updateOrCreate(
+                        ['questionnaire_risque_id' => $questionnaire->id],
+                        $financierData
+                    );
+                    Log::info('✅ Données financières sauvegardées', ['data' => $financierData]);
+                }
+            }
+
+            // Sauvegarder les connaissances si présentes
+            if (!empty($questionnaireData['connaissances']) && is_array($questionnaireData['connaissances'])) {
+                $connaissancesData = array_filter($questionnaireData['connaissances'], function($value) {
+                    return !is_null($value) && $value !== '';
+                });
+
+                if (!empty($connaissancesData)) {
+                    $questionnaire->connaissances()->updateOrCreate(
+                        ['questionnaire_risque_id' => $questionnaire->id],
+                        $connaissancesData
+                    );
+                    Log::info('✅ Connaissances sauvegardées', ['data' => $connaissancesData]);
+                }
+            }
+
+            // Recalculer le score avec le ScoringService
+            $scoringService = app(\App\Services\ScoringService::class);
+            $updatedQuestionnaire = $scoringService->scorerEtSauvegarder($questionnaire, [
+                'financier' => $questionnaireData['financier'] ?? [],
+                'connaissances' => $questionnaireData['connaissances'] ?? [],
+                'quiz' => [], // Pas de quiz rempli par vocal pour l'instant
+            ]);
+
+            Log::info('✅ Questionnaire de risque mis à jour', [
+                'client_id' => $clientId,
+                'score' => $updatedQuestionnaire->score_global,
+                'profil' => $updatedQuestionnaire->profil_calcule
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('❌ Erreur lors de la sauvegarde du questionnaire de risque', [
+                'client_id' => $clientId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 }
