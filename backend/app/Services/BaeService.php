@@ -2,24 +2,30 @@
 
 namespace App\Services;
 
-use App\Models\BaeEpargne;
-use App\Models\BaePrevoyance;
-use App\Models\BaeRetraite;
 use App\Models\Client;
 use Illuminate\Support\Facades\Log;
 
 class BaeService
 {
     /**
-     * Synchronise les données BAE (Prévoyance, Retraite, Épargne) pour un client
+     * Synchronise les données BAE (Prévoyance, Retraite, Épargne, Santé) pour un client
      *
-     * @param Client $client
-     * @param array $data Données extraites par GPT contenant bae_prevoyance, bae_retraite, bae_epargne
-     * @return void
+     * @param  array  $data  Données extraites par GPT contenant bae_prevoyance, bae_retraite, bae_epargne, sante_souhait
      */
     public function syncBaeData(Client $client, array $data): void
     {
         Log::info("📊 [BAE] Synchronisation des données BAE pour le client #{$client->id}");
+        Log::info("🔍 [BAE DEBUG] Clés reçues dans \$data", ['keys' => array_keys($data)]);
+
+        // 0️⃣ Synchroniser Santé Souhait
+        if (isset($data['sante_souhait']) && is_array($data['sante_souhait'])) {
+            $this->syncSanteSouhait($client, $data['sante_souhait']);
+        } else {
+            Log::warning("⚠️ [BAE DEBUG] sante_souhait non trouvé ou pas un tableau", [
+                'isset' => isset($data['sante_souhait']),
+                'is_array' => isset($data['sante_souhait']) ? is_array($data['sante_souhait']) : 'N/A',
+            ]);
+        }
 
         // 1️⃣ Synchroniser BAE Prévoyance
         if (isset($data['bae_prevoyance']) && is_array($data['bae_prevoyance'])) {
@@ -42,13 +48,11 @@ class BaeService
     /**
      * Supprime les entrées BAE correspondant aux besoins retirés
      *
-     * @param Client $client
-     * @param array $removedBesoins Liste des besoins retirés (ex: ["retraite", "prévoyance"])
-     * @return void
+     * @param  array  $removedBesoins  Liste des besoins retirés (ex: ["retraite", "prévoyance"])
      */
     public function removeBaeForBesoins(Client $client, array $removedBesoins): void
     {
-        Log::info("🗑️ [BAE] Suppression des BAE pour les besoins retirés", ['besoins' => $removedBesoins]);
+        Log::info('🗑️ [BAE] Suppression des BAE pour les besoins retirés', ['besoins' => $removedBesoins]);
 
         foreach ($removedBesoins as $besoin) {
             $besoinNormalized = $this->normalizeBesoinName($besoin);
@@ -77,7 +81,7 @@ class BaeService
             }
         }
 
-        Log::info("✅ [BAE] Suppression terminée");
+        Log::info('✅ [BAE] Suppression terminée');
     }
 
     /**
@@ -88,6 +92,7 @@ class BaeService
         $besoin = mb_strtolower($besoin, 'UTF-8');
         $besoin = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $besoin);
         $besoin = preg_replace('/[^a-z0-9]+/', '', $besoin);
+
         return $besoin;
     }
 
@@ -104,18 +109,18 @@ class BaeService
             $prevoyanceData = [];
         }
 
-        Log::info("🛡️ [BAE PRÉVOYANCE] Synchronisation", ['data' => $prevoyanceData]);
+        Log::info('🛡️ [BAE PRÉVOYANCE] Synchronisation', ['data' => $prevoyanceData]);
 
         // Récupérer ou créer l'entrée
         $prevoyance = $client->baePrevoyance()->first();
 
         if ($prevoyance) {
             // Mise à jour : on merge les nouvelles données avec les anciennes
-            if (!empty($prevoyanceData)) {
+            if (! empty($prevoyanceData)) {
                 $prevoyance->update($prevoyanceData);
                 Log::info("✅ [BAE PRÉVOYANCE] Mise à jour de l'entrée existante #{$prevoyance->id}");
             } else {
-                Log::info("ℹ️ [BAE PRÉVOYANCE] Aucune nouvelle donnée à mettre à jour");
+                Log::info('ℹ️ [BAE PRÉVOYANCE] Aucune nouvelle donnée à mettre à jour');
             }
         } else {
             // Création
@@ -137,18 +142,18 @@ class BaeService
             $retraiteData = [];
         }
 
-        Log::info("🏖️ [BAE RETRAITE] Synchronisation", ['data' => $retraiteData]);
+        Log::info('🏖️ [BAE RETRAITE] Synchronisation', ['data' => $retraiteData]);
 
         // Récupérer ou créer l'entrée
         $retraite = $client->baeRetraite()->first();
 
         if ($retraite) {
             // Mise à jour : on merge les nouvelles données avec les anciennes
-            if (!empty($retraiteData)) {
+            if (! empty($retraiteData)) {
                 $retraite->update($retraiteData);
                 Log::info("✅ [BAE RETRAITE] Mise à jour de l'entrée existante #{$retraite->id}");
             } else {
-                Log::info("ℹ️ [BAE RETRAITE] Aucune nouvelle donnée à mettre à jour");
+                Log::info('ℹ️ [BAE RETRAITE] Aucune nouvelle donnée à mettre à jour');
             }
         } else {
             // Création
@@ -170,18 +175,18 @@ class BaeService
             $epargneData = [];
         }
 
-        Log::info("💰 [BAE ÉPARGNE] Synchronisation", ['data' => $epargneData]);
+        Log::info('💰 [BAE ÉPARGNE] Synchronisation', ['data' => $epargneData]);
 
         // Récupérer ou créer l'entrée
         $epargne = $client->baeEpargne()->first();
 
         if ($epargne) {
             // Mise à jour : on merge les nouvelles données avec les anciennes
-            if (!empty($epargneData)) {
+            if (! empty($epargneData)) {
                 $epargne->update($epargneData);
                 Log::info("✅ [BAE ÉPARGNE] Mise à jour de l'entrée existante #{$epargne->id}");
             } else {
-                Log::info("ℹ️ [BAE ÉPARGNE] Aucune nouvelle donnée à mettre à jour");
+                Log::info('ℹ️ [BAE ÉPARGNE] Aucune nouvelle donnée à mettre à jour');
             }
         } else {
             // Création
@@ -191,16 +196,46 @@ class BaeService
     }
 
     /**
+     * Synchronise les données de Santé Souhait
+     */
+    private function syncSanteSouhait(Client $client, array $santeData): void
+    {
+        // Filtrer les valeurs null/vides pour ne pas écraser les données existantes
+        $santeData = $this->filterEmptyValues($santeData);
+
+        // Si après filtrage il ne reste rien, créer quand même une entrée vide
+        if (empty($santeData)) {
+            $santeData = [];
+        }
+
+        Log::info('❤️ [SANTÉ SOUHAIT] Synchronisation', ['data' => $santeData]);
+
+        // Récupérer ou créer l'entrée
+        $sante = $client->santeSouhait()->first();
+
+        if ($sante) {
+            // Mise à jour : on merge les nouvelles données avec les anciennes
+            if (! empty($santeData)) {
+                $sante->update($santeData);
+                Log::info("✅ [SANTÉ SOUHAIT] Mise à jour de l'entrée existante #{$sante->id}");
+            } else {
+                Log::info('ℹ️ [SANTÉ SOUHAIT] Aucune nouvelle donnée à mettre à jour');
+            }
+        } else {
+            // Création
+            $sante = $client->santeSouhait()->create($santeData);
+            Log::info("✅ [SANTÉ SOUHAIT] Nouvelle entrée créée #{$sante->id}");
+        }
+    }
+
+    /**
      * Filtre les valeurs vides (null, "", []) pour éviter d'écraser les données existantes
-     *
-     * @param array $data
-     * @return array
      */
     private function filterEmptyValues(array $data): array
     {
         return array_filter($data, function ($value) {
             // Garder les valeurs false et 0 (valeurs valides)
-            if ($value === false || $value === 0 || $value === "0") {
+            if ($value === false || $value === 0 || $value === '0') {
                 return true;
             }
 

@@ -383,25 +383,84 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
         </InfoCard>
       )}
 
+      {/* Carte Santé (si applicable) */}
+      {client.sante_souhait && (
+        <InfoCard title="Santé" icon={<HeartIcon size={20} />} color="pink">
+          <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+            {client.sante_souhait.contrat_en_place && (
+              <InfoItem label="Contrat en place" value={client.sante_souhait.contrat_en_place} />
+            )}
+            {client.sante_souhait.budget_mensuel_maximum && (
+              <InfoItem
+                label="Budget mensuel maximum"
+                value={formatCurrency(client.sante_souhait.budget_mensuel_maximum)}
+                icon={<DollarSignIcon size={14} />}
+              />
+            )}
+            {client.sante_souhait.niveau_hospitalisation !== null && client.sante_souhait.niveau_hospitalisation !== undefined && (
+              <InfoItem
+                label="Niveau hospitalisation"
+                value={`${client.sante_souhait.niveau_hospitalisation}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_chambre_particuliere !== null && client.sante_souhait.niveau_chambre_particuliere !== undefined && (
+              <InfoItem
+                label="Niveau chambre particulière"
+                value={`${client.sante_souhait.niveau_chambre_particuliere}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_medecin_generaliste !== null && client.sante_souhait.niveau_medecin_generaliste !== undefined && (
+              <InfoItem
+                label="Niveau médecin généraliste"
+                value={`${client.sante_souhait.niveau_medecin_generaliste}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_analyses_imagerie !== null && client.sante_souhait.niveau_analyses_imagerie !== undefined && (
+              <InfoItem
+                label="Niveau analyses/imagerie"
+                value={`${client.sante_souhait.niveau_analyses_imagerie}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_auxiliaires_medicaux !== null && client.sante_souhait.niveau_auxiliaires_medicaux !== undefined && (
+              <InfoItem
+                label="Niveau auxiliaires médicaux"
+                value={`${client.sante_souhait.niveau_auxiliaires_medicaux}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_pharmacie !== null && client.sante_souhait.niveau_pharmacie !== undefined && (
+              <InfoItem
+                label="Niveau pharmacie"
+                value={`${client.sante_souhait.niveau_pharmacie}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_dentaire !== null && client.sante_souhait.niveau_dentaire !== undefined && (
+              <InfoItem
+                label="Niveau dentaire"
+                value={`${client.sante_souhait.niveau_dentaire}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_optique !== null && client.sante_souhait.niveau_optique !== undefined && (
+              <InfoItem
+                label="Niveau optique"
+                value={`${client.sante_souhait.niveau_optique}/10`}
+              />
+            )}
+            {client.sante_souhait.niveau_protheses_auditives !== null && client.sante_souhait.niveau_protheses_auditives !== undefined && (
+              <InfoItem
+                label="Niveau prothèses auditives"
+                value={`${client.sante_souhait.niveau_protheses_auditives}/10`}
+              />
+            )}
+          </dl>
+        </InfoCard>
+      )}
+
       {/* Carte Prévoyance (si applicable) */}
       {client.bae_prevoyance && (
         <InfoCard title="Prévoyance" icon={<ShieldIcon size={20} />} color="orange">
           <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-            {client.bae_prevoyance.contrat_en_place !== undefined && (
-              <InfoItem
-                label="Contrat en place"
-                value={
-                  client.bae_prevoyance.contrat_en_place ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Oui
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Non
-                    </span>
-                  )
-                }
-              />
+            {client.bae_prevoyance.contrat_en_place && (
+              <InfoItem label="Contrat en place" value={client.bae_prevoyance.contrat_en_place} />
             )}
             {client.bae_prevoyance.date_effet && (
               <InfoItem
@@ -412,13 +471,16 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
             )}
             {client.bae_prevoyance.cotisations && (
               <InfoItem
-                label="Cotisations"
+                label="Cotisations mensuelles"
                 value={formatCurrency(client.bae_prevoyance.cotisations)}
                 icon={<DollarSignIcon size={14} />}
               />
             )}
-            {client.bae_prevoyance.couverture_invalidite && (
-              <InfoItem label="Couverture invalidité" value={client.bae_prevoyance.couverture_invalidite} />
+            {client.bae_prevoyance.souhaite_couverture_invalidite !== null && client.bae_prevoyance.souhaite_couverture_invalidite !== undefined && (
+              <InfoItem
+                label="Couverture invalidité"
+                value={client.bae_prevoyance.souhaite_couverture_invalidite ? "Oui" : "Non"}
+              />
             )}
             {client.bae_prevoyance.revenu_a_garantir && (
               <InfoItem
@@ -427,17 +489,49 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 icon={<DollarSignIcon size={14} />}
               />
             )}
-            {client.bae_prevoyance.charges_professionnelles && (
+            {client.bae_prevoyance.souhaite_couvrir_charges_professionnelles !== null && client.bae_prevoyance.souhaite_couvrir_charges_professionnelles !== undefined && (
               <InfoItem
-                label="Charges professionnelles"
-                value={formatCurrency(client.bae_prevoyance.charges_professionnelles)}
+                label="Couvrir charges pro"
+                value={client.bae_prevoyance.souhaite_couvrir_charges_professionnelles ? "Oui" : "Non"}
+              />
+            )}
+            {client.bae_prevoyance.montant_annuel_charges_professionnelles && (
+              <InfoItem
+                label="Montant charges pro (annuel)"
+                value={formatCurrency(client.bae_prevoyance.montant_annuel_charges_professionnelles)}
                 icon={<DollarSignIcon size={14} />}
               />
             )}
-            {client.bae_prevoyance.capital_deces && (
+            {client.bae_prevoyance.garantir_totalite_charges_professionnelles !== null && client.bae_prevoyance.garantir_totalite_charges_professionnelles !== undefined && (
+              <InfoItem
+                label="Garantir totalité charges"
+                value={client.bae_prevoyance.garantir_totalite_charges_professionnelles ? "Oui" : "Non"}
+              />
+            )}
+            {client.bae_prevoyance.montant_charges_professionnelles_a_garantir && (
+              <InfoItem
+                label="Montant charges à garantir"
+                value={formatCurrency(client.bae_prevoyance.montant_charges_professionnelles_a_garantir)}
+                icon={<DollarSignIcon size={14} />}
+              />
+            )}
+            {client.bae_prevoyance.duree_indemnisation_souhaitee && (
+              <InfoItem
+                label="Durée d'indemnisation"
+                value={client.bae_prevoyance.duree_indemnisation_souhaitee}
+              />
+            )}
+            {client.bae_prevoyance.capital_deces_souhaite && (
               <InfoItem
                 label="Capital décès"
-                value={formatCurrency(client.bae_prevoyance.capital_deces)}
+                value={formatCurrency(client.bae_prevoyance.capital_deces_souhaite)}
+                icon={<DollarSignIcon size={14} />}
+              />
+            )}
+            {client.bae_prevoyance.garanties_obseques && (
+              <InfoItem
+                label="Garanties obsèques"
+                value={formatCurrency(client.bae_prevoyance.garanties_obseques)}
                 icon={<DollarSignIcon size={14} />}
               />
             )}
@@ -455,6 +549,9 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 icon={<DollarSignIcon size={14} />}
               />
             )}
+            {client.bae_prevoyance.payeur && (
+              <InfoItem label="Payeur" value={client.bae_prevoyance.payeur} />
+            )}
           </dl>
         </InfoCard>
       )}
@@ -470,10 +567,10 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 icon={<DollarSignIcon size={14} />}
               />
             )}
-            {client.bae_retraite.revenus_foyer && (
+            {client.bae_retraite.revenus_annuels_foyer && (
               <InfoItem
                 label="Revenus foyer"
-                value={formatCurrency(client.bae_retraite.revenus_foyer)}
+                value={formatCurrency(client.bae_retraite.revenus_annuels_foyer)}
                 icon={<DollarSignIcon size={14} />}
               />
             )}
@@ -484,16 +581,30 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 icon={<DollarSignIcon size={14} />}
               />
             )}
-            {client.bae_retraite.parts_fiscales && (
-              <InfoItem label="Parts fiscales" value={client.bae_retraite.parts_fiscales} />
+            {client.bae_retraite.nombre_parts_fiscales && (
+              <InfoItem label="Parts fiscales" value={client.bae_retraite.nombre_parts_fiscales} />
             )}
-            {client.bae_retraite.TMI && (
-              <InfoItem label="TMI" value={`${client.bae_retraite.TMI}%`} />
+            {client.bae_retraite.tmi && (
+              <InfoItem label="TMI" value={client.bae_retraite.tmi} />
+            )}
+            {client.bae_retraite.impot_paye_n_1 && (
+              <InfoItem
+                label="Impôt payé N-1"
+                value={formatCurrency(client.bae_retraite.impot_paye_n_1)}
+                icon={<DollarSignIcon size={14} />}
+              />
             )}
             {client.bae_retraite.age_depart_retraite && (
               <InfoItem
                 label="Âge départ retraite"
                 value={`${client.bae_retraite.age_depart_retraite} ans`}
+                icon={<CalendarIcon size={14} />}
+              />
+            )}
+            {client.bae_retraite.age_depart_retraite_conjoint && (
+              <InfoItem
+                label="Âge départ retraite conjoint"
+                value={`${client.bae_retraite.age_depart_retraite_conjoint} ans`}
                 icon={<CalendarIcon size={14} />}
               />
             )}
@@ -503,21 +614,23 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 value={`${client.bae_retraite.pourcentage_revenu_a_maintenir}%`}
               />
             )}
-            {client.bae_retraite.contrat_en_place !== undefined && (
+            {client.bae_retraite.contrat_en_place && (
+              <InfoItem label="Contrat en place" value={client.bae_retraite.contrat_en_place} />
+            )}
+            {client.bae_retraite.bilan_retraite_disponible !== null && client.bae_retraite.bilan_retraite_disponible !== undefined && (
               <InfoItem
-                label="Contrat en place"
-                value={
-                  client.bae_retraite.contrat_en_place ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Oui
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      Non
-                    </span>
-                  )
-                }
+                label="Bilan retraite disponible"
+                value={client.bae_retraite.bilan_retraite_disponible ? "Oui" : "Non"}
               />
+            )}
+            {client.bae_retraite.complementaire_retraite_mise_en_place !== null && client.bae_retraite.complementaire_retraite_mise_en_place !== undefined && (
+              <InfoItem
+                label="Complémentaire retraite"
+                value={client.bae_retraite.complementaire_retraite_mise_en_place ? "Oui" : "Non"}
+              />
+            )}
+            {client.bae_retraite.designation_etablissement && (
+              <InfoItem label="Établissement" value={client.bae_retraite.designation_etablissement} />
             )}
             {client.bae_retraite.cotisations_annuelles && (
               <InfoItem
@@ -525,6 +638,9 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 value={formatCurrency(client.bae_retraite.cotisations_annuelles)}
                 icon={<DollarSignIcon size={14} />}
               />
+            )}
+            {client.bae_retraite.titulaire && (
+              <InfoItem label="Titulaire" value={client.bae_retraite.titulaire} />
             )}
           </dl>
         </InfoCard>
@@ -534,153 +650,436 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
       {client.bae_epargne && (
         <InfoCard title="Épargne" icon={<DollarSignIcon size={20} />} color="green">
           <div className="space-y-6">
+            {/* Informations générales */}
             <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-              {client.bae_epargne.epargne_disponible && (
+              {client.bae_epargne.epargne_disponible !== null && client.bae_epargne.epargne_disponible !== undefined && (
                 <InfoItem
                   label="Épargne disponible"
-                  value={formatCurrency(client.bae_epargne.epargne_disponible)}
+                  value={client.bae_epargne.epargne_disponible ? "Oui" : "Non"}
+                />
+              )}
+              {client.bae_epargne.montant_epargne_disponible && (
+                <InfoItem
+                  label="Montant épargne"
+                  value={formatCurrency(client.bae_epargne.montant_epargne_disponible)}
                   icon={<DollarSignIcon size={14} />}
                 />
               )}
-              {client.bae_epargne.capacite_epargne && (
+              {client.bae_epargne.donation_realisee !== null && client.bae_epargne.donation_realisee !== undefined && (
+                <InfoItem
+                  label="Donation réalisée"
+                  value={client.bae_epargne.donation_realisee ? "Oui" : "Non"}
+                />
+              )}
+              {client.bae_epargne.donation_forme && (
+                <InfoItem label="Forme donation" value={client.bae_epargne.donation_forme} />
+              )}
+              {client.bae_epargne.donation_date && (
+                <InfoItem
+                  label="Date donation"
+                  value={formatDate(client.bae_epargne.donation_date)}
+                  icon={<CalendarIcon size={14} />}
+                />
+              )}
+              {client.bae_epargne.donation_montant && (
+                <InfoItem
+                  label="Montant donation"
+                  value={formatCurrency(client.bae_epargne.donation_montant)}
+                  icon={<DollarSignIcon size={14} />}
+                />
+              )}
+              {client.bae_epargne.donation_beneficiaires && (
+                <InfoItem label="Bénéficiaires donation" value={client.bae_epargne.donation_beneficiaires} />
+              )}
+              {client.bae_epargne.capacite_epargne_estimee && (
                 <InfoItem
                   label="Capacité d'épargne"
-                  value={formatCurrency(client.bae_epargne.capacite_epargne)}
-                  icon={<DollarSignIcon size={14} />}
-                />
-              )}
-              {client.bae_epargne.charges && (
-                <InfoItem
-                  label="Charges"
-                  value={formatCurrency(client.bae_epargne.charges)}
-                  icon={<DollarSignIcon size={14} />}
-                />
-              )}
-              {client.bae_epargne.donations && (
-                <InfoItem
-                  label="Donations"
-                  value={formatCurrency(client.bae_epargne.donations)}
+                  value={formatCurrency(client.bae_epargne.capacite_epargne_estimee)}
                   icon={<DollarSignIcon size={14} />}
                 />
               )}
             </dl>
 
             {/* Actifs financiers */}
-            {client.bae_epargne.actifs_financiers && client.bae_epargne.actifs_financiers.length > 0 && (
+            {(client.bae_epargne.actifs_financiers_pourcentage || client.bae_epargne.actifs_financiers_total || client.bae_epargne.actifs_financiers_details) && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
                   <TrendingUpIcon size={16} />
                   <span>Actifs Financiers</span>
                 </h4>
-                <div className="space-y-3">
-                  {client.bae_epargne.actifs_financiers.map((actif: any, index: number) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-emerald-50 rounded-lg border border-emerald-200"
-                    >
-                      <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                        {actif.type && (
-                          <div>
-                            <dt className="text-gray-500">Type</dt>
-                            <dd className="font-medium text-gray-900">{actif.type}</dd>
-                          </div>
-                        )}
-                        {actif.montant && (
-                          <div>
-                            <dt className="text-gray-500">Montant</dt>
-                            <dd className="font-medium text-gray-900">{formatCurrency(actif.montant)}</dd>
-                          </div>
-                        )}
-                        {actif.details && (
-                          <div className="col-span-full">
-                            <dt className="text-gray-500">Détails</dt>
-                            <dd className="font-medium text-gray-900">{actif.details}</dd>
-                          </div>
-                        )}
-                      </dl>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                  {client.bae_epargne.actifs_financiers_pourcentage && (
+                    <InfoItem
+                      label="Pourcentage"
+                      value={`${client.bae_epargne.actifs_financiers_pourcentage}%`}
+                    />
+                  )}
+                  {client.bae_epargne.actifs_financiers_total && (
+                    <InfoItem
+                      label="Total"
+                      value={formatCurrency(client.bae_epargne.actifs_financiers_total)}
+                      icon={<DollarSignIcon size={14} />}
+                    />
+                  )}
+                  {client.bae_epargne.actifs_financiers_details && (
+                    <div className="col-span-full">
+                      <InfoItem
+                        label="Détails"
+                        value={typeof client.bae_epargne.actifs_financiers_details === 'string'
+                          ? client.bae_epargne.actifs_financiers_details
+                          : JSON.stringify(client.bae_epargne.actifs_financiers_details)}
+                      />
                     </div>
-                  ))}
-                </div>
+                  )}
+                </dl>
               </div>
             )}
 
             {/* Actifs immobiliers */}
-            {client.bae_epargne.actifs_immo && client.bae_epargne.actifs_immo.length > 0 && (
+            {(client.bae_epargne.actifs_immo_pourcentage || client.bae_epargne.actifs_immo_total || client.bae_epargne.actifs_immo_details) && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
                   <BuildingIcon size={16} />
                   <span>Actifs Immobiliers</span>
                 </h4>
-                <div className="space-y-3">
-                  {client.bae_epargne.actifs_immo.map((actif: any, index: number) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-emerald-50 rounded-lg border border-emerald-200"
-                    >
-                      <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                        {actif.type && (
-                          <div>
-                            <dt className="text-gray-500">Type</dt>
-                            <dd className="font-medium text-gray-900">{actif.type}</dd>
-                          </div>
-                        )}
-                        {actif.valeur && (
-                          <div>
-                            <dt className="text-gray-500">Valeur</dt>
-                            <dd className="font-medium text-gray-900">{formatCurrency(actif.valeur)}</dd>
-                          </div>
-                        )}
-                        {actif.details && (
-                          <div className="col-span-full">
-                            <dt className="text-gray-500">Détails</dt>
-                            <dd className="font-medium text-gray-900">{actif.details}</dd>
-                          </div>
-                        )}
-                      </dl>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                  {client.bae_epargne.actifs_immo_pourcentage && (
+                    <InfoItem
+                      label="Pourcentage"
+                      value={`${client.bae_epargne.actifs_immo_pourcentage}%`}
+                    />
+                  )}
+                  {client.bae_epargne.actifs_immo_total && (
+                    <InfoItem
+                      label="Total"
+                      value={formatCurrency(client.bae_epargne.actifs_immo_total)}
+                      icon={<DollarSignIcon size={14} />}
+                    />
+                  )}
+                  {client.bae_epargne.actifs_immo_details && (
+                    <div className="col-span-full">
+                      <InfoItem
+                        label="Détails"
+                        value={typeof client.bae_epargne.actifs_immo_details === 'string'
+                          ? client.bae_epargne.actifs_immo_details
+                          : JSON.stringify(client.bae_epargne.actifs_immo_details)}
+                      />
                     </div>
-                  ))}
-                </div>
+                  )}
+                </dl>
+              </div>
+            )}
+
+            {/* Autres actifs */}
+            {(client.bae_epargne.actifs_autres_pourcentage || client.bae_epargne.actifs_autres_total || client.bae_epargne.actifs_autres_details) && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                  <InfoIcon size={16} />
+                  <span>Autres Actifs</span>
+                </h4>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                  {client.bae_epargne.actifs_autres_pourcentage && (
+                    <InfoItem
+                      label="Pourcentage"
+                      value={`${client.bae_epargne.actifs_autres_pourcentage}%`}
+                    />
+                  )}
+                  {client.bae_epargne.actifs_autres_total && (
+                    <InfoItem
+                      label="Total"
+                      value={formatCurrency(client.bae_epargne.actifs_autres_total)}
+                      icon={<DollarSignIcon size={14} />}
+                    />
+                  )}
+                  {client.bae_epargne.actifs_autres_details && (
+                    <div className="col-span-full">
+                      <InfoItem
+                        label="Détails"
+                        value={typeof client.bae_epargne.actifs_autres_details === 'string'
+                          ? client.bae_epargne.actifs_autres_details
+                          : JSON.stringify(client.bae_epargne.actifs_autres_details)}
+                      />
+                    </div>
+                  )}
+                </dl>
               </div>
             )}
 
             {/* Passifs */}
-            {client.bae_epargne.passifs && client.bae_epargne.passifs.length > 0 && (
+            {(client.bae_epargne.passifs_total_emprunts || client.bae_epargne.passifs_details) && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
                   <InfoIcon size={16} />
                   <span>Passifs</span>
                 </h4>
-                <div className="space-y-3">
-                  {client.bae_epargne.passifs.map((passif: any, index: number) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-emerald-50 rounded-lg border border-emerald-200"
-                    >
-                      <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                        {passif.type && (
-                          <div>
-                            <dt className="text-gray-500">Type</dt>
-                            <dd className="font-medium text-gray-900">{passif.type}</dd>
-                          </div>
-                        )}
-                        {passif.montant && (
-                          <div>
-                            <dt className="text-gray-500">Montant</dt>
-                            <dd className="font-medium text-gray-900">{formatCurrency(passif.montant)}</dd>
-                          </div>
-                        )}
-                        {passif.details && (
-                          <div className="col-span-full">
-                            <dt className="text-gray-500">Détails</dt>
-                            <dd className="font-medium text-gray-900">{passif.details}</dd>
-                          </div>
-                        )}
-                      </dl>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                  {client.bae_epargne.passifs_total_emprunts && (
+                    <InfoItem
+                      label="Total emprunts"
+                      value={formatCurrency(client.bae_epargne.passifs_total_emprunts)}
+                      icon={<DollarSignIcon size={14} />}
+                    />
+                  )}
+                  {client.bae_epargne.passifs_details && (
+                    <div className="col-span-full">
+                      <InfoItem
+                        label="Détails"
+                        value={typeof client.bae_epargne.passifs_details === 'string'
+                          ? client.bae_epargne.passifs_details
+                          : JSON.stringify(client.bae_epargne.passifs_details)}
+                      />
                     </div>
-                  ))}
-                </div>
+                  )}
+                </dl>
               </div>
             )}
+
+            {/* Charges */}
+            {(client.bae_epargne.charges_totales || client.bae_epargne.charges_details) && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                  <DollarSignIcon size={16} />
+                  <span>Charges</span>
+                </h4>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                  {client.bae_epargne.charges_totales && (
+                    <InfoItem
+                      label="Total charges"
+                      value={formatCurrency(client.bae_epargne.charges_totales)}
+                      icon={<DollarSignIcon size={14} />}
+                    />
+                  )}
+                  {client.bae_epargne.charges_details && (
+                    <div className="col-span-full">
+                      <InfoItem
+                        label="Détails"
+                        value={typeof client.bae_epargne.charges_details === 'string'
+                          ? client.bae_epargne.charges_details
+                          : JSON.stringify(client.bae_epargne.charges_details)}
+                      />
+                    </div>
+                  )}
+                </dl>
+              </div>
+            )}
+
+            {/* Situation financière */}
+            {client.bae_epargne.situation_financiere_revenus_charges && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Situation financière (revenus/charges)</h4>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded">
+                  {client.bae_epargne.situation_financiere_revenus_charges}
+                </p>
+              </div>
+            )}
+          </div>
+        </InfoCard>
+      )}
+
+      {/* Carte Revenus (si applicable) */}
+      {client.revenus && client.revenus.length > 0 && (
+        <InfoCard
+          title="Revenus"
+          icon={<DollarSignIcon size={20} />}
+          color="green"
+          badge={`${client.revenus.length} revenu${client.revenus.length > 1 ? 's' : ''}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nature</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Périodicité</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {client.revenus.map((revenu: any) => (
+                  <tr key={revenu.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{revenu.nature || 'Non renseigné'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{revenu.periodicite || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {revenu.montant ? formatCurrency(revenu.montant) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </InfoCard>
+      )}
+
+      {/* Carte Passifs/Dettes (si applicable) */}
+      {client.passifs && client.passifs.length > 0 && (
+        <InfoCard
+          title="Dettes et Emprunts"
+          icon={<TrendingUpIcon size={20} />}
+          color="orange"
+          badge={`${client.passifs.length} emprunt${client.passifs.length > 1 ? 's' : ''}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nature</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prêteur</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Périodicité</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Mensualité</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Capital restant</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Durée restante</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {client.passifs.map((passif: any) => (
+                  <tr key={passif.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{passif.nature || 'Non renseigné'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{passif.preteur || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{passif.periodicite || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                      {passif.montant_remboursement ? formatCurrency(passif.montant_remboursement) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {passif.capital_restant_du ? formatCurrency(passif.capital_restant_du) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                      {passif.duree_restante ? `${passif.duree_restante} mois` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </InfoCard>
+      )}
+
+      {/* Carte Actifs Financiers (si applicable) */}
+      {client.actifs_financiers && client.actifs_financiers.length > 0 && (
+        <InfoCard
+          title="Patrimoine Financier"
+          icon={<TrendingUpIcon size={20} />}
+          color="blue"
+          badge={`${client.actifs_financiers.length} actif${client.actifs_financiers.length > 1 ? 's' : ''}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nature</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Établissement</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Détenteur</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date ouverture</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur actuelle</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {client.actifs_financiers.map((actif: any) => (
+                  <tr key={actif.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{actif.nature || 'Non renseigné'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{actif.etablissement || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{actif.detenteur || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {actif.date_ouverture_souscription ? formatDate(actif.date_ouverture_souscription) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {actif.valeur_actuelle ? formatCurrency(actif.valeur_actuelle) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </InfoCard>
+      )}
+
+      {/* Carte Biens Immobiliers (si applicable) */}
+      {client.biens_immobiliers && client.biens_immobiliers.length > 0 && (
+        <InfoCard
+          title="Patrimoine Immobilier"
+          icon={<BuildingIcon size={20} />}
+          color="indigo"
+          badge={`${client.biens_immobiliers.length} bien${client.biens_immobiliers.length > 1 ? 's' : ''}`}
+        >
+          <div className="space-y-4">
+            {client.biens_immobiliers.map((bien: any, index: number) => (
+              <div
+                key={bien.id}
+                className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-900">
+                    {bien.designation || `Bien ${index + 1}`}
+                  </h4>
+                  {bien.forme_propriete && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      {bien.forme_propriete}
+                    </span>
+                  )}
+                </div>
+                <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                  {bien.detenteur && (
+                    <div>
+                      <dt className="text-gray-500">Détenteur</dt>
+                      <dd className="font-medium text-gray-900">{bien.detenteur}</dd>
+                    </div>
+                  )}
+                  {bien.valeur_actuelle_estimee && (
+                    <div>
+                      <dt className="text-gray-500">Valeur estimée</dt>
+                      <dd className="font-medium text-gray-900">
+                        {formatCurrency(bien.valeur_actuelle_estimee)}
+                      </dd>
+                    </div>
+                  )}
+                  {bien.annee_acquisition && (
+                    <div>
+                      <dt className="text-gray-500">Année d'acquisition</dt>
+                      <dd className="font-medium text-gray-900">{bien.annee_acquisition}</dd>
+                    </div>
+                  )}
+                  {bien.valeur_acquisition && (
+                    <div>
+                      <dt className="text-gray-500">Valeur d'acquisition</dt>
+                      <dd className="font-medium text-gray-900">
+                        {formatCurrency(bien.valeur_acquisition)}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </InfoCard>
+      )}
+
+      {/* Carte Autres Épargnes (si applicable) */}
+      {client.autres_epargnes && client.autres_epargnes.length > 0 && (
+        <InfoCard
+          title="Autres Épargnes"
+          icon={<DollarSignIcon size={20} />}
+          color="teal"
+          badge={`${client.autres_epargnes.length} épargne${client.autres_epargnes.length > 1 ? 's' : ''}`}
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Désignation</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Détenteur</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Valeur</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {client.autres_epargnes.map((epargne: any) => (
+                  <tr key={epargne.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{epargne.designation || 'Non renseigné'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{epargne.detenteur || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
+                      {epargne.valeur ? formatCurrency(epargne.valeur) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </InfoCard>
       )}

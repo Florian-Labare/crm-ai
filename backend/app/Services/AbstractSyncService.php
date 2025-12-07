@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 
 /**
  * Classe de base pour synchroniser des entités à partir de données d'analyse IA.
@@ -39,6 +38,7 @@ abstract class AbstractSyncService
         // 3️⃣ Mise à jour ou création
         if ($existing) {
             $existing->update($normalizedData);
+
             return $existing;
         }
 
@@ -56,8 +56,8 @@ abstract class AbstractSyncService
         $query = $modelClass::query();
 
         foreach ($matchFields as $field) {
-            if (!empty($data[$field])) {
-                $query->whereRaw('LOWER(' . $field . ') = ?', [strtolower($data[$field])]);
+            if (! empty($data[$field])) {
+                $query->whereRaw('LOWER('.$field.') = ?', [strtolower($data[$field])]);
             }
         }
 
@@ -75,6 +75,7 @@ abstract class AbstractSyncService
                 if (is_string($value)) {
                     return trim($value);
                 }
+
                 return $value;
             })
             ->toArray();

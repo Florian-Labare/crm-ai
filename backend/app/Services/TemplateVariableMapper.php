@@ -47,7 +47,7 @@ class TemplateVariableMapper
     private function resolveVariable(Client $client, $config): string
     {
         // Si une valeur par défaut est spécifiée et aucune source, retourner la valeur par défaut
-        if (isset($config['default']) && !isset($config['source'])) {
+        if (isset($config['default']) && ! isset($config['source'])) {
             return $config['default'];
         }
 
@@ -116,7 +116,9 @@ class TemplateVariableMapper
     {
         switch ($format) {
             case 'date':
-                if (empty($value)) return '';
+                if (empty($value)) {
+                    return '';
+                }
                 try {
                     return Carbon::parse($value)->format('d/m/Y');
                 } catch (\Exception $e) {
@@ -124,11 +126,17 @@ class TemplateVariableMapper
                 }
 
             case 'currency':
-                if (empty($value) || $value == 0) return '';
-                return number_format((float) $value, 2, ',', ' ') . ' €';
+                if (empty($value) || $value == 0) {
+                    return '';
+                }
+
+                return number_format((float) $value, 2, ',', ' ').' €';
 
             case 'boolean':
-                if ($value === null) return '';
+                if ($value === null) {
+                    return '';
+                }
+
                 return $value ? 'Oui' : 'Non';
 
             case 'enum':
@@ -137,6 +145,7 @@ class TemplateVariableMapper
                 }
                 $mapping = $config['mapping'] ?? [];
                 $key = (string) $value;
+
                 return $mapping[$key] ?? (string) $value;
 
             case 'quiz':
@@ -149,6 +158,7 @@ class TemplateVariableMapper
                     'aucune_idee' => 'Aucune idée',
                 ];
                 $key = strtolower((string) $value);
+
                 return $mapping[$key] ?? ucfirst(str_replace('_', ' ', $key));
 
             case 'text':
@@ -171,8 +181,8 @@ class TemplateVariableMapper
     public function getMappingStats(): array
     {
         $total = count($this->mapping);
-        $mapped = count(array_filter($this->mapping, fn($config) => isset($config['source'])));
-        $defaults = count(array_filter($this->mapping, fn($config) => isset($config['default']) && !isset($config['source'])));
+        $mapped = count(array_filter($this->mapping, fn ($config) => isset($config['source'])));
+        $defaults = count(array_filter($this->mapping, fn ($config) => isset($config['default']) && ! isset($config['source'])));
 
         return [
             'total' => $total,

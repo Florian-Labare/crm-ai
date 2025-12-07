@@ -5,9 +5,15 @@ namespace App\Jobs;
 use App\Models\Client;
 use App\Models\AudioRecord;
 use Illuminate\Bus\Queueable;
-use App\Services\AnalysisService;
+use App\Services\Ai\AnalysisService; // Nouveau namespace
 use App\Services\BaeService;
 use App\Services\EnfantSyncService;
+use App\Services\ConjointSyncService;
+use App\Services\ClientRevenusSyncService;
+use App\Services\ClientPassifsSyncService;
+use App\Services\ClientActifsFinanciersSyncService;
+use App\Services\ClientBiensImmobiliersSyncService;
+use App\Services\ClientAutresEpargnesSyncService;
 use Illuminate\Queue\SerializesModels;
 use App\Services\ClientSyncService;
 use Illuminate\Queue\InteractsWithQueue;
@@ -69,21 +75,28 @@ class ProcessAudioRecording implements ShouldQueue
             // 1️⃣ Mettre le statut à "processing"
             $this->audioRecord->update(['status' => 'processing']);
 
-            // 2️⃣ Transcription via Whisper API
-            Log::info("🧠 Transcription audio #{$this->audioRecord->id}...");
-            $audioPath = storage_path("app/public/{$this->audioRecord->path}");
+            // 2️⃣ Transcription via Whisper API (ou réutilisation si déjà présente)
+            if (!empty($this->audioRecord->transcription)) {
+                // Transcription déjà présente (ex: depuis LongRecorder)
+                Log::info("📝 Transcription déjà disponible pour audio #{$this->audioRecord->id}");
+                $transcription = $this->audioRecord->transcription;
+            } else {
+                // Transcription via Whisper
+                Log::info("🧠 Transcription audio #{$this->audioRecord->id}...");
+                $audioPath = storage_path("app/public/{$this->audioRecord->path}");
 
-            if (!file_exists($audioPath)) {
-                throw new Exception("Fichier audio introuvable : {$audioPath}");
+                if (!file_exists($audioPath)) {
+                    throw new Exception("Fichier audio introuvable : {$audioPath}");
+                }
+
+                $transcription = $transcriptionService->transcribe($audioPath);
+
+                if (empty($transcription)) {
+                    throw new Exception("Transcription vide ou échec de Whisper API");
+                }
+
+                Log::info("✅ Transcription réussie : " . strlen($transcription) . " caractères");
             }
-
-            $transcription = $transcriptionService->transcribe($audioPath);
-
-            if (empty($transcription)) {
-                throw new Exception("Transcription vide ou échec de Whisper API");
-            }
-
-            Log::info("✅ Transcription réussie : " . strlen($transcription) . " caractères");
 
             // 3️⃣ Analyse GPT pour extraction des données
             Log::info("💬 Analyse GPT-4 des données client...");
@@ -151,18 +164,22 @@ class ProcessAudioRecording implements ShouldQueue
                     unset($data['besoins_action']);
                 }
 
-                // Filtrer les valeurs vides et exclure questionnaire_risque, bae_* et enfants (gérés séparément)
+                // Filtrer les valeurs vides et exclure les champs gérés séparément
                 $filteredData = [];
+                $fillable = $client->getFillable();
+
                 foreach ($data as $key => $value) {
-                    if ($key === 'questionnaire_risque') {
-                        continue; // géré séparément
+                    // Exclusions explicites
+                    if (in_array($key, ['questionnaire_risque', 'bae_prevoyance', 'bae_retraite', 'bae_epargne', 'sante_souhait', 'enfants', 'conjoint', 'client_revenus', 'client_passifs', 'client_actifs_financiers', 'client_biens_immobiliers', 'client_autres_epargnes'])) {
+                        continue;
                     }
-                    if (in_array($key, ['bae_prevoyance', 'bae_retraite', 'bae_epargne'])) {
-                        continue; // géré séparément par BaeService
+
+                    // Vérifier si le champ est autorisé dans le modèle
+                    if (!in_array($key, $fillable)) {
+                        Log::warning("⚠️ Champ '$key' ignoré car non présent dans fillable du modèle Client");
+                        continue;
                     }
-                    if ($key === 'enfants') {
-                        continue; // géré séparément par EnfantSyncService
-                    }
+
                     if ($value === null || $value === '') {
                         continue;
                     }
@@ -188,6 +205,12 @@ class ProcessAudioRecording implements ShouldQueue
                 unset($data['bae_retraite']); // Exclu car géré séparément
                 unset($data['bae_epargne']); // Exclu car géré séparément
                 unset($data['enfants']); // Exclu car géré séparément
+                unset($data['conjoint']); // Exclu car géré séparément
+                unset($data['client_revenus']); // Exclu car géré séparément
+                unset($data['client_passifs']); // Exclu car géré séparément
+                unset($data['client_actifs_financiers']); // Exclu car géré séparément
+                unset($data['client_biens_immobiliers']); // Exclu car géré séparément
+                unset($data['client_autres_epargnes']); // Exclu car géré séparément
                 $client = $clientSyncService->findOrCreateFromAnalysis($data, $this->audioRecord->user_id);
                 Log::info("✅ Client #{$client->id} synchronisé (créé ou trouvé)");
 
@@ -219,6 +242,48 @@ class ProcessAudioRecording implements ShouldQueue
                 Log::info("👶 Détection de données enfants, synchronisation...");
                 $enfantService = new EnfantSyncService();
                 $enfantService->syncEnfants($client, $data['enfants']);
+            }
+
+            // 4️⃣ quinquies - Synchronisation du conjoint
+            if (isset($data['conjoint']) && is_array($data['conjoint']) && !empty($data['conjoint'])) {
+                Log::info("💑 Détection de données conjoint, synchronisation...");
+                $conjointService = new ConjointSyncService();
+                $conjointService->syncConjoint($client, $data['conjoint']);
+            }
+
+            // 4️⃣ sextus - Synchronisation des revenus
+            if (isset($data['client_revenus']) && is_array($data['client_revenus']) && !empty($data['client_revenus'])) {
+                Log::info("💰 Détection de données revenus, synchronisation...");
+                $revenusService = new ClientRevenusSyncService();
+                $revenusService->syncRevenus($client, $data['client_revenus']);
+            }
+
+            // 4️⃣ septimus - Synchronisation des passifs
+            if (isset($data['client_passifs']) && is_array($data['client_passifs']) && !empty($data['client_passifs'])) {
+                Log::info("📉 Détection de données passifs, synchronisation...");
+                $passifsService = new ClientPassifsSyncService();
+                $passifsService->syncPassifs($client, $data['client_passifs']);
+            }
+
+            // 4️⃣ octavus - Synchronisation des actifs financiers
+            if (isset($data['client_actifs_financiers']) && is_array($data['client_actifs_financiers']) && !empty($data['client_actifs_financiers'])) {
+                Log::info("📈 Détection de données actifs financiers, synchronisation...");
+                $actifsService = new ClientActifsFinanciersSyncService();
+                $actifsService->syncActifsFinanciers($client, $data['client_actifs_financiers']);
+            }
+
+            // 4️⃣ nonus - Synchronisation des biens immobiliers
+            if (isset($data['client_biens_immobiliers']) && is_array($data['client_biens_immobiliers']) && !empty($data['client_biens_immobiliers'])) {
+                Log::info("🏠 Détection de données biens immobiliers, synchronisation...");
+                $biensService = new ClientBiensImmobiliersSyncService();
+                $biensService->syncBiensImmobiliers($client, $data['client_biens_immobiliers']);
+            }
+
+            // 4️⃣ decimus - Synchronisation des autres épargnes
+            if (isset($data['client_autres_epargnes']) && is_array($data['client_autres_epargnes']) && !empty($data['client_autres_epargnes'])) {
+                Log::info("💎 Détection de données autres épargnes, synchronisation...");
+                $epargnesService = new ClientAutresEpargnesSyncService();
+                $epargnesService->syncAutresEpargnes($client, $data['client_autres_epargnes']);
             }
 
             // 5️⃣ Finalisation : marquer comme traité

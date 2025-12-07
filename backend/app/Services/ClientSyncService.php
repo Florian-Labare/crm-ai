@@ -20,6 +20,7 @@ class ClientSyncService
                 if (is_array($v)) {
                     return empty($v);
                 }
+
                 return is_null($v);
             })
             ->toArray();
@@ -29,22 +30,24 @@ class ClientSyncService
             if ($existing->isDirty()) {
                 $existing->save();
             }
+
             return $existing;
         }
 
         $cleanData['user_id'] = $userId;
+
         return Client::create($cleanData);
     }
 
     private function findExistingClient(array $data, int $userId): ?Client
     {
-        if (!empty($data['id'])) {
+        if (! empty($data['id'])) {
             return Client::where('user_id', $userId)->find($data['id']);
         }
 
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             $email = strtolower(trim($data['email']));
-            if (!empty($email)) {
+            if (! empty($email)) {
                 $match = Client::where('user_id', $userId)
                     ->whereRaw('LOWER(email) = ?', [$email])
                     ->first();
@@ -54,7 +57,7 @@ class ClientSyncService
             }
         }
 
-        if (!empty($data['telephone'])) {
+        if (! empty($data['telephone'])) {
             $normalizedPhone = $this->normalizePhone($data['telephone']);
             if ($normalizedPhone) {
                 $match = Client::where('user_id', $userId)
@@ -70,9 +73,9 @@ class ClientSyncService
 
         $normalizedNom = $this->normalizeString($data['nom'] ?? null);
         $normalizedPrenom = $this->normalizeString($data['prenom'] ?? null);
-        $dateNaissance = !empty($data['date_naissance']) ? trim($data['date_naissance']) : null;
+        $dateNaissance = ! empty($data['date_naissance']) ? trim($data['date_naissance']) : null;
 
-        if (!$normalizedNom || !$normalizedPrenom) {
+        if (! $normalizedNom || ! $normalizedPrenom) {
             return null;
         }
 
@@ -102,6 +105,7 @@ class ClientSyncService
         }
 
         $normalized = Str::ascii(Str::lower(trim($value)));
+
         return $normalized === '' ? null : $normalized;
     }
 
@@ -117,7 +121,7 @@ class ClientSyncService
         }
 
         if (str_starts_with($digits, '33') && strlen($digits) === 11) {
-            $digits = '0' . substr($digits, 2);
+            $digits = '0'.substr($digits, 2);
         }
 
         return $digits;

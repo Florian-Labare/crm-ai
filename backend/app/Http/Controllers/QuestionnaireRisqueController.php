@@ -12,7 +12,8 @@ class QuestionnaireRisqueController extends Controller
 {
     public function __construct(
         private ScoringService $scoringService
-    ) {}
+    ) {
+    }
 
     public function live(Request $request): JsonResponse
     {
@@ -28,6 +29,7 @@ class QuestionnaireRisqueController extends Controller
         $questionnaire = QuestionnaireRisque::firstOrCreate(
             ['client_id' => $clientId],
             [
+                'team_id' => auth()->user()->currentTeam()->id,
                 'score_global' => 0,
                 'profil_calcule' => 'Prudent',
                 'recommandation' => '',

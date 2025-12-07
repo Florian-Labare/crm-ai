@@ -22,14 +22,14 @@ class AnalysisService
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
+                'Authorization' => 'Bearer '.env('OPENAI_API_KEY'),
                 'OpenAI-Organization' => env('OPENAI_ORG_ID'),
             ])->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o-mini', // Modèle GPT-4 optimisé et moins coûteux
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => <<<PROMPT
+                        'content' => <<<'PROMPT'
                         Tu es un assistant spécialisé en analyse de conversations pour un conseiller en assurance et gestion de patrimoine.
 
                         Ta tâche :
@@ -133,15 +133,40 @@ class AnalysisService
 
                         ⚠️ Ne JAMAIS extraire d'informations depuis une simple question du conseiller sans réponse du client
 
-                        6️⃣ **ORTHOGRAPHE & ÉPELLATION (CRITIQUE)**
+                        6️⃣ **ORTHOGRAPHE & ÉPELLATION (CRITIQUE - PRIORITÉ ABSOLUE)**
+                        🚨 RÈGLE SUPRÊME : L'ÉPELLATION A TOUJOURS LA PRIORITÉ SUR TOUT 🚨
+
                         - Le client peut épeler son nom, une ville, une adresse ou un email lettre par lettre : "D I J O N", "D comme Denis, U comme Ursule, P comme Pierre, O comme Olivier, N comme Nicolas".
                         - Tu dois TOUJOURS reconstruire le mot final à partir de ces lettres et l'utiliser pour remplir le champ correspondant.
                         - Supprime les séparateurs (espaces, tirets, "comme") et respecte la casse française habituelle (nom propre capitalisé).
+
+                        ⚠️ DÉTECTION D'ÉPELLATION - PATTERNS À DÉTECTER :
+                        - "X Y Z" avec des lettres espacées : "D I J O N", "L A B A R R E"
+                        - "X comme ... Y comme ..." : "D comme Denis, I comme Irène"
+                        - "je l'épelle" / "j'épelle" suivi de lettres
+                        - Lettres prononcées individuellement avec pauses
+
+                        ⚠️ PRIORITÉ ABSOLUE DE L'ÉPELLATION :
+                        - Si tu détectes une épellation pour un champ (nom, ville, lieu_naissance, email), IGNORE complètement l'interprétation phonétique
+                        - Même si tu entends "Dijon" prononcé normalement ET "D I J O N" épelé → UTILISE L'ÉPELLATION "Dijon"
+                        - L'épellation est LA VÉRITÉ, tout le reste est secondaire
+
                         - Exemples :
-                          • "Mon nom c'est L A B A R R E" → {"nom": "Labarré"} (garde les accents si clairement prononcés).
-                          • "La ville c'est D I J O N" → {"ville": "Dijon"}.
-                          • "Email : f comme francis, l comme léa, a comme anna, b arrobase exemple point com" → {"email": "flab@example.com"}.
+                          • "Mon nom c'est L A B A R R E" → {"nom": "Labarre"} (utilise l'épellation)
+                          • "La ville c'est D I J O N" → {"ville": "Dijon"} (utilise l'épellation)
+                          • Client dit "je suis né à Shalom" puis "j'épelle C H Â L O N S" → {"lieu_naissance": "Châlons"} (IGNORE "Shalom", UTILISE l'épellation)
+                          • "Email : f comme francis, l comme léa, a comme anna, b arrobase exemple point com" → {"email": "flab@example.com"}
                         - Si une lettre est répétée ou corrigée ("non, j'épelle D U P O N T"), prends la dernière version.
+
+                        📍 CAS SPÉCIAL - VILLE ET LIEU DE NAISSANCE :
+                        - Si le client épelle une ville ou un lieu de naissance, c'est TOUJOURS la version correcte
+                        - IGNORE l'interprétation phonétique approximative (ex: "Shalom" pour "Châlons")
+                        - L'épellation prime sur TOUT
+
+                        🔴 RÈGLE CRITIQUE : EN CAS DE CONFLIT PHONÉTIQUE vs ÉPELLATION
+                        - Phonétique : "Shalom" ❌
+                        - Épellation : "C H Â L O N S" ✅
+                        → RÉSULTAT : {"lieu_naissance": "Châlons"} (on utilise UNIQUEMENT l'épellation)
 
                         📌 RÈGLE D'OR : EN CAS DE DOUTE, NE PAS EXTRAIRE
                         Si tu ne peux pas distinguer clairement qui parle → N'extrais PAS l'information
@@ -289,6 +314,8 @@ class AnalysisService
                         - Si aucune mention de besoins, n'inclus pas ces champs.
                         - Ne réponds **que** avec un JSON valide, sans texte explicatif.
                         - Privilégie TOUJOURS l'épellation sur l'interprétation phonétique.
+                        - **NOMS DE VILLES : TOUJOURS conserver le nom COMPLET de la ville avec tous les éléments (tirets, espaces, "en", "sur", etc.)**
+                          Exemples : "Châlons-en-Champagne" (PAS "Châlons"), "Boulogne-sur-Mer" (PAS "Boulogne"), "Aix-en-Provence" (PAS "Aix")
 
                         📋 SCHÉMA JSON - NOMS EXACTS DES CHAMPS À UTILISER 📋
                         ⚠️ UTILISE OBLIGATOIREMENT CES NOMS DE CHAMPS EXACTS (avec underscores) ⚠️
@@ -299,7 +326,7 @@ class AnalysisService
                         - "nom_jeune_fille" (string) : nom de jeune fille si applicable
                         - "prenom" (string) : prénom
                         - "date_naissance" (string) : format "YYYY-MM-DD" ou "DD/MM/YYYY"
-                        - "lieu_naissance" (string) : ville de naissance
+                        - "lieu_naissance" (string) : ville de naissance COMPLÈTE (ex: "Châlons-en-Champagne", PAS "Châlons")
                         - "nationalite" (string) : nationalité
 
                         **Situation familiale :**
@@ -331,7 +358,7 @@ class AnalysisService
                         **Coordonnées :**
                         - "adresse" (string) : numéro et nom de rue SEULEMENT (ex: "37 rue de la Prévoyance")
                         - "code_postal" (string) : code postal (ex: "21000")
-                        - "ville" (string) : ville (ex: "Dijon")
+                        - "ville" (string) : ville COMPLÈTE (ex: "Châlons-en-Champagne", "Boulogne-sur-Mer", "Aix-en-Provence")
                         - "residence_fiscale" (string) : pays de résidence fiscale
                         - "telephone" (string) : numéro de téléphone
                         - "email" (string) : adresse email
@@ -582,7 +609,7 @@ class AnalysisService
                         - "nom de jeune fille" / "nom de naissance" → nom_jeune_fille
                         - "prénom" → prenom
                         - "date de naissance" / "né le" / "je suis né" / "anniversaire" → date_naissance
-                        - "lieu de naissance" / "né à" / "ville de naissance" → lieu_naissance
+                        - "lieu de naissance" / "né à" / "ville de naissance" → lieu_naissance (nom COMPLET de la ville, ex: "Châlons-en-Champagne")
                         - "nationalité" / "je suis français" / "nationalité française" → nationalite
                         - "marié" / "célibataire" / "divorcé" / "pacsé" / "concubinage" / "veuf" / "situation matrimoniale" → situation_matrimoniale
                         - "date de mariage" / "marié depuis" / "date du pacs" → date_situation_matrimoniale
@@ -593,7 +620,7 @@ class AnalysisService
                         - "revenus annuels" / "je gagne" / "salaire annuel" / "revenus" → revenus_annuels
                         - "adresse" / "j'habite" / "rue" / "avenue" / "boulevard" → adresse
                         - "code postal" / "CP" → code_postal
-                        - "ville" → ville
+                        - "ville" / "j'habite à" → ville (nom COMPLET de la ville, ex: "Châlons-en-Champagne")
                         - "résidence fiscale" / "résident fiscal" / "pays de résidence" → residence_fiscale
                         - "téléphone" / "numéro" / "portable" / "mobile" → telephone
                         - "email" / "mail" / "adresse mail" / "courriel" → email
@@ -612,7 +639,7 @@ class AnalysisService
                         - "conjoint" + "nom de jeune fille" → conjoint.nom_jeune_fille
                         - "conjoint" + "prénom" / "prénom de mon conjoint" → conjoint.prenom
                         - "conjoint" + "date de naissance" / "né le" → conjoint.date_naissance
-                        - "conjoint" + "lieu de naissance" → conjoint.lieu_naissance
+                        - "conjoint" + "lieu de naissance" → conjoint.lieu_naissance (nom COMPLET de la ville, ex: "Châlons-en-Champagne")
                         - "conjoint" + "nationalité" → conjoint.nationalite
                         - "conjoint" + "profession" / "métier de mon conjoint" / "il/elle travaille" → conjoint.profession
                         - "conjoint" + "chef d'entreprise" → conjoint.chef_entreprise: true
@@ -1055,8 +1082,9 @@ class AnalysisService
 
             $data = json_decode($raw, true);
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('Impossible de parser la réponse GPT', ['content' => $raw]);
+
                 return [];
             }
 
@@ -1071,7 +1099,7 @@ class AnalysisService
             ];
 
             foreach ($fieldMapping as $oldName => $newName) {
-                if (isset($data[$oldName]) && !isset($data[$newName])) {
+                if (isset($data[$oldName]) && ! isset($data[$newName])) {
                     $data[$newName] = $data[$oldName];
                     unset($data[$oldName]);
                 }
@@ -1083,7 +1111,7 @@ class AnalysisService
             if (isset($data['enfants'])) {
                 if (is_numeric($data['enfants'])) {
                     // Ancien système: enfants est un nombre → convertir en nombre_enfants
-                    if (!isset($data['nombre_enfants'])) {
+                    if (! isset($data['nombre_enfants'])) {
                         $data['nombre_enfants'] = (int) $data['enfants'];
                     }
                     unset($data['enfants']);
@@ -1138,7 +1166,7 @@ class AnalysisService
 
             // 🔧 POST-PROCESSING SPÉCIAL - CORRECTION EMAIL INCOMPLET
             // Si GPT a raté l'extraction du @, on essaie de le récupérer depuis la transcription
-            if (isset($data['email']) && !empty($data['email']) && !str_contains($data['email'], '@')) {
+            if (isset($data['email']) && ! empty($data['email']) && ! str_contains($data['email'], '@')) {
                 Log::warning('⚠️ Email incomplet détecté (pas de @)', ['email' => $data['email']]);
                 $fixedEmail = $this->tryFixIncompleteEmail($transcription, $data['email']);
                 if ($fixedEmail) {
@@ -1153,23 +1181,23 @@ class AnalysisService
             // 📅 Normalisation des dates - conversion au format ISO YYYY-MM-DD
             $dateFields = ['date_naissance', 'date_situation_matrimoniale', 'date_evenement_professionnel'];
             foreach ($dateFields as $field) {
-                if (isset($data[$field]) && !empty($data[$field])) {
+                if (isset($data[$field]) && ! empty($data[$field])) {
                     $data[$field] = $this->normalizeDateToISO($data[$field]);
                 }
             }
 
             // 📞 Normalisation du téléphone - suppression des espaces et caractères non numériques
-            if (isset($data['telephone']) && !empty($data['telephone'])) {
+            if (isset($data['telephone']) && ! empty($data['telephone'])) {
                 $data['telephone'] = $this->normalizePhone($data['telephone']);
             }
 
             // 📧 Normalisation de l'email - validation et mise en minuscules
-            if (isset($data['email']) && !empty($data['email'])) {
+            if (isset($data['email']) && ! empty($data['email'])) {
                 $data['email'] = $this->normalizeEmail($data['email']);
             }
 
             // 📮 Normalisation du code postal - validation du format français
-            if (isset($data['code_postal']) && !empty($data['code_postal'])) {
+            if (isset($data['code_postal']) && ! empty($data['code_postal'])) {
                 $data['code_postal'] = $this->normalizePostalCode($data['code_postal']);
             }
 
@@ -1186,7 +1214,7 @@ class AnalysisService
             }
 
             // 👶 Debug: vérifier si les enfants existent avant normalisation
-            Log::info("👶 [DEBUG ENFANTS] Avant normalisation", [
+            Log::info('👶 [DEBUG ENFANTS] Avant normalisation', [
                 'isset_enfants' => isset($data['enfants']),
                 'is_array' => isset($data['enfants']) ? is_array($data['enfants']) : 'N/A',
                 'keys' => array_keys($data),
@@ -1194,11 +1222,12 @@ class AnalysisService
 
             // 👶 Normalisation du tableau enfants
             if (isset($data['enfants']) && is_array($data['enfants'])) {
-                Log::info("👶 [ENFANTS] Normalisation du tableau enfants", ['count' => count($data['enfants'])]);
+                Log::info('👶 [ENFANTS] Normalisation du tableau enfants', ['count' => count($data['enfants'])]);
                 $normalizedEnfants = [];
                 foreach ($data['enfants'] as $index => $enfant) {
-                    if (!is_array($enfant)) {
+                    if (! is_array($enfant)) {
                         Log::warning("👶 [ENFANTS] Enfant #{$index} ignoré (pas un tableau)");
+
                         continue; // Ignorer les enfants non-objets
                     }
 
@@ -1206,15 +1235,15 @@ class AnalysisService
                     $normalizedEnfant = [];
 
                     // Normaliser chaque champ de l'enfant
-                    if (isset($enfant['nom']) && !empty($enfant['nom'])) {
+                    if (isset($enfant['nom']) && ! empty($enfant['nom'])) {
                         $normalizedEnfant['nom'] = trim($enfant['nom']);
                     }
 
-                    if (isset($enfant['prenom']) && !empty($enfant['prenom'])) {
+                    if (isset($enfant['prenom']) && ! empty($enfant['prenom'])) {
                         $normalizedEnfant['prenom'] = trim($enfant['prenom']);
                     }
 
-                    if (isset($enfant['date_naissance']) && !empty($enfant['date_naissance'])) {
+                    if (isset($enfant['date_naissance']) && ! empty($enfant['date_naissance'])) {
                         $normalizedDate = $this->normalizeDateToISO($enfant['date_naissance']);
                         if ($normalizedDate) {
                             $normalizedEnfant['date_naissance'] = $normalizedDate;
@@ -1241,15 +1270,15 @@ class AnalysisService
                 }
 
                 // Remplacer le tableau enfants par le tableau normalisé
-                if (!empty($normalizedEnfants)) {
+                if (! empty($normalizedEnfants)) {
                     $data['enfants'] = $normalizedEnfants;
                     // Déduire nombre_enfants si pas déjà défini
-                    if (!isset($data['nombre_enfants'])) {
+                    if (! isset($data['nombre_enfants'])) {
                         $data['nombre_enfants'] = count($normalizedEnfants);
                     }
-                    Log::info("✅ [ENFANTS] Normalisation terminée", ['count' => count($normalizedEnfants)]);
+                    Log::info('✅ [ENFANTS] Normalisation terminée', ['count' => count($normalizedEnfants)]);
                 } else {
-                    Log::warning("⚠️ [ENFANTS] Aucun enfant normalisé - suppression du champ");
+                    Log::warning('⚠️ [ENFANTS] Aucun enfant normalisé - suppression du champ');
                     unset($data['enfants']);
                 }
             }
@@ -1284,6 +1313,9 @@ class AnalysisService
             // 🏠 Déduit code postal / ville quand l'adresse contient déjà tout
             $this->hydrateAddressComponents($data);
 
+            // 🔤 PRIORITÉ ABSOLUE - Détection et application de l'épellation
+            $this->detectAndApplySpelling($transcription, $data);
+
             // 🎯 Normalisation des besoins
             if (isset($data['besoins'])) {
                 // S'assurer que besoins est un tableau
@@ -1296,29 +1328,32 @@ class AnalysisService
                         // Sinon, mettre la chaîne dans un tableau
                         $data['besoins'] = [$data['besoins']];
                     }
-                } elseif (!is_array($data['besoins'])) {
+                } elseif (! is_array($data['besoins'])) {
                     $data['besoins'] = [];
                 }
 
                 // Nettoyer chaque besoin (supprimer espaces inutiles, normaliser)
-                $data['besoins'] = array_map(function($besoin) {
+                $data['besoins'] = array_map(function ($besoin) {
                     if (is_string($besoin)) {
                         // Si un besoin est lui-même une chaîne JSON, le décoder
                         $decoded = json_decode($besoin, true);
                         if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                             return $decoded;
                         }
+
                         return trim($besoin);
                     }
+
                     return $besoin;
                 }, $data['besoins']);
 
                 // Aplatir le tableau si nécessaire (si on a des sous-tableaux)
-                $data['besoins'] = array_reduce($data['besoins'], function($carry, $item) {
+                $data['besoins'] = array_reduce($data['besoins'], function ($carry, $item) {
                     if (is_array($item)) {
                         return array_merge($carry, $item);
                     }
                     $carry[] = $item;
+
                     return $carry;
                 }, []);
             } else {
@@ -1327,7 +1362,7 @@ class AnalysisService
 
             // Valider besoins_action
             if (isset($data['besoins_action'])) {
-                if (!in_array($data['besoins_action'], ['add', 'remove', 'replace'])) {
+                if (! in_array($data['besoins_action'], ['add', 'remove', 'replace'])) {
                     $data['besoins_action'] = 'replace'; // par défaut
                 }
             } else {
@@ -1337,6 +1372,7 @@ class AnalysisService
             return $data;
         } catch (\Throwable $e) {
             Log::error('Erreur dans AnalysisService', ['message' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -1344,7 +1380,7 @@ class AnalysisService
     /**
      * Normalise une date vers le format ISO (YYYY-MM-DD)
      *
-     * @param string $date Date à normaliser
+     * @param  string  $date  Date à normaliser
      * @return string|null Date au format ISO ou null si invalide
      */
     private function normalizeDateToISO(string $date): ?string
@@ -1363,6 +1399,7 @@ class AnalysisService
                 $day = $matches[1];
                 $month = $matches[2];
                 $year = $matches[3];
+
                 return "$year-$month-$day";
             }
 
@@ -1371,15 +1408,18 @@ class AnalysisService
                 $day = $matches[1];
                 $month = $matches[2];
                 $year = $matches[3];
+
                 return "$year-$month-$day";
             }
 
             // Tenter de parser avec Carbon (pour d'autres formats)
             $carbonDate = \Carbon\Carbon::parse($date);
+
             return $carbonDate->format('Y-m-d');
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser la date', ['date' => $date, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -1387,7 +1427,7 @@ class AnalysisService
     /**
      * Normalise un numéro de téléphone (supprime espaces, points, tirets)
      *
-     * @param string $phone Numéro de téléphone
+     * @param  string  $phone  Numéro de téléphone
      * @return string|null Numéro normalisé ou null si invalide
      */
     private function normalizePhone(string $phone): ?string
@@ -1405,10 +1445,12 @@ class AnalysisService
             }
 
             Log::warning('Format de téléphone invalide', ['phone' => $phone]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser le téléphone', ['phone' => $phone, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -1416,7 +1458,7 @@ class AnalysisService
     /**
      * Normalise une adresse email
      *
-     * @param string $email Adresse email
+     * @param  string  $email  Adresse email
      * @return string|null Email normalisé ou null si invalide
      */
     private function normalizeEmail(string $email): ?string
@@ -1434,39 +1476,339 @@ class AnalysisService
             }
 
             Log::warning('Format email invalide', ['email' => $email]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser l\'email', ['email' => $email, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
 
     /**
+     * Détecte les épellations dans la transcription et les applique en priorité
+     * Ex: "je suis né à Shalom... j'épelle C H Â L O N S" → force "Châlons"
+     *
+     * @param  string  $transcription  Transcription complète
+     * @param  array  $data  Données extraites par GPT (modifiées par référence)
+     */
+    private function detectAndApplySpelling(string $transcription, array &$data): void
+    {
+        Log::info('🔤 Détection des épellations dans la transcription');
+
+        $text = $transcription;
+
+        // Champs susceptibles d'être épelés
+        $fieldsToCheck = [
+            'nom' => ['keywords' => ['nom', 'nom de famille', 'je m\'appelle', 'nom c\'est']],
+            'prenom' => ['keywords' => ['prénom', 'prenom']],
+            'ville' => ['keywords' => ['ville', 'j\'habite à', 'j\'habite']],
+            'lieu_naissance' => ['keywords' => ['né à', 'née à', 'lieu de naissance', 'ville de naissance', 'naissance']],
+            'email' => ['keywords' => ['email', 'mail', 'adresse mail']],
+        ];
+
+        foreach ($fieldsToCheck as $field => $config) {
+            $spelledValue = $this->extractSpelledWord($text, $config['keywords']);
+
+            if ($spelledValue !== null) {
+                // Épellation détectée - PRIORITÉ ABSOLUE
+                Log::info("✅ ÉPELLATION DÉTECTÉE pour '{$field}'", [
+                    'field' => $field,
+                    'spelled_value' => $spelledValue,
+                    'old_value' => $data[$field] ?? 'non défini',
+                ]);
+
+                // Capitaliser la première lettre pour les noms propres
+                if (in_array($field, ['nom', 'prenom', 'ville', 'lieu_naissance'])) {
+                    $spelledValue = ucfirst(mb_strtolower($spelledValue, 'UTF-8'));
+                }
+
+                // FORCER la valeur épelée (priorité absolue)
+                $data[$field] = $spelledValue;
+
+                Log::info("🚨 PRIORITÉ ÉPELLATION - Valeur forcée pour '{$field}' : {$spelledValue}");
+            }
+        }
+    }
+
+    /**
+     * Extrait un mot épelé depuis la transcription
+     * Détecte les patterns : "X Y Z", "X comme ... Y comme ...", "j'épelle X Y Z"
+     *
+     * @param  string  $text  Transcription
+     * @param  array  $keywords  Mots-clés précédant l'épellation (ex: "nom", "ville")
+     * @return string|null Mot reconstruit ou null si pas d'épellation détectée
+     */
+    private function extractSpelledWord(string $text, array $keywords): ?string
+    {
+        $textLower = mb_strtolower($text, 'UTF-8');
+
+        // Pattern 1: "j'épelle X Y Z" ou "je l'épelle X Y Z"
+        if (preg_match('/(?:j\'?épelle|je\s+l\'?épelle)\s+([a-zàâäéèêëïîôùûüÿçæœ\s\-\']{3,})/ui', $text, $matches)) {
+            $spelled = $this->reconstructSpelledWord($matches[1]);
+            if ($spelled) {
+                Log::info('🔤 Pattern "j\'épelle X Y Z" détecté', ['spelled' => $spelled]);
+
+                return $spelled;
+            }
+        }
+
+        // Pattern 2: Chercher autour des keywords
+        foreach ($keywords as $keyword) {
+            // Chercher "keyword c'est/est X Y Z" avec lettres espacées
+            $pattern = '/' . preg_quote($keyword, '/') . '\s+(?:c\'?est|est)?\s*([a-zàâäéèêëïîôùûüÿçæœ\s\-\']{3,})/ui';
+            if (preg_match($pattern, $text, $matches)) {
+                $spelled = $this->reconstructSpelledWord($matches[1]);
+                if ($spelled) {
+                    Log::info("🔤 Pattern \"$keyword c'est X Y Z\" détecté", ['spelled' => $spelled]);
+
+                    return $spelled;
+                }
+            }
+        }
+
+        // Pattern 3: "X comme ... Y comme ..." (épellation phonétique)
+        if (preg_match_all('/\b([a-z])\s+comme\s+[a-zàâäéèêëïîôùûüÿçæœ]+/ui', $text, $matches, PREG_SET_ORDER)) {
+            if (count($matches) >= 3) {
+                // Au moins 3 lettres épelées avec "comme"
+                $letters = array_map(fn ($m) => mb_strtoupper($m[1], 'UTF-8'), $matches);
+                $spelled = implode('', $letters);
+                Log::info('🔤 Pattern "X comme ... Y comme ..." détecté', ['spelled' => $spelled]);
+
+                return $spelled;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Reconstruit un mot à partir de lettres espacées
+     * Ex: "D I J O N" → "Dijon", "C H Â L O N S" → "Châlons"
+     *
+     * @param  string  $text  Texte contenant des lettres espacées
+     * @return string|null Mot reconstruit ou null si pas de pattern détecté
+     */
+    private function reconstructSpelledWord(string $text): ?string
+    {
+        $text = trim($text);
+
+        // Détecter si le texte contient des lettres séparées par des espaces
+        // Pattern: au moins 3 lettres séparées par des espaces
+        if (preg_match_all('/\b([a-zàâäéèêëïîôùûüÿçæœ])\b/ui', $text, $matches)) {
+            $letters = $matches[1];
+
+            // Au moins 3 lettres pour être considéré comme une épellation
+            if (count($letters) >= 3) {
+                // Vérifier que les lettres sont bien espacées (pas un mot normal)
+                $spacing = preg_match('/[a-zàâäéèêëïîôùûüÿçæœ]\s+[a-zàâäéèêëïîôùûüÿçæœ]/ui', $text);
+
+                if ($spacing) {
+                    $word = implode('', $letters);
+                    Log::info('🔤 Lettres espacées reconstruites', [
+                        'original' => $text,
+                        'letters' => $letters,
+                        'word' => $word,
+                    ]);
+
+                    return $word;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Convertit les nombres verbaux français en chiffres
+     * Exemples: "cinquante-et-un" → "51", "cinquante-et-un cent" → "51100"
+     *
+     * @param  string  $text  Texte contenant potentiellement des nombres verbaux
+     * @return string Texte avec les nombres convertis en chiffres
+     */
+    private function convertFrenchVerbalNumbers(string $text): string
+    {
+        // Dictionnaire des nombres de base
+        $numbers = [
+            'zéro' => 0, 'zero' => 0,
+            'un' => 1, 'une' => 1,
+            'deux' => 2,
+            'trois' => 3,
+            'quatre' => 4,
+            'cinq' => 5,
+            'six' => 6,
+            'sept' => 7,
+            'huit' => 8,
+            'neuf' => 9,
+            'dix' => 10,
+            'onze' => 11,
+            'douze' => 12,
+            'treize' => 13,
+            'quatorze' => 14,
+            'quinze' => 15,
+            'seize' => 16,
+            'vingt' => 20,
+            'trente' => 30,
+            'quarante' => 40,
+            'cinquante' => 50,
+            'soixante' => 60,
+            'cent' => 100,
+            'cents' => 100,
+            'mille' => 1000,
+        ];
+
+        // Nombres composés courants (pour optimisation)
+        $composedNumbers = [
+            'vingt-et-un' => 21, 'vingt et un' => 21,
+            'vingt-deux' => 22, 'vingt deux' => 22,
+            'vingt-trois' => 23, 'vingt trois' => 23,
+            'vingt-quatre' => 24, 'vingt quatre' => 24,
+            'vingt-cinq' => 25, 'vingt cinq' => 25,
+            'vingt-six' => 26, 'vingt six' => 26,
+            'vingt-sept' => 27, 'vingt sept' => 27,
+            'vingt-huit' => 28, 'vingt huit' => 28,
+            'vingt-neuf' => 29, 'vingt neuf' => 29,
+            'trente-et-un' => 31, 'trente et un' => 31,
+            'trente-deux' => 32, 'trente deux' => 32,
+            'trente-trois' => 33, 'trente trois' => 33,
+            'trente-quatre' => 34, 'trente quatre' => 34,
+            'trente-cinq' => 35, 'trente cinq' => 35,
+            'trente-six' => 36, 'trente six' => 36,
+            'trente-sept' => 37, 'trente sept' => 37,
+            'trente-huit' => 38, 'trente huit' => 38,
+            'trente-neuf' => 39, 'trente neuf' => 39,
+            'quarante-et-un' => 41, 'quarante et un' => 41,
+            'quarante-deux' => 42, 'quarante deux' => 42,
+            'quarante-trois' => 43, 'quarante trois' => 43,
+            'quarante-quatre' => 44, 'quarante quatre' => 44,
+            'quarante-cinq' => 45, 'quarante cinq' => 45,
+            'quarante-six' => 46, 'quarante six' => 46,
+            'quarante-sept' => 47, 'quarante sept' => 47,
+            'quarante-huit' => 48, 'quarante huit' => 48,
+            'quarante-neuf' => 49, 'quarante neuf' => 49,
+            'cinquante-et-un' => 51, 'cinquante et un' => 51,
+            'cinquante-deux' => 52, 'cinquante deux' => 52,
+            'cinquante-trois' => 53, 'cinquante trois' => 53,
+            'cinquante-quatre' => 54, 'cinquante quatre' => 54,
+            'cinquante-cinq' => 55, 'cinquante cinq' => 55,
+            'cinquante-six' => 56, 'cinquante six' => 56,
+            'cinquante-sept' => 57, 'cinquante sept' => 57,
+            'cinquante-huit' => 58, 'cinquante huit' => 58,
+            'cinquante-neuf' => 59, 'cinquante neuf' => 59,
+            'soixante-et-un' => 61, 'soixante et un' => 61,
+            'soixante-deux' => 62, 'soixante deux' => 62,
+            'soixante-trois' => 63, 'soixante trois' => 63,
+            'soixante-quatre' => 64, 'soixante quatre' => 64,
+            'soixante-cinq' => 65, 'soixante cinq' => 65,
+            'soixante-six' => 66, 'soixante six' => 66,
+            'soixante-sept' => 67, 'soixante sept' => 67,
+            'soixante-huit' => 68, 'soixante huit' => 68,
+            'soixante-neuf' => 69, 'soixante neuf' => 69,
+            'soixante-dix' => 70, 'soixante dix' => 70,
+            'soixante-et-onze' => 71, 'soixante et onze' => 71,
+            'soixante-douze' => 72, 'soixante douze' => 72,
+            'soixante-treize' => 73, 'soixante treize' => 73,
+            'soixante-quatorze' => 74, 'soixante quatorze' => 74,
+            'soixante-quinze' => 75, 'soixante quinze' => 75,
+            'soixante-seize' => 76, 'soixante seize' => 76,
+            'quatre-vingts' => 80, 'quatre vingts' => 80,
+            'quatre-vingt' => 80, 'quatre vingt' => 80,
+            'quatre-vingt-un' => 81, 'quatre vingt un' => 81,
+            'quatre-vingt-deux' => 82, 'quatre vingt deux' => 82,
+            'quatre-vingt-dix' => 90, 'quatre vingt dix' => 90,
+            'quatre-vingt-onze' => 91, 'quatre vingt onze' => 91,
+        ];
+
+        $textLower = mb_strtolower($text, 'UTF-8');
+
+        // Cas spécial pour les codes postaux : "XX cent" → "XX100"
+        // Ex: "cinquante-et-un cent" → "51100"
+        $textLower = preg_replace_callback(
+            '/\b((?:vingt|trente|quarante|cinquante|soixante)(?:[\s-](?:et[\s-])?(?:un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize))?|quatre[\s-]vingt(?:[\s-](?:un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize))?|soixante[\s-]dix|un|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|seize|dix[\s-]sept|dix[\s-]huit|dix[\s-]neuf)\s+(cent|mille)\b/u',
+            function ($matches) use ($composedNumbers, $numbers) {
+                $firstPart = trim($matches[1]);
+                $secondPart = trim($matches[2]);
+
+                // Convertir la première partie
+                $firstNumber = $composedNumbers[$firstPart] ?? $numbers[$firstPart] ?? null;
+
+                if ($firstNumber !== null) {
+                    // Pour les codes postaux: concaténation, pas multiplication
+                    if ($secondPart === 'cent') {
+                        // "51 cent" → "51100"
+                        return str_pad($firstNumber, 2, '0', STR_PAD_LEFT) . '100';
+                    } elseif ($secondPart === 'mille') {
+                        // "51 mille" → "51000"
+                        return str_pad($firstNumber, 2, '0', STR_PAD_LEFT) . '000';
+                    }
+                }
+
+                return $matches[0]; // Pas de conversion possible
+            },
+            $textLower
+        );
+
+        // Remplacer les nombres composés (plus longs en premier)
+        foreach ($composedNumbers as $verbal => $numeric) {
+            $pattern = '/\b' . preg_quote($verbal, '/') . '\b/u';
+            $textLower = preg_replace($pattern, (string) $numeric, $textLower);
+        }
+
+        // Remplacer les nombres simples
+        foreach ($numbers as $verbal => $numeric) {
+            $pattern = '/\b' . preg_quote($verbal, '/') . '\b/u';
+            $textLower = preg_replace($pattern, (string) $numeric, $textLower);
+        }
+
+        return $textLower;
+    }
+
+    /**
      * Normalise un code postal français
      *
-     * @param string $postalCode Code postal
+     * @param  string  $postalCode  Code postal
      * @return string|null Code postal normalisé (5 chiffres) ou null si invalide
      */
     private function normalizePostalCode(string $postalCode): ?string
     {
         try {
-            // Supprimer les espaces
-            $normalized = trim($postalCode);
+            // ÉTAPE 1: Convertir les nombres verbaux français en chiffres
+            // Ex: "cinquante-et-un cent" → "51100"
+            $converted = $this->convertFrenchVerbalNumbers($postalCode);
 
-            // Supprimer tous les caractères non numériques
+            Log::info('🔢 Conversion nombres verbaux pour code postal', [
+                'original' => $postalCode,
+                'converted' => $converted,
+            ]);
+
+            // ÉTAPE 2: Supprimer les espaces
+            $normalized = trim($converted);
+
+            // ÉTAPE 3: Supprimer tous les caractères non numériques
             $normalized = preg_replace('/[^0-9]/', '', $normalized);
 
-            // Validation : doit être exactement 5 chiffres pour la France
+            // ÉTAPE 4: Validation - doit être exactement 5 chiffres pour la France
             if (preg_match('/^\d{5}$/', $normalized)) {
+                Log::info('✅ Code postal normalisé avec succès', ['result' => $normalized]);
+
                 return $normalized;
             }
 
-            Log::warning('Format code postal invalide', ['code_postal' => $postalCode]);
+            Log::warning('Format code postal invalide après conversion', [
+                'code_postal' => $postalCode,
+                'converted' => $converted,
+                'normalized' => $normalized,
+            ]);
+
             return null;
 
         } catch (\Throwable $e) {
-            Log::warning('Impossible de normaliser le code postal', ['code_postal' => $postalCode, 'error' => $e->getMessage()]);
+            Log::warning('Impossible de normaliser le code postal', [
+                'code_postal' => $postalCode,
+                'error' => $e->getMessage(),
+            ]);
+
             return null;
         }
     }
@@ -1613,14 +1955,15 @@ class AnalysisService
             foreach ($patterns['negative'] as $regex) {
                 if (preg_match($regex, $text)) {
                     $data[$field] = false;
+
                     continue 2;
                 }
             }
 
-            if (!empty($patterns['positive'])) {
+            if (! empty($patterns['positive'])) {
                 foreach ($patterns['positive'] as $regex) {
                     if (preg_match($regex, $text)) {
-                        if (!array_key_exists($field, $data) || $data[$field] === null) {
+                        if (! array_key_exists($field, $data) || $data[$field] === null) {
                             $data[$field] = true;
                         }
                         break;
@@ -1697,6 +2040,7 @@ class AnalysisService
                 if (preg_match($negativeRegex, $text)) {
                     Log::info("🔍 [ENTREPRISE] Pattern négatif trouvé pour $field", ['pattern' => $negativeRegex]);
                     $data[$field] = false;
+
                     continue 2; // Skip ce champ et passer au suivant
                 }
             }
@@ -1712,7 +2056,7 @@ class AnalysisService
                 }
             }
 
-            if (!$matched) {
+            if (! $matched) {
                 Log::info("❌ [ENTREPRISE] Aucun pattern trouvé pour $field");
             }
 
@@ -1744,12 +2088,54 @@ class AnalysisService
             ];
 
             foreach ($statutKeywords as $needle => $label) {
-                $pattern = '/\b' . preg_quote($needle, '/') . '\b/u';
+                $pattern = '/\b'.preg_quote($needle, '/').'\b/u';
                 if (preg_match($pattern, $text)) {
                     $data['statut'] = $label;
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Recherche la ville correspondant à un code postal dans la base de données
+     *
+     * @param  string  $postalCode  Code postal normalisé (5 chiffres)
+     * @return string|null Ville trouvée ou null
+     */
+    private function lookupCityFromPostalCode(string $postalCode): ?string
+    {
+        try {
+            // Chercher dans la table clients les villes existantes pour ce code postal
+            $city = \App\Models\Client::where('code_postal', $postalCode)
+                ->whereNotNull('ville')
+                ->where('ville', '!=', '')
+                ->groupBy('ville')
+                ->orderByRaw('COUNT(*) DESC')
+                ->value('ville');
+
+            if ($city) {
+                Log::info('🏙️ Ville trouvée pour le code postal', [
+                    'code_postal' => $postalCode,
+                    'ville' => $city,
+                ]);
+
+                return $city;
+            }
+
+            Log::info('🔍 Aucune ville trouvée en BDD pour ce code postal', [
+                'code_postal' => $postalCode,
+            ]);
+
+            return null;
+
+        } catch (\Throwable $e) {
+            Log::warning('Erreur lors de la recherche de ville par code postal', [
+                'code_postal' => $postalCode,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
         }
     }
 
@@ -1771,14 +2157,14 @@ class AnalysisService
         if (preg_match_all('/\b(\d{5})\b(?:\s+([A-Za-zÀ-ÖØ-öø-ÿ\'\-\s]+))?/u', $address, $postalMatches, PREG_SET_ORDER)) {
             $match = end($postalMatches);
 
-            if (!empty($match[1]) && (empty($data['code_postal']) || strlen((string) $data['code_postal']) < 5)) {
+            if (! empty($match[1]) && (empty($data['code_postal']) || strlen((string) $data['code_postal']) < 5)) {
                 $normalizedPostal = $this->normalizePostalCode($match[1]);
                 if ($normalizedPostal) {
                     $data['code_postal'] = $normalizedPostal;
                 }
             }
 
-            if (empty($data['ville']) && !empty($match[2])) {
+            if (empty($data['ville']) && ! empty($match[2])) {
                 $cityCandidate = trim(preg_replace('/[^A-Za-zÀ-ÖØ-öø-ÿ\'\-\s]/u', '', $match[2]));
                 if ($cityCandidate !== '') {
                     $data['ville'] = $cityCandidate;
@@ -1791,8 +2177,21 @@ class AnalysisService
             $lastSegment = trim(end($segments));
             $lastSegment = preg_replace('/^\d{5}\s*/', '', $lastSegment);
 
-            if ($lastSegment !== '' && !preg_match('/\d{3,}/', $lastSegment)) {
+            if ($lastSegment !== '' && ! preg_match('/\d{3,}/', $lastSegment)) {
                 $data['ville'] = $lastSegment;
+            }
+        }
+
+        // 🏙️ RECHERCHE AUTOMATIQUE DE LA VILLE PAR CODE POSTAL
+        // Si on a un code postal mais pas de ville, chercher en BDD
+        if (! empty($data['code_postal']) && empty($data['ville'])) {
+            $lookedUpCity = $this->lookupCityFromPostalCode($data['code_postal']);
+            if ($lookedUpCity) {
+                $data['ville'] = $lookedUpCity;
+                Log::info('✅ Ville auto-complétée depuis le code postal', [
+                    'code_postal' => $data['code_postal'],
+                    'ville' => $lookedUpCity,
+                ]);
             }
         }
     }
@@ -1800,8 +2199,8 @@ class AnalysisService
     /**
      * Tente de corriger un email incomplet en analysant la transcription originale
      *
-     * @param string $transcription Transcription vocale complète
-     * @param string $incompleteEmail Email incomplet extrait par GPT
+     * @param  string  $transcription  Transcription vocale complète
+     * @param  string  $incompleteEmail  Email incomplet extrait par GPT
      * @return string|null Email corrigé ou null si impossible
      */
     private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string
@@ -1829,6 +2228,7 @@ class AnalysisService
 
             if (empty($emailContext)) {
                 Log::warning('❌ Aucun contexte email trouvé dans la transcription');
+
                 return null;
             }
 
@@ -1869,10 +2269,11 @@ class AnalysisService
                     $local = preg_replace('/[^\w.\-_]/', '', $parts[0]);
                     $domain = preg_replace('/[^\w.\-]/', '', $parts[1]);
 
-                    if (!empty($local) && !empty($domain) && str_contains($domain, '.')) {
-                        $finalEmail = strtolower($local . '@' . $domain);
+                    if (! empty($local) && ! empty($domain) && str_contains($domain, '.')) {
+                        $finalEmail = strtolower($local.'@'.$domain);
                         if (filter_var($finalEmail, FILTER_VALIDATE_EMAIL)) {
                             Log::info('✅ Email nettoyé et validé', ['final' => $finalEmail]);
+
                             return $finalEmail;
                         }
                     }
@@ -1880,10 +2281,12 @@ class AnalysisService
             }
 
             Log::warning('❌ Impossible de reconstruire un email valide', ['reconstructed' => $reconstructed]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::error('Erreur lors de la correction d\'email', ['error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -1891,16 +2294,16 @@ class AnalysisService
     /**
      * Sauvegarde les données du questionnaire de risque si présentes dans les données extraites
      *
-     * @param int $clientId ID du client
-     * @param array $data Données extraites contenant potentiellement questionnaire_risque
-     * @return void
+     * @param  int  $clientId  ID du client
+     * @param  array  $data  Données extraites contenant potentiellement questionnaire_risque
      */
     public function saveQuestionnaireRisque(int $clientId, array $data): void
     {
         try {
             // Vérifier si des données de questionnaire de risque sont présentes
-            if (!isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {
+            if (! isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {
                 Log::info('Aucune donnée de questionnaire de risque à sauvegarder', ['client_id' => $clientId]);
+
                 return;
             }
 
@@ -1909,13 +2312,14 @@ class AnalysisService
             // Vérifier qu'il y a au moins des données financières ou de connaissances
             if (empty($questionnaireData['financier']) && empty($questionnaireData['connaissances'])) {
                 Log::info('Données de questionnaire vides, abandon', ['client_id' => $clientId]);
+
                 return;
             }
 
             Log::info('💾 Sauvegarde du questionnaire de risque', [
                 'client_id' => $clientId,
-                'has_financier' => !empty($questionnaireData['financier']),
-                'has_connaissances' => !empty($questionnaireData['connaissances'])
+                'has_financier' => ! empty($questionnaireData['financier']),
+                'has_connaissances' => ! empty($questionnaireData['connaissances']),
             ]);
 
             // Créer ou récupérer le questionnaire principal
@@ -1929,12 +2333,12 @@ class AnalysisService
             );
 
             // Sauvegarder les données financières/comportementales si présentes
-            if (!empty($questionnaireData['financier']) && is_array($questionnaireData['financier'])) {
-                $financierData = array_filter($questionnaireData['financier'], function($value) {
-                    return !is_null($value) && $value !== '';
+            if (! empty($questionnaireData['financier']) && is_array($questionnaireData['financier'])) {
+                $financierData = array_filter($questionnaireData['financier'], function ($value) {
+                    return ! is_null($value) && $value !== '';
                 });
 
-                if (!empty($financierData)) {
+                if (! empty($financierData)) {
                     $questionnaire->financier()->updateOrCreate(
                         ['questionnaire_risque_id' => $questionnaire->id],
                         $financierData
@@ -1944,12 +2348,12 @@ class AnalysisService
             }
 
             // Sauvegarder les connaissances si présentes
-            if (!empty($questionnaireData['connaissances']) && is_array($questionnaireData['connaissances'])) {
-                $connaissancesData = array_filter($questionnaireData['connaissances'], function($value) {
-                    return !is_null($value) && $value !== '';
+            if (! empty($questionnaireData['connaissances']) && is_array($questionnaireData['connaissances'])) {
+                $connaissancesData = array_filter($questionnaireData['connaissances'], function ($value) {
+                    return ! is_null($value) && $value !== '';
                 });
 
-                if (!empty($connaissancesData)) {
+                if (! empty($connaissancesData)) {
                     $questionnaire->connaissances()->updateOrCreate(
                         ['questionnaire_risque_id' => $questionnaire->id],
                         $connaissancesData
@@ -1969,14 +2373,14 @@ class AnalysisService
             Log::info('✅ Questionnaire de risque mis à jour', [
                 'client_id' => $clientId,
                 'score' => $updatedQuestionnaire->score_global,
-                'profil' => $updatedQuestionnaire->profil_calcule
+                'profil' => $updatedQuestionnaire->profil_calcule,
             ]);
 
         } catch (\Throwable $e) {
             Log::error('❌ Erreur lors de la sauvegarde du questionnaire de risque', [
                 'client_id' => $clientId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }

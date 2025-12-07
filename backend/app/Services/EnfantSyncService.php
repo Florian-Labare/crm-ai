@@ -11,9 +11,7 @@ class EnfantSyncService
     /**
      * Synchronise les enfants d'un client avec les données extraites
      *
-     * @param Client $client
-     * @param array $enfantsData Tableau d'objets enfants extraits par GPT
-     * @return void
+     * @param  array  $enfantsData  Tableau d'objets enfants extraits par GPT
      */
     public function syncEnfants(Client $client, array $enfantsData): void
     {
@@ -58,20 +56,23 @@ class EnfantSyncService
         }
 
         // 2️⃣ Supprimer les enfants qui ne sont plus dans le tableau
-        // ATTENTION: On ne supprime que si on a reçu des données explicites
-        // Si le tableau est vide, on ne supprime rien (le client n'a peut-être pas encore donné les infos)
-        if (!empty($enfantsData) && count($enfantsData) < $existingEnfants->count()) {
+        // ⚠️ MODIFICATION : On ne supprime PLUS automatiquement les enfants manquants
+        // car l'IA peut ne retourner qu'un seul enfant pour une mise à jour partielle.
+        // La suppression devra être gérée manuellement ou via une intention explicite plus tard.
+        /*
+        if (! empty($enfantsData) && count($enfantsData) < $existingEnfants->count()) {
             $enfantsToDelete = $existingEnfants->whereNotIn('id', $processedIds);
             foreach ($enfantsToDelete as $enfant) {
                 Log::info("👶 [ENFANTS] Suppression de l'enfant #{$enfant->id} (plus dans le tableau)");
                 $enfant->delete();
             }
         }
+        */
 
-        // 3️⃣ Mettre à jour le champ nombre_enfants du client
-        $client->update(['nombre_enfants' => count($processedIds)]);
+        // 3️⃣ Mettre à jour le champ nombre_enfants du client (SUPPRIMÉ car colonne inexistante)
+        // $client->update(['nombre_enfants' => count($processedIds)]);
 
-        Log::info("✅ [ENFANTS] Synchronisation terminée - " . count($processedIds) . " enfant(s)");
+        Log::info('✅ [ENFANTS] Synchronisation terminée - ' . count($processedIds) . ' enfant(s)');
     }
 
     /**
@@ -92,6 +93,7 @@ class EnfantSyncService
             });
             if ($match) {
                 Log::info("👶 [ENFANTS] Match trouvé par prénom+nom: {$enfantData['prenom']} {$enfantData['nom']}");
+
                 return $match;
             }
         }
@@ -104,6 +106,7 @@ class EnfantSyncService
 
             if ($matches->count() === 1) {
                 Log::info("👶 [ENFANTS] Match trouvé par prénom unique: {$enfantData['prenom']}");
+
                 return $matches->first();
             }
         }
@@ -111,11 +114,13 @@ class EnfantSyncService
         // 3️⃣ Match par index (si l'enfant à cet index existe)
         if ($index < $existingEnfants->count()) {
             Log::info("👶 [ENFANTS] Match trouvé par index: {$index}");
+
             return $existingEnfants->get($index);
         }
 
         // Aucun match trouvé
-        Log::info("👶 [ENFANTS] Aucun match trouvé - nouvel enfant sera créé");
+        Log::info('👶 [ENFANTS] Aucun match trouvé - nouvel enfant sera créé');
+
         return null;
     }
 
@@ -129,6 +134,7 @@ class EnfantSyncService
             if (is_bool($value)) {
                 return true;
             }
+
             // Filtrer null et chaînes vides
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
@@ -145,6 +151,7 @@ class EnfantSyncService
 
         $normalized = mb_strtolower(trim($value), 'UTF-8');
         $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+
         return $normalized === '' ? null : $normalized;
     }
 }

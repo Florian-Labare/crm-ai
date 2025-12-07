@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import api from "../api/apiClient";
 import RecordRTC from "recordrtc";
+import { extractData, extractWithMessage } from "../utils/apiHelpers";
+import type { AudioRecord } from "../types/api";
 
 interface Props {
   clientId?: number;
@@ -55,7 +57,8 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient, onUploadSucc
   const checkStatus = async (audioRecordId: number) => {
     try {
       const res = await api.get(`/audio/status/${audioRecordId}`);
-      const { status, client, error: errorMsg } = res.data;
+      const audioRecord = extractData<any>(res);
+      const { status, client, error: errorMsg } = audioRecord;
 
       console.log(`📊 Statut audio #${audioRecordId}: ${status}`);
 
@@ -231,9 +234,15 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient, onUploadSucc
             headers: { "Content-Type": "multipart/form-data" },
           });
 
-          if (res.data && res.data.audio_record_id) {
-            console.log(`📝 Audio record créé : ID ${res.data.audio_record_id}`);
-            startPolling(res.data.audio_record_id);
+          const { data: audioRecord, message } = extractWithMessage<AudioRecord>(res);
+
+          if (message) {
+            toast.info(message);
+          }
+
+          if (audioRecord && audioRecord.id) {
+            console.log(`📝 Audio record créé : ID ${audioRecord.id}`);
+            startPolling(audioRecord.id);
           } else {
             throw new Error('Pas d\'ID d\'enregistrement retourné');
           }

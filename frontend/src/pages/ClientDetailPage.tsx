@@ -6,33 +6,8 @@ import api from "../api/apiClient";
 import { RiskQuestionnaire } from "./RiskQuestionnaire";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ClientInfoSection } from "../components/ClientInfoSection";
-
-interface Conjoint {
-  id: number;
-  nom: string;
-  nom_jeune_fille?: string;
-  prenom: string;
-  date_naissance?: string;
-  lieu_naissance?: string;
-  nationalite?: string;
-  profession?: string;
-  chef_entreprise?: string;
-  situation_actuelle_statut?: string;
-  date_evenement_professionnel?: string;
-  risques_professionnels?: boolean;
-  details_risques_professionnels?: string;
-  telephone?: string;
-  adresse?: string;
-}
-
-interface Enfant {
-  id: number;
-  nom: string;
-  prenom: string;
-  date_naissance?: string;
-  fiscalement_a_charge?: boolean;
-  garde_alternee?: boolean;
-}
+import { extractData } from "../utils/apiHelpers";
+import type { Client } from "../types/api";
 
 interface SanteSouhait {
   id: number;
@@ -49,148 +24,45 @@ interface SanteSouhait {
   niveau_protheses_auditives?: number;
 }
 
-interface BaePrevoyance {
-  id: number;
-  client_id: number;
-  contrat_en_place?: string;
-  date_effet?: string;
-  cotisations?: number;
-  souhaite_couverture_invalidite?: boolean;
-  revenu_a_garantir?: number;
-  souhaite_couvrir_charges_professionnelles?: boolean;
-  montant_annuel_charges_professionnelles?: number;
-  garantir_totalite_charges_professionnelles?: boolean;
-  montant_charges_professionnelles_a_garantir?: number;
-  duree_indemnisation_souhaitee?: string;
-  capital_deces_souhaite?: number;
-  garanties_obseques?: number;
-  rente_enfants?: number;
-  rente_conjoint?: number;
-  payeur?: string;
-}
-
-interface BaeRetraite {
-  id: number;
-  client_id: number;
-  revenus_annuels?: number;
-  revenus_annuels_foyer?: number;
-  impot_revenu?: number;
-  nombre_parts_fiscales?: number;
-  tmi?: string;
-  impot_paye_n_1?: number;
-  age_depart_retraite?: number;
-  age_depart_retraite_conjoint?: number;
-  pourcentage_revenu_a_maintenir?: number;
-  contrat_en_place?: string;
-  bilan_retraite_disponible?: boolean;
-  complementaire_retraite_mise_en_place?: boolean;
-  designation_etablissement?: string;
-  cotisations_annuelles?: number;
-  titulaire?: string;
-}
-
-interface BaeEpargne {
-  id: number;
-  client_id: number;
-  epargne_disponible?: boolean;
-  montant_epargne_disponible?: number;
-  donation_realisee?: boolean;
-  donation_forme?: string;
-  donation_date?: string;
-  donation_montant?: number;
-  donation_beneficiaires?: string;
-  capacite_epargne_estimee?: number;
-  actifs_financiers_pourcentage?: number;
-  actifs_financiers_total?: number;
-  actifs_financiers_details?: string[];
-  actifs_immo_pourcentage?: number;
-  actifs_immo_total?: number;
-  actifs_immo_details?: string[];
-  actifs_autres_pourcentage?: number;
-  actifs_autres_total?: number;
-  actifs_autres_details?: string[];
-  passifs_total_emprunts?: number;
-  passifs_details?: string[];
-  charges_totales?: number;
-  charges_details?: string[];
-  situation_financiere_revenus_charges?: string;
-}
-
-interface Client {
-  id: number;
-  // Identité de base
+// Extension du type Client pour inclure les champs non-BAE
+interface ExtendedClient extends Client {
   civilite?: string;
-  nom: string;
   nom_jeune_fille?: string;
-  prenom: string;
-  date_naissance?: string;
   lieu_naissance?: string;
-  nationalite?: string;
-
-  // Situation
   situation_matrimoniale?: string;
   date_situation_matrimoniale?: string;
   situation_actuelle?: string;
-
-  // Professionnel
-  profession?: string;
   date_evenement_professionnel?: string;
   risques_professionnels?: boolean;
   details_risques_professionnels?: string;
   revenus_annuels?: number;
-
-  // Coordonnées
-  adresse?: string;
-  code_postal?: string;
-  ville?: string;
   residence_fiscale?: string;
-  telephone?: string;
-  email?: string;
-
-  // Mode de vie
   fumeur?: boolean;
   activites_sportives?: boolean;
   details_activites_sportives?: string;
   niveau_activites_sportives?: string;
-
-  // Famille
-  nombre_enfants?: number;
-
-  // Besoins
   besoins?: string[] | null;
-
-  // Autres
   transcription_path?: string;
   consentement_audio?: boolean;
   charge_clientele?: string;
-
-  // Relations
-  conjoint?: Conjoint;
-  enfants?: Enfant[];
   chef_entreprise?: boolean;
   statut?: string;
   travailleur_independant?: boolean;
   mandataire_social?: boolean;
   santeSouhait?: SanteSouhait;
-  bae_prevoyance?: BaePrevoyance;
-  bae_retraite?: BaeRetraite;
-  bae_epargne?: BaeEpargne;
-
-  // Timestamps
-  created_at?: string;
-  updated_at?: string;
 }
 
 const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [client, setClient] = useState<Client | null>(null);
+  const [client, setClient] = useState<ExtendedClient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents">("info");
   const [documents, setDocuments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [selectedFormat, setSelectedFormat] = useState<'docx' | 'pdf'>('docx');
   const [generatingDocument, setGeneratingDocument] = useState(false);
 
   // États pour les dialogues de confirmation
@@ -204,13 +76,13 @@ const ClientDetailPage: React.FC = () => {
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   const fetchClient = async () => {
     try {
       const res = await api.get(`/clients/${id}`);
-      setClient(res.data);
+      setClient(extractData<ExtendedClient>(res));
     } catch (err) {
       console.error("Erreur lors du chargement du client :", err);
       toast.error("Erreur lors du chargement du client");
@@ -249,11 +121,12 @@ const ClientDetailPage: React.FC = () => {
     try {
       await api.post(`/clients/${id}/documents/generate`, {
         template_id: selectedTemplateId,
-        format: 'docx',
+        format: selectedFormat,
       });
-      toast.success("Document généré avec succès");
+      toast.success(`Document ${selectedFormat.toUpperCase()} généré avec succès`);
       setShowGenerateModal(false);
       setSelectedTemplateId(null);
+      setSelectedFormat('docx');
       fetchDocuments();
     } catch (err: any) {
       console.error("Erreur lors de la génération du document :", err);
@@ -265,13 +138,17 @@ const ClientDetailPage: React.FC = () => {
 
   const handleDownloadDocument = async (documentId: number) => {
     try {
+      // Trouver le document dans la liste pour obtenir son format
+      const doc = documents.find(d => d.id === documentId);
+      const fileExtension = doc?.format || 'docx';
+
       const res = await api.get(`/documents/${documentId}/download`, {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `document-${documentId}.docx`);
+      link.setAttribute('download', `document-${documentId}.${fileExtension}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -459,7 +336,7 @@ const ClientDetailPage: React.FC = () => {
         <div className="flex justify-between items-start mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
-              {client.civilite && `${client.civilite} `}{client.prenom} {client.nom?.toUpperCase()}
+              {client.civilite && `${client.civilite} `}{client.nom_complet}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Client #{client.id} • Dernière mise à jour : {formatDate(client.updated_at)}
@@ -469,9 +346,9 @@ const ClientDetailPage: React.FC = () => {
             {activeTab === "info" && (
               <button
                 onClick={() => navigate(`/clients/${client.id}/edit`)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
+                className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 <span>Éditer</span>
@@ -479,10 +356,10 @@ const ClientDetailPage: React.FC = () => {
             )}
             <button
               onClick={handleExportPDF}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
+              className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
             >
               <svg
-                className="w-4 h-4"
+                className="w-4 h-4 text-purple-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -498,10 +375,10 @@ const ClientDetailPage: React.FC = () => {
             </button>
             <button
               onClick={handleExportWord}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
+              className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
             >
               <svg
-                className="w-4 h-4"
+                className="w-4 h-4 text-blue-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -518,16 +395,22 @@ const ClientDetailPage: React.FC = () => {
             {activeTab === "questionnaires" && (
               <button
                 onClick={handleExportQuestionnairePdf}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg"
+                className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
               >
+                <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
                 <span>Export questionnaire PDF</span>
               </button>
             )}
             <button
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all"
+              className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-all flex items-center space-x-2"
             >
-              🗑️ Supprimer
+              <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Supprimer</span>
             </button>
           </div>
         </div>
@@ -541,9 +424,8 @@ const ClientDetailPage: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as "info" | "questionnaires" | "documents")}
-              className={`px-5 py-3 text-sm font-semibold transition-colors ${
-                activeTab === tab.key ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`px-5 py-3 text-sm font-semibold transition-colors ${activeTab === tab.key ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500 hover:text-gray-700"
+                }`}
             >
               {tab.label}
             </button>
@@ -552,11 +434,13 @@ const ClientDetailPage: React.FC = () => {
 
 
         {activeTab === "info" && (
-          <ClientInfoSection
-            client={client}
-            formatDate={formatDate}
-            formatCurrency={formatCurrency}
-          />
+          <div className="space-y-6">
+            <ClientInfoSection
+              client={client}
+              formatDate={formatDate}
+              formatCurrency={formatCurrency}
+            />
+          </div>
         )}
 
         {activeTab === "questionnaires" && (
@@ -663,6 +547,7 @@ const ClientDetailPage: React.FC = () => {
               onClick={() => {
                 setShowGenerateModal(false);
                 setSelectedTemplateId(null);
+                setSelectedFormat('docx');
               }}
             />
 
@@ -675,6 +560,7 @@ const ClientDetailPage: React.FC = () => {
                     onClick={() => {
                       setShowGenerateModal(false);
                       setSelectedTemplateId(null);
+                      setSelectedFormat('docx');
                     }}
                     className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
@@ -689,19 +575,17 @@ const ClientDetailPage: React.FC = () => {
                     <div
                       key={template.id}
                       onClick={() => setSelectedTemplateId(template.id)}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        selectedTemplateId === template.id
-                          ? 'border-indigo-600 bg-indigo-50'
-                          : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
-                      }`}
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedTemplateId === template.id
+                        ? 'border-indigo-600 bg-indigo-50'
+                        : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                        }`}
                     >
                       <div className="flex items-start">
                         <div className="flex-shrink-0 mt-1">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            selectedTemplateId === template.id
-                              ? 'border-indigo-600 bg-indigo-600'
-                              : 'border-gray-300'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedTemplateId === template.id
+                            ? 'border-indigo-600 bg-indigo-600'
+                            : 'border-gray-300'
+                            }`}>
                             {selectedTemplateId === template.id && (
                               <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 12 12">
                                 <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
@@ -723,11 +607,51 @@ const ClientDetailPage: React.FC = () => {
                   ))}
                 </div>
 
+                {/* Sélecteur de format */}
+                <div className="mt-6 border-t border-gray-200 pt-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Format du document</label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSelectedFormat('docx')}
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+                        selectedFormat === 'docx'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="font-medium">DOCX</span>
+                      </div>
+                      <p className="text-xs mt-1">Modifiable avec Word</p>
+                    </button>
+                    <button
+                      onClick={() => setSelectedFormat('pdf')}
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+                        selectedFormat === 'pdf'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span className="font-medium">PDF</span>
+                      </div>
+                      <p className="text-xs mt-1">Prêt à imprimer</p>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
                     onClick={() => {
                       setShowGenerateModal(false);
                       setSelectedTemplateId(null);
+                      setSelectedFormat('docx');
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                   >
@@ -736,11 +660,10 @@ const ClientDetailPage: React.FC = () => {
                   <button
                     onClick={handleGenerateDocument}
                     disabled={!selectedTemplateId || generatingDocument}
-                    className={`px-6 py-2 rounded-lg text-white transition-all ${
-                      !selectedTemplateId || generatingDocument
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-indigo-600 hover:bg-indigo-700'
-                    }`}
+                    className={`px-6 py-2 rounded-lg text-white transition-all ${!selectedTemplateId || generatingDocument
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                      }`}
                   >
                     {generatingDocument ? 'Génération...' : 'Générer le document'}
                   </button>

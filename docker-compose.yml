@@ -127,6 +127,33 @@ services:
       redis:
         condition: service_healthy
 
+  # --- MAILHOG (Serveur SMTP pour tests emails) ---
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    logging:
+      driver: 'none'  # Désactive les logs pour réduire le bruit
+
+  # --- GOTENBERG (Conversion documents → PDF) ---
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: gotenberg
+    restart: unless-stopped
+    ports:
+      - "3001:3000"  # API HTTP pour conversion
+    environment:
+      DISABLE_GOOGLE_CHROME: "1"  # On utilise seulement LibreOffice
+      DEFAULT_WAIT_TIMEOUT: "30"
+    command:
+      - "gotenberg"
+      - "--api-timeout=30s"
+      - "--api-port=3000"
+      - "--log-level=info"
+
   # --- FRONTEND (Vite/React/Vue/Autre) ---
   frontend:
     build:

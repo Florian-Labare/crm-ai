@@ -167,21 +167,21 @@ class ScoringService
             'recommandation' => $this->genererRecommandation($scoreGlobal),
         ]);
 
-        if (!empty($financier)) {
+        if (! empty($financier)) {
             $questionnaire->financier()->updateOrCreate(
                 ['questionnaire_risque_id' => $questionnaire->id],
                 $financier
             );
         }
 
-        if (!empty($connaissances)) {
+        if (! empty($connaissances)) {
             $questionnaire->connaissances()->updateOrCreate(
                 ['questionnaire_risque_id' => $questionnaire->id],
                 $connaissances
             );
         }
 
-        if (!empty($quiz)) {
+        if (! empty($quiz)) {
             $quiz['score_quiz'] = (int) round($scoreQuiz);
             $questionnaire->quiz()->updateOrCreate(
                 ['questionnaire_risque_id' => $questionnaire->id],
@@ -197,7 +197,7 @@ class ScoringService
         $score = 0;
 
         foreach (self::COMPORTEMENT_MAPPINGS as $champ => $valeurs) {
-            if (!isset($data[$champ])) {
+            if (! isset($data[$champ])) {
                 continue;
             }
 
@@ -205,6 +205,7 @@ class ScoringService
 
             if (isset($valeurs[$valeur])) {
                 $score += $valeurs[$valeur];
+
                 continue;
             }
 
@@ -244,7 +245,7 @@ class ScoringService
         ];
 
         foreach ($produits as $produit) {
-            if (!empty($data[$produit]) && $data[$produit] == true) {
+            if (! empty($data[$produit]) && $data[$produit] == true) {
                 $produitsConnus++;
             }
         }
@@ -272,9 +273,9 @@ class ScoringService
         if ($score < 45) {
             $texte = "Votre profil est **Prudent**. Vous privilégiez la sécurité du capital. Nous recommandons des placements à faible volatilité : fonds euros, obligations d'État, livrets réglementés. Diversification limitée sur des supports à risque modéré.";
         } elseif ($score <= 75) {
-            $texte = "Votre profil est **Modéré**. Vous acceptez une certaine volatilité pour rechercher du rendement. Nous recommandons une allocation équilibrée : 50-60% fonds sécurisés, 40-50% actions/SCPI/fonds diversifiés. Horizon minimum 5 ans.";
+            $texte = 'Votre profil est **Modéré**. Vous acceptez une certaine volatilité pour rechercher du rendement. Nous recommandons une allocation équilibrée : 50-60% fonds sécurisés, 40-50% actions/SCPI/fonds diversifiés. Horizon minimum 5 ans.';
         } else {
-            $texte = "Votre profil est **Dynamique**. Vous recherchez la performance et acceptez la volatilité. Nous recommandons une allocation offensive : 60-80% actions/fonds actions/private equity, 20-40% supports moins risqués. Horizon long terme (>8 ans).";
+            $texte = 'Votre profil est **Dynamique**. Vous recherchez la performance et acceptez la volatilité. Nous recommandons une allocation offensive : 60-80% actions/fonds actions/private equity, 20-40% supports moins risqués. Horizon long terme (>8 ans).';
         }
 
         return Str::ascii($texte);

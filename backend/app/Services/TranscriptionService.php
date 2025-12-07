@@ -15,6 +15,7 @@ class TranscriptionService
         // Fallback sur OpenAI API si échec local
         if (empty($transcription)) {
             Log::warning('⚠️ Whisper local a échoué, utilisation de l\'API OpenAI');
+
             return $this->transcribeOpenAI($audioPath);
         }
 
@@ -24,14 +25,14 @@ class TranscriptionService
     private function transcribeLocal(string $audioPath): ?string
     {
         try {
-            if (!file_exists($audioPath)) {
+            if (! file_exists($audioPath)) {
                 throw new \Exception("Fichier audio introuvable : {$audioPath}");
             }
 
             // Chemin vers le script Python
             $scriptPath = base_path('scripts/whisper_transcribe.py');
 
-            if (!file_exists($scriptPath)) {
+            if (! file_exists($scriptPath)) {
                 throw new \Exception("Script Whisper introuvable : {$scriptPath}");
             }
 
@@ -57,7 +58,7 @@ class TranscriptionService
             exec($command, $output, $returnCode);
 
             if ($returnCode !== 0) {
-                throw new \Exception('Erreur lors de l\'exécution du script Python : ' . implode("\n", $output));
+                throw new \Exception('Erreur lors de l\'exécution du script Python : '.implode("\n", $output));
             }
 
             $result = json_decode(implode("\n", $output), true);
@@ -78,7 +79,8 @@ class TranscriptionService
             return $transcription;
 
         } catch (\Throwable $e) {
-            Log::error('[Whisper Local] ' . $e->getMessage());
+            Log::error('[Whisper Local] '.$e->getMessage());
+
             return null;
         }
     }
@@ -87,21 +89,22 @@ class TranscriptionService
     {
         try {
             $apiKey = config('openai.api_key');
-            if (!$apiKey) {
+            if (! $apiKey) {
                 throw new \Exception('Clé API OpenAI manquante.');
             }
 
             $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $apiKey,
-                ])
+                'Authorization' => 'Bearer '.$apiKey,
+            ])
                 ->asMultipart()
                 ->attach('file', file_get_contents($audioPath), basename($audioPath))
                 ->attach('model', 'whisper-1')
                 ->attach('language', 'fr')
                 ->post('https://api.openai.com/v1/audio/transcriptions');
 
-            if (!$response->successful()) {
-                Log::error('[Whisper API] Erreur ' . $response->status() . ' : ' . $response->body());
+            if (! $response->successful()) {
+                Log::error('[Whisper API] Erreur '.$response->status().' : '.$response->body());
+
                 return null;
             }
 
@@ -112,7 +115,8 @@ class TranscriptionService
 
             return $transcription;
         } catch (\Throwable $e) {
-            Log::error('[Whisper API] ' . $e->getMessage());
+            Log::error('[Whisper API] '.$e->getMessage());
+
             return null;
         }
     }

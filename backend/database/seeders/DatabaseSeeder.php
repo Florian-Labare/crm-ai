@@ -23,5 +23,11 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // Créer le rôle MIA et les utilisateurs MIA
+        $this->call([
+            RoleSeeder::class,
+            MiaUserSeeder::class,
+        ]);
     }
 }

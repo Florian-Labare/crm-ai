@@ -11,6 +11,7 @@ class DocumentTemplate extends Model
     use HasFactory;
 
     protected $fillable = [
+        'team_id',
         'name',
         'description',
         'file_path',
@@ -21,6 +22,19 @@ class DocumentTemplate extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new \App\Scopes\TeamScope);
+    }
+
+    public function team(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
 
     /**
      * Un template peut avoir plusieurs documents générés

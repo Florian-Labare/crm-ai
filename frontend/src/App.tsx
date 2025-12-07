@@ -4,6 +4,7 @@ import HomePage from "./pages/HomePage";
 import ClientDetailPage from "./pages/ClientDetailPage";
 import ClientEditPage from "./pages/ClientEditPage";
 import ClientForm from "./components/ClientForm";
+import DerFormPage from "./pages/DerFormPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { RiskQuestionnaire } from "./pages/RiskQuestionnaire";
@@ -28,7 +29,10 @@ function Navigation() {
           <a href="/" className="text-gray-700 hover:text-indigo-600 font-medium transition-colors">
             Accueil
           </a>
-          <a href="/clients/new" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md">
+          <a href="/der/new" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md">
+            + Créer un nouveau rendez-vous
+          </a>
+          <a href="/clients/new" className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md">
             + Nouveau client
           </a>
           {user && (
@@ -66,6 +70,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+              <Route path="/der/new" element={<ProtectedRoute><DerFormPage /></ProtectedRoute>} />
               <Route path="/clients/new" element={<ProtectedRoute><ClientForm /></ProtectedRoute>} />
               <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailPage /></ProtectedRoute>} />
               <Route path="/clients/:id/edit" element={<ProtectedRoute><ClientEditPage /></ProtectedRoute>} />

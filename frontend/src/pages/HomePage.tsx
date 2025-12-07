@@ -4,22 +4,16 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { extractCollection } from "../utils/apiHelpers";
+import type { Client } from "../types/api";
 
-interface Client {
-  id: number;
-  nom: string;
-  prenom: string;
-  email?: string;
-  telephone?: string;
-  profession?: string;
-  ville?: string;
+interface ExtendedClient extends Client {
   situation_matrimoniale?: string;
   besoins?: string[];
-  created_at?: string;
 }
 
 const HomePage: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>([]);
+  const [clients, setClients] = useState<ExtendedClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
@@ -49,19 +43,20 @@ const HomePage: React.FC = () => {
     try {
       setLoading(true);
       const res = await api.get("/clients");
-      setClients(res.data);
+      const clientsData = extractCollection<ExtendedClient>(res);
+      setClients(clientsData);
 
       // Calculer les statistiques
-      const total = res.data.length;
-      const nouveaux = res.data.filter((c: Client) => {
+      const total = clientsData.length;
+      const nouveaux = clientsData.filter((c: ExtendedClient) => {
         if (!c.created_at) return false;
         const createdDate = new Date(c.created_at);
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         return createdDate > weekAgo;
       }).length;
-      const avecBesoins = res.data.filter(
-        (c: Client) => c.besoins && c.besoins.length > 0
+      const avecBesoins = clientsData.filter(
+        (c: ExtendedClient) => c.besoins && c.besoins.length > 0
       ).length;
 
       setStats({ total, nouveaux, avecBesoins });
@@ -335,7 +330,7 @@ const HomePage: React.FC = () => {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-semibold text-gray-900">
-                                {client.prenom} {client.nom.toUpperCase()}
+                                {client.nom_complet}
                               </div>
                               <div className="text-xs text-gray-500">
                                 ID: {client.id}

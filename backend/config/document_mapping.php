@@ -19,21 +19,64 @@ return [
     'prenom' => ['source' => 'client', 'field' => 'prenom'],
     'nomjeunefille' => ['source' => 'client', 'field' => 'nom_jeune_fille'],
     'datenaissance' => ['source' => 'client', 'field' => 'date_naissance', 'format' => 'date'],
+    'Datedenaissance' => ['source' => 'client', 'field' => 'date_naissance', 'format' => 'date'], // Alias
     'lieunaissance' => ['source' => 'client', 'field' => 'lieu_naissance'],
+    'Lieudenaissance' => ['source' => 'client', 'field' => 'lieu_naissance'], // Alias
     'nationalite' => ['source' => 'client', 'field' => 'nationalite'],
     'situationmatrimoniale' => ['source' => 'client', 'field' => 'situation_matrimoniale'],
+    'Situationmatrimoniale' => ['source' => 'client', 'field' => 'situation_matrimoniale'], // Alias
+    'Datesituationmatri' => ['source' => 'client', 'field' => 'date_situation_matrimoniale', 'format' => 'date'],
     'situationactuelle' => ['source' => 'client', 'field' => 'situation_actuelle'],
+    'Situationactuelle' => ['source' => 'client', 'field' => 'situation_actuelle'], // Alias
 
     // === COORDONNÉES CLIENT ===
     'adresse' => ['source' => 'client', 'field' => 'adresse'],
     'codepostal' => ['source' => 'client', 'field' => 'code_postal'],
     'ville' => ['source' => 'client', 'field' => 'ville'],
     'numerotel' => ['source' => 'client', 'field' => 'telephone'],
+    'tel' => ['source' => 'client', 'field' => 'telephone'], // Alias pour numerotel
     'email' => ['source' => 'client', 'field' => 'email'],
+    'Mail' => ['source' => 'client', 'field' => 'email'], // Alias pour email
 
     // === PROFESSIONNEL CLIENT ===
     'professionn' => ['source' => 'client', 'field' => 'profession'],
+    'Profession' => ['source' => 'client', 'field' => 'profession'], // Alias
     'chefentreprisee' => ['source' => 'client', 'field' => 'chef_entreprise', 'format' => 'boolean'],
+    'Mandatairesocial' => ['source' => 'client', 'field' => 'mandataire_social', 'format' => 'boolean'],
+    'Statut' => ['source' => 'client', 'field' => 'statut'],
+
+    // === SANTÉ ET LOISIRS CLIENT ===
+    'fumeur' => ['source' => 'client', 'field' => 'fumeur', 'format' => 'boolean'],
+    'activitéssportives' => [
+        'source' => 'computed',
+        'computed' => function ($client) {
+            if (!$client->activites_sportives) {
+                return 'Non';
+            }
+            $details = $client->details_activites_sportives ? ' (' . $client->details_activites_sportives . ')' : '';
+            return 'Oui' . $details;
+        },
+    ],
+    'risquesparticuliers' => [
+        'source' => 'computed',
+        'computed' => function ($client) {
+            if (!$client->risques_professionnels) {
+                return 'Non';
+            }
+            $details = $client->details_risques_professionnels ? ' (' . $client->details_risques_professionnels . ')' : '';
+            return 'Oui' . $details;
+        },
+    ],
+    'enfantacharge' => [
+        'source' => 'computed',
+        'computed' => function ($client) {
+            if (!$client->enfants || $client->enfants->isEmpty()) {
+                return '0';
+            }
+            $aCharge = $client->enfants->where('fiscalement_a_charge', true)->count();
+            return (string) $aCharge;
+        },
+    ],
 
     // === INFORMATIONS CONJOINT ===
     'nomconjoint' => ['source' => 'conjoint', 'field' => 'nom'],
@@ -112,6 +155,15 @@ return [
         },
     ],
 
+    // === BAE PRÉVOYANCE ===
+    'prévoyanceindividuelle' => ['source' => 'bae_prevoyance', 'field' => 'contrat_en_place'],
+    'invaliditecouvert' => ['source' => 'bae_prevoyance', 'field' => 'souhaite_couverture_invalidite', 'format' => 'boolean'],
+    'arrettravail' => ['source' => 'bae_prevoyance', 'field' => 'duree_indemnisation_souhaitee'],
+    'casdecesproche' => ['source' => 'bae_prevoyance', 'field' => 'capital_deces_souhaite', 'format' => 'currency'],
+    'chargesprocouvert' => ['source' => 'bae_prevoyance', 'field' => 'souhaite_couvrir_charges_professionnelles', 'format' => 'boolean'],
+    'chargesprofessionnelles' => ['source' => 'bae_prevoyance', 'field' => 'montant_charges_professionnelles_a_garantir', 'format' => 'currency'],
+    'Payeur' => ['source' => 'bae_prevoyance', 'field' => 'payeur'],
+
     // === BAE RETRAITE ===
     'ageretraitedepart' => ['source' => 'bae_retraite', 'field' => 'age_depart_retraite'],
     'ageretraitedepartconjoint' => ['source' => 'bae_retraite', 'field' => 'age_depart_retraite_conjoint'],
@@ -148,6 +200,8 @@ return [
     'donationmontant' => ['source' => 'bae_epargne', 'field' => 'donation_montant', 'format' => 'currency'],
     'donationbeneficiaire' => ['source' => 'bae_epargne', 'field' => 'donation_beneficiaires'],
     'donationforme' => ['source' => 'bae_epargne', 'field' => 'donation_forme'],
+    'horizonibjectif' => ['default' => ''], // TODO: Ajouter champ dans BaeEpargne
+    'objectifrapport' => ['default' => ''], // TODO: Ajouter champ dans BaeEpargne
 
     // === ACTIFS FINANCIERS (depuis bae_epargne, extraits du JSON) ===
     'nature1financier' => [
@@ -229,10 +283,37 @@ return [
             : ''
     ],
 
+    // === SANTÉ ===
+    'contratsanteindiv' => ['source' => 'sante_souhait', 'field' => 'contrat_en_place'],
+    'budgetsantemax' => ['source' => 'sante_souhait', 'field' => 'budget_mensuel_maximum', 'format' => 'currency'],
+
+    // === QUESTIONNAIRE RISQUE ===
+    'profilrisqueclient' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->questionnaireRisque?->profil_calcule ?? 'Non défini'
+    ],
+
+    // === BESOINS ===
+    'Siouiprévoyance' => [
+        'source' => 'computed',
+        'computed' => function ($client) {
+            $besoins = is_array($client->besoins) ? $client->besoins : [];
+            return in_array('prévoyance', $besoins) ? 'Oui' : 'Non';
+        },
+    ],
+
     // === DATES ET METADATA ===
     'Date' => [
         'source' => 'computed',
         'computed' => fn($client) => now()->format('d/m/Y')
+    ],
+    'datedocument' => [
+        'source' => 'computed',
+        'computed' => fn($client) => now()->format('d/m/Y')
+    ],
+    'dategaranties' => [
+        'source' => 'computed',
+        'computed' => fn($client) => now()->addDays(30)->format('d/m/Y')
     ],
 
     // === QUESTIONNAIRE - COMPORTEMENT FINANCIER ===
@@ -684,4 +765,124 @@ return [
     'valeuractuellefinancier2' => ['default' => ''],
     'valeuractuellefinancier3' => ['default' => ''],
     'valeurestimeeimmo5' => ['default' => ''],
+
+    // === MIGRATION COMPLÈTE - 57 VARIABLES AJOUTÉES ===
+
+    // === SANTÉ - Mapping vers champs existants niveau_* ===
+    'AnalyseImagerie' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_analyses_imagerie ? 'Oui' : 'Non',
+    ],
+    'AuxiliairesMédicaux' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_auxiliaires_medicaux ? 'Oui' : 'Non',
+    ],
+    'Dentaire' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_dentaire ? 'Oui' : 'Non',
+    ],
+    'Hospitalisation' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_hospitalisation ? 'Oui' : 'Non',
+    ],
+    'MédecinGénéralisteetspécialiste' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_medecin_generaliste ? 'Oui' : 'Non',
+    ],
+    'autresprotheses' => ['source' => 'sante_souhait', 'field' => 'souhaite_autres_protheses', 'format' => 'boolean'],
+    'curesthermales' => ['source' => 'sante_souhait', 'field' => 'souhaite_cures_thermales', 'format' => 'boolean'],
+    'medecinedouce' => ['source' => 'sante_souhait', 'field' => 'souhaite_medecine_douce', 'format' => 'boolean'],
+    'optiquelentilles' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_optique ? 'Oui' : 'Non',
+    ],
+    'protheseauditive' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_protheses_auditives ? 'Oui' : 'Non',
+    ],
+    'protectionjuridique' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique', 'format' => 'boolean'],
+    'protectionjuridiqueconjoint' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique_conjoint', 'format' => 'boolean'],
+
+    // === FINANCIERS ===
+    'Impôtsurlerevenupayéenn' => ['source' => 'bae_retraite', 'field' => 'impot_paye_n_1', 'format' => 'currency'],
+    'Montantépargnedisponible' => ['source' => 'bae_epargne', 'field' => 'montant_epargne_disponible', 'format' => 'currency'],
+    'Totalemprunts' => ['source' => 'bae_epargne', 'field' => 'passifs_total_emprunts', 'format' => 'currency'],
+    'Leclientdispose-t-ilduneépargnedisponible(liquide)' => [
+        'source' => 'computed',
+        'computed' => function ($client) {
+            if (!$client->baeEpargne || !$client->baeEpargne->montant_epargne_disponible) {
+                return 'Non';
+            }
+            return $client->baeEpargne->montant_epargne_disponible > 0 ? 'Oui' : 'Non';
+        },
+    ],
+
+    // === PROFIL DE RISQUE - Mapping vers questionnaire_risque_financiers ===
+    'Latoléranceaurisqueduclientest' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->tolerance_risque ?? 'Non défini',
+    ],
+    'Pourcentagemaxperte' => [
+        'source' => 'computed',
+        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->pourcentage_perte_max ?? '',
+    ],
+
+    // === PROFESSIONNELS ===
+    'Travailleurindépendant' => ['source' => 'client', 'field' => 'travailleur_independant', 'format' => 'boolean'],
+    'siindependant' => ['source' => 'client', 'field' => 'travailleur_independant', 'format' => 'boolean'],
+    'siindependantconjoint' => ['source' => 'conjoint', 'field' => 'travailleur_independant', 'format' => 'boolean'],
+    'deplacementpro' => ['source' => 'bae_prevoyance', 'field' => 'deplacements_professionnels'],
+    'deplacementproconjoint' => ['source' => 'bae_prevoyance', 'field' => 'deplacements_professionnels_conjoint'],
+    'dureeindemnisationfraispro' => ['source' => 'bae_prevoyance', 'field' => 'duree_indemnisation_frais_pro'],
+    'montantannuelprocouvert' => ['source' => 'bae_prevoyance', 'field' => 'montant_annuel_charges_professionnelles', 'format' => 'currency'],
+    'professionactuelleouancienne' => ['source' => 'client', 'field' => 'profession'],
+    'professionactuelleouancienneconjoint' => ['source' => 'conjoint', 'field' => 'profession'],
+    'situationpro' => ['source' => 'client', 'field' => 'situation_professionnelle'],
+    'situationproconjoint' => ['source' => 'conjoint', 'field' => 'situation_professionnelle'],
+    'statutsiactivite' => ['source' => 'client', 'field' => 'statut'],
+    'statutsiactiviteconjoint' => ['source' => 'conjoint', 'field' => 'statut'],
+
+    // === PRÉVOYANCE ===
+    'couvertinvalidite' => ['source' => 'bae_prevoyance', 'field' => 'souhaite_couverture_invalidite', 'format' => 'boolean'],
+    'couvrirchargespro' => ['source' => 'bae_prevoyance', 'field' => 'souhaite_couvrir_charges_professionnelles', 'format' => 'boolean'],
+    'dénominationcontratprev' => ['source' => 'bae_prevoyance', 'field' => 'denomination_contrat'],
+    'montantprevgarantie' => ['source' => 'bae_prevoyance', 'field' => 'montant_garanti', 'format' => 'currency'],
+    'procheprotecdeces' => ['source' => 'bae_prevoyance', 'field' => 'capital_deces_souhaite', 'format' => 'currency'],
+    'siouicharges' => ['source' => 'bae_prevoyance', 'field' => 'souhaite_couvrir_charges_professionnelles', 'format' => 'boolean'],
+    'siouimandataire' => ['source' => 'client', 'field' => 'mandataire_social', 'format' => 'boolean'],
+    'siouioutillage' => ['source' => 'bae_prevoyance', 'field' => 'souhaite_garantie_outillage', 'format' => 'boolean'],
+    '​​montantchargecouverte' => ['source' => 'bae_prevoyance', 'field' => 'montant_charges_professionnelles_a_garantir', 'format' => 'currency'],
+
+    // === ACTIVITÉ SPORTIVE ===
+    'niveauactivite' => ['source' => 'client', 'field' => 'niveau_activites_sportives'],
+    'niveauactivitesportiveconjoint' => ['source' => 'conjoint', 'field' => 'niveau_activite_sportive'],
+    'typeactivitesportiveconjoint' => ['source' => 'conjoint', 'field' => 'details_activites_sportives'],
+    'nbkmparan' => ['source' => 'client', 'field' => 'km_parcourus_annuels', 'format' => 'number'],
+
+    // === RETRAITE ===
+    'Agedudépartàlaretraite' => ['source' => 'bae_retraite', 'field' => 'age_depart_retraite', 'format' => 'number'],
+    'dateretraiteevenement' => ['source' => 'bae_retraite', 'field' => 'date_evenement_retraite', 'format' => 'date'],
+
+    // === GÉNÉRAUX ===
+    'Résidencefiscale' => ['source' => 'client', 'field' => 'residence_fiscale'],
+    'residencefiscale' => ['source' => 'client', 'field' => 'residence_fiscale'],
+    'Téléphone' => ['source' => 'client', 'field' => 'telephone'],
+    'adressepersop' => ['source' => 'client', 'field' => 'adresse'],
+    'etatcivile' => ['source' => 'client', 'field' => 'situation_matrimoniale'],
+    'genre' => ['source' => 'client', 'field' => 'genre', 'format' => 'enum'],
+    'SOCOGEAvousindique' => [
+        'source' => 'computed',
+        'computed' => fn($client) => 'SOCOGEA vous indique',
+    ],
+    'SOCOGEAvousindiqueque' => [
+        'source' => 'computed',
+        'computed' => fn($client) => 'SOCOGEA vous indique que',
+    ],
+    'Leprésentrapportrépond' => [
+        'source' => 'computed',
+        'computed' => fn($client) => 'Le présent rapport répond',
+    ],
+
+    // === CONJOINT ===
+    'situationconjointchomage' => ['source' => 'conjoint', 'field' => 'situation_chomage', 'format' => 'boolean'],
 ];

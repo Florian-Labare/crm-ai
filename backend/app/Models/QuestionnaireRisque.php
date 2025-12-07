@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class QuestionnaireRisque extends Model
 {
     protected $fillable = [
+        'team_id',
         'client_id',
         'score_global',
         'profil_calcule',
@@ -18,6 +19,19 @@ class QuestionnaireRisque extends Model
     protected $casts = [
         'score_global' => 'integer',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new \App\Scopes\TeamScope);
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
 
     public function client(): BelongsTo
     {

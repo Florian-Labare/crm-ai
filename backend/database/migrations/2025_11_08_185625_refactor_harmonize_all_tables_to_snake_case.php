@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('clients', function (Blueprint $table) {
@@ -15,21 +14,28 @@ return new class extends Migration
                 'lieudenaissance' => 'lieu_naissance',
                 'situationmatrimoniale' => 'situation_matrimoniale',
                 'revenusannuels' => 'revenus_annuels',
+                'revenus_annuel' => 'revenus_annuels', // Add singular variant
                 'nombreenfants' => 'nombre_enfants',
             ] as $old => $new) {
-                if (Schema::hasColumn('clients', $old)) {
+                if (Schema::hasColumn('clients', $old) && !Schema::hasColumn('clients', $new)) {
                     $table->renameColumn($old, $new);
                 }
             }
         });
 
         if (DB::getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE clients MODIFY date_naissance VARCHAR(255) NULL');
-            DB::statement('ALTER TABLE clients MODIFY lieu_naissance VARCHAR(255) NULL');
-            DB::statement('ALTER TABLE clients MODIFY situation_matrimoniale VARCHAR(255) NULL');
-            DB::statement('ALTER TABLE clients MODIFY date_situation_matrimoniale VARCHAR(255) NULL');
-            DB::statement('ALTER TABLE clients MODIFY date_evenement_professionnel VARCHAR(255) NULL');
-            DB::statement('ALTER TABLE clients MODIFY revenus_annuels VARCHAR(255) NULL');
+            if (Schema::hasColumn('clients', 'date_naissance'))
+                DB::statement('ALTER TABLE clients MODIFY date_naissance VARCHAR(255) NULL');
+            if (Schema::hasColumn('clients', 'lieu_naissance'))
+                DB::statement('ALTER TABLE clients MODIFY lieu_naissance VARCHAR(255) NULL');
+            if (Schema::hasColumn('clients', 'situation_matrimoniale'))
+                DB::statement('ALTER TABLE clients MODIFY situation_matrimoniale VARCHAR(255) NULL');
+            if (Schema::hasColumn('clients', 'date_situation_matrimoniale'))
+                DB::statement('ALTER TABLE clients MODIFY date_situation_matrimoniale VARCHAR(255) NULL');
+            if (Schema::hasColumn('clients', 'date_evenement_professionnel'))
+                DB::statement('ALTER TABLE clients MODIFY date_evenement_professionnel VARCHAR(255) NULL');
+            if (Schema::hasColumn('clients', 'revenus_annuels'))
+                DB::statement('ALTER TABLE clients MODIFY revenus_annuels VARCHAR(255) NULL');
         }
 
         Schema::table('conjoints', function (Blueprint $table) {
