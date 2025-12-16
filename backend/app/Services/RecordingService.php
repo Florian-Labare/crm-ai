@@ -18,6 +18,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class RecordingService
 {
+    private DiarizationService $diarizationService;
+
+    public function __construct(DiarizationService $diarizationService)
+    {
+        $this->diarizationService = $diarizationService;
+    }
+
     /**
      * Stocke un chunk audio
      */
@@ -86,17 +93,45 @@ class RecordingService
 
             Log::info("📂 [RECORDING] {$session->total_chunks} chunks trouvés");
 
-            // Transcrire chaque chunk via Whisper
-            $transcriptions = [];
-            foreach ($chunks as $index => $chunkPath) {
-                Log::info("🧠 [RECORDING] Transcription du chunk #{$index}...");
-                $transcription = $this->transcribeChunk($chunkPath);
-                $transcriptions[] = $transcription;
-                Log::info("✅ [RECORDING] Chunk #{$index} transcrit : " . strlen($transcription) . " caractères");
+            // Étape 1: Concaténer tous les chunks en un seul fichier audio
+            Log::info("🔗 [RECORDING] Concaténation des chunks...");
+            $concatenatedAudio = $this->concatenateChunks($chunks, $sessionId);
+
+            // Étape 2: Diarisation pour identifier courtier/client
+            Log::info("🎙️ [RECORDING] Diarisation pour séparer courtier/client...");
+            $diarizationResult = $this->diarizationService->diarize($concatenatedAudio);
+
+            $finalTranscription = '';
+
+            if ($diarizationResult['success'] && !empty($diarizationResult['client_segments'])) {
+                // Diarisation réussie - ne transcrire que les segments du client
+                Log::info("✅ [RECORDING] Diarisation réussie - {$diarizationResult['stats']['client_num_segments']} segments client détectés");
+
+                // Extraire l'audio du client uniquement
+                $clientAudioPath = $this->diarizationService->extractClientAudio(
+                    $concatenatedAudio,
+                    $diarizationResult['client_segments']
+                );
+
+                if ($clientAudioPath) {
+                    // Transcrire uniquement l'audio du client
+                    Log::info("🧠 [RECORDING] Transcription des segments client...");
+                    $finalTranscription = $this->transcribeChunk($clientAudioPath);
+
+                    // Nettoyer le fichier audio client temporaire
+                    $this->diarizationService->cleanup($clientAudioPath);
+                } else {
+                    Log::warning("⚠️ [RECORDING] Impossible d'extraire l'audio client, transcription complète");
+                    $finalTranscription = $this->transcribeChunk($concatenatedAudio);
+                }
+            } else {
+                // Diarisation échouée - transcrire tout l'audio (comportement par défaut)
+                Log::warning("⚠️ [RECORDING] Diarisation échouée, transcription de tout l'audio");
+                $finalTranscription = $this->transcribeChunk($concatenatedAudio);
             }
 
-            // Concaténer toutes les transcriptions
-            $finalTranscription = implode(' ', $transcriptions);
+            // Nettoyer le fichier audio concaténé
+            $this->diarizationService->cleanup($concatenatedAudio);
 
             Log::info("🎉 [RECORDING] Transcription finale : " . strlen($finalTranscription) . " caractères");
 
@@ -202,6 +237,76 @@ class RecordingService
         }
 
         return $response->json('text', '');
+    }
+
+    /**
+     * Concatène tous les chunks en un seul fichier audio
+     */
+    private function concatenateChunks(array $chunks, string $sessionId): string
+    {
+        if (count($chunks) === 1) {
+            // Un seul chunk - copier vers temp pour un nettoyage uniforme
+            $tempDir = storage_path('app/temp');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            $outputPath = $tempDir . '/concatenated_' . $sessionId . '.webm';
+            copy($chunks[0], $outputPath);
+
+            Log::info('✅ [RECORDING] Chunk unique copié vers temp', [
+                'output_path' => $outputPath
+            ]);
+
+            return $outputPath;
+        }
+
+        // Créer un fichier de concaténation temporaire
+        $outputPath = storage_path('app/temp/concatenated_' . $sessionId . '.wav');
+
+        // Créer le dossier temp s'il n'existe pas
+        $tempDir = storage_path('app/temp');
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        // Créer un fichier de liste pour ffmpeg
+        $fileListPath = $tempDir . '/filelist_' . $sessionId . '.txt';
+        $fileListContent = '';
+
+        foreach ($chunks as $chunkPath) {
+            // ffmpeg nécessite le format: file '/path/to/file.webm'
+            $fileListContent .= "file '" . str_replace("'", "'\\''", $chunkPath) . "'\n";
+        }
+
+        file_put_contents($fileListPath, $fileListContent);
+
+        // Concaténer avec ffmpeg
+        $command = sprintf(
+            'ffmpeg -f concat -safe 0 -i %s -c copy %s 2>&1',
+            escapeshellarg($fileListPath),
+            escapeshellarg($outputPath)
+        );
+
+        exec($command, $output, $returnCode);
+
+        // Nettoyer le fichier de liste
+        @unlink($fileListPath);
+
+        if ($returnCode !== 0 || !file_exists($outputPath)) {
+            Log::error('[RECORDING] Échec de la concaténation', [
+                'command' => $command,
+                'output' => implode("\n", $output)
+            ]);
+            throw new \Exception('Échec de la concaténation des chunks');
+        }
+
+        Log::info('✅ [RECORDING] Chunks concaténés', [
+            'output_path' => $outputPath,
+            'file_size' => filesize($outputPath)
+        ]);
+
+        return $outputPath;
     }
 
     /**

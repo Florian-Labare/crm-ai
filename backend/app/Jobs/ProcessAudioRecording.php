@@ -189,6 +189,11 @@ class ProcessAudioRecording implements ShouldQueue
                     $filteredData[$key] = $value;
                 }
 
+                // Normaliser la civilité pour correspondre à l'enum (Monsieur/Madame)
+                if (isset($filteredData['civilite'])) {
+                    $filteredData['civilite'] = $this->normalizeCivilite($filteredData['civilite']);
+                }
+
                 $client->fill($filteredData);
                 if ($client->isDirty()) {
                     $client->save();
@@ -443,6 +448,41 @@ class ProcessAudioRecording implements ShouldQueue
             'mandataire_social' => $data['mandataire_social'] ?? 'non défini',
             'statut' => $data['statut'] ?? 'non défini',
         ]);
+    }
+
+    /**
+     * Normalise la civilité pour correspondre à l'enum MySQL (Monsieur/Madame)
+     */
+    private function normalizeCivilite(?string $civilite): ?string
+    {
+        if (empty($civilite)) {
+            return null;
+        }
+
+        $civilite = trim(mb_strtolower($civilite, 'UTF-8'));
+
+        // Variantes pour Monsieur
+        $monsieurVariants = ['m.', 'm', 'mr', 'mr.', 'monsieur', 'homme', 'masculin', 'h'];
+        if (in_array($civilite, $monsieurVariants)) {
+            return 'Monsieur';
+        }
+
+        // Variantes pour Madame
+        $madameVariants = ['mme', 'mme.', 'madame', 'mademoiselle', 'mlle', 'mlle.', 'femme', 'féminin', 'f'];
+        if (in_array($civilite, $madameVariants)) {
+            return 'Madame';
+        }
+
+        // Si déjà au bon format
+        if (mb_strtolower($civilite) === 'monsieur') {
+            return 'Monsieur';
+        }
+        if (mb_strtolower($civilite) === 'madame') {
+            return 'Madame';
+        }
+
+        Log::warning("⚠️ Civilité non reconnue: '$civilite', ignorée");
+        return null;
     }
 
     /**
