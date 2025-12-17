@@ -127,9 +127,19 @@ class DirectTemplateMapper
      */
     private function resolveVariable(Client $client, string $variable): string
     {
-        // Cas spéciaux
+        // Cas spéciaux - dates
         if ($variable === 'current_date' || $variable === 'Date' || $variable === 'Datedocgener') {
             return Carbon::now()->format('d/m/Y');
+        }
+
+        // Cas spéciaux - fiscalcharge1, fiscalcharge2, fiscalcharge3 (ancien format)
+        if (preg_match('/^fiscalcharge(\d+)$/i', $variable, $matches)) {
+            $index = (int)$matches[1] - 1; // fiscalcharge1 = index 0
+            $enfant = $client->enfants->get($index);
+            if ($enfant) {
+                return $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
+            }
+            return '';
         }
 
         // Parser la variable au format: table.colonne ou table[index].colonne
@@ -214,12 +224,30 @@ class DirectTemplateMapper
             return '';
         }
 
+        // Certaines colonnes peuvent contenir des tableaux (JSON casté côté Eloquent)
+        if (is_array($value)) {
+            $parts = [];
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($value));
+            foreach ($iterator as $item) {
+                if ($item === null || $item === '') {
+                    continue;
+                }
+                $parts[] = (string) $item;
+            }
+
+            return implode("\n", $parts);
+        }
+
         // Formatage des dates
         if (in_array($columnName, self::DATE_COLUMNS)) {
+            // Vérifier si la date contient des caractères invalides (XX, ??, etc.)
+            if (is_string($value) && preg_match('/[Xx?]+/', $value)) {
+                return $value; // Retourner la date telle quelle
+            }
             try {
                 return Carbon::parse($value)->format('d/m/Y');
             } catch (\Exception $e) {
-                return '';
+                return (string) $value; // Retourner la valeur originale si parsing échoue
             }
         }
 

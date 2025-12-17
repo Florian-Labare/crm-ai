@@ -296,45 +296,46 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
           <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
             <InfoItem
               label="Nom complet"
-              value={`${client.conjoint.prenom} ${client.conjoint.nom?.toUpperCase()}`}
+              value={client.conjoint.prenom || client.conjoint.nom
+                ? `${client.conjoint.prenom || ''} ${client.conjoint.nom?.toUpperCase() || ''}`.trim()
+                : 'Non renseigné'}
             />
-            {client.conjoint.nom_jeune_fille && (
-              <InfoItem label="Nom de jeune fille" value={client.conjoint.nom_jeune_fille} />
-            )}
-            {client.conjoint.date_naissance && (
-              <InfoItem
-                label="Date de naissance"
-                value={formatDate(client.conjoint.date_naissance)}
-                icon={<CalendarIcon size={14} />}
-              />
-            )}
-            {client.conjoint.lieu_naissance && (
-              <InfoItem label="Lieu de naissance" value={client.conjoint.lieu_naissance} />
-            )}
-            {client.conjoint.nationalite && (
-              <InfoItem label="Nationalité" value={client.conjoint.nationalite} />
-            )}
-            {client.conjoint.profession && (
-              <InfoItem label="Profession" value={client.conjoint.profession} />
-            )}
-            {client.conjoint.situation_actuelle_statut && (
-              <InfoItem label="Situation actuelle" value={client.conjoint.situation_actuelle_statut} />
-            )}
-            {client.conjoint.telephone && (
-              <InfoItem
-                label="Téléphone"
-                value={client.conjoint.telephone}
-                icon={<PhoneIcon size={14} />}
-              />
-            )}
-            {client.conjoint.adresse && (
-              <InfoItem
-                label="Adresse"
-                value={client.conjoint.adresse}
-                icon={<MapPinIcon size={14} />}
-                fullWidth
-              />
-            )}
+            <InfoItem
+              label="Nom de jeune fille"
+              value={client.conjoint.nom_jeune_fille || 'Non renseigné'}
+            />
+            <InfoItem
+              label="Date de naissance"
+              value={client.conjoint.date_naissance ? formatDate(client.conjoint.date_naissance) : 'Non renseigné'}
+              icon={<CalendarIcon size={14} />}
+            />
+            <InfoItem
+              label="Lieu de naissance"
+              value={client.conjoint.lieu_naissance || 'Non renseigné'}
+            />
+            <InfoItem
+              label="Nationalité"
+              value={client.conjoint.nationalite || 'Non renseigné'}
+            />
+            <InfoItem
+              label="Profession"
+              value={client.conjoint.profession || 'Non renseigné'}
+            />
+            <InfoItem
+              label="Situation actuelle"
+              value={client.conjoint.situation_actuelle_statut || 'Non renseigné'}
+            />
+            <InfoItem
+              label="Téléphone"
+              value={client.conjoint.telephone || 'Non renseigné'}
+              icon={<PhoneIcon size={14} />}
+            />
+            <InfoItem
+              label="Adresse"
+              value={client.conjoint.adresse || 'Non renseignée'}
+              icon={<MapPinIcon size={14} />}
+              fullWidth
+            />
           </dl>
         </InfoCard>
       )}

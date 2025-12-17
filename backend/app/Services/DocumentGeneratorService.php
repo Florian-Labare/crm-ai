@@ -8,6 +8,7 @@ use App\Models\GeneratedDocument;
 use GuzzleHttp\Client as HttpClient;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class DocumentGeneratorService
 {
@@ -66,11 +67,16 @@ class DocumentGeneratorService
 
         // Remplacer toutes les variables dans le template
         foreach ($variables as $key => $value) {
-            $templateProcessor->setValue($key, $value);
+            $templateProcessor->setValue($key, $this->normalizeTemplateValue($value));
         }
 
         // Générer un nom de fichier unique (toujours en .docx d'abord)
         $fileName = $this->generateFileName($client, $template, 'docx');
+
+        // S'assurer que le dossier de sortie existe sur le disque par défaut
+        // (ex: storage/app/private/documents si le disque "private" est celui par défaut)
+        Storage::makeDirectory('documents');
+
         $outputPath = Storage::path("documents/{$fileName}");
 
         // Sauvegarder le document généré
@@ -116,7 +122,7 @@ class DocumentGeneratorService
         $variables['nom'] = $client->nom;
         $variables['nomjeunefille'] = $client->nom_jeune_fille;
         $variables['prenom'] = $client->prenom;
-        $variables['datenaissance'] = $client->date_naissance ? \Carbon\Carbon::parse($client->date_naissance)->format('d/m/Y') : '';
+        $variables['datenaissance'] = $this->safeFormatDate($client->date_naissance);
         $variables['lieunaissance'] = $client->lieu_naissance;
         $variables['nationalite'] = $client->nationalite;
         $variables['situationmatrimoniale'] = $client->situation_matrimoniale;
@@ -141,10 +147,13 @@ class DocumentGeneratorService
 
             if ($enfant) {
                 $variables["nomprenomenfant{$i}"] = $enfant->prenom.' '.$enfant->nom;
-                $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = $enfant->date_naissance ? \Carbon\Carbon::parse($enfant->date_naissance)->format('d/m/Y') : '';
+                $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = $this->safeFormatDate($enfant->date_naissance);
+                // Variable fiscalcharge pour le template (fiscalcharge1, fiscalcharge2, fiscalcharge3)
+                $variables["fiscalcharge{$i}"] = $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
             } else {
                 $variables["nomprenomenfant{$i}"] = '';
                 $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = '';
+                $variables["fiscalcharge{$i}"] = '';
             }
         }
 
@@ -155,7 +164,7 @@ class DocumentGeneratorService
             $variables['nomconjoint'] = $conjoint->nom;
             $variables['nomjeunefilleconjoint'] = $conjoint->nom_jeune_fille;
             $variables['prenomconjoint'] = $conjoint->prenom;
-            $variables['datenaissanceconjoint'] = $conjoint->date_naissance ? \Carbon\Carbon::parse($conjoint->date_naissance)->format('d/m/Y') : '';
+            $variables['datenaissanceconjoint'] = $this->safeFormatDate($conjoint->date_naissance);
             $variables['lieunaissanceconjoint'] = $conjoint->lieu_naissance;
             $variables['nationaliteconjoint'] = $conjoint->nationalite;
             $variables['professionconjointnn'] = $conjoint->profession;
@@ -226,10 +235,68 @@ class DocumentGeneratorService
     private function generateFileName(Client $client, DocumentTemplate $template, string $format): string
     {
         $timestamp = now()->format('Ymd_His');
-        $clientName = str_replace(' ', '_', $client->nom.'_'.$client->prenom);
-        $templateSlug = str_replace(' ', '_', strtolower($template->name));
+        $clientName = Str::slug($client->nom.'_'.$client->prenom, '_');
+        $templateSlug = Str::slug($template->name, '_');
 
         return "{$clientName}_{$templateSlug}_{$timestamp}.{$format}";
+    }
+
+    /**
+     * Parse une date de façon sécurisée (gère les formats partiels comme "1961-XX-XX")
+     */
+    private function safeFormatDate(?string $date): string
+    {
+        if (empty($date)) {
+            return '';
+        }
+
+        // Vérifier si la date contient des caractères invalides (XX, ??, etc.)
+        if (preg_match('/[Xx?]+/', $date)) {
+            // Retourner la date telle quelle ou une version nettoyée
+            return $date;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($date)->format('d/m/Y');
+        } catch (\Exception $e) {
+            // Si la date ne peut pas être parsée, la retourner telle quelle
+            return $date;
+        }
+    }
+
+    /**
+     * Normalise une valeur pour PhpWord TemplateProcessor::setValue (qui attend du texte).
+     */
+    private function normalizeTemplateValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Oui' : 'Non';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('d/m/Y');
+        }
+
+        if (is_array($value)) {
+            $parts = [];
+
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($value));
+            foreach ($iterator as $item) {
+                $parts[] = $this->normalizeTemplateValue($item);
+            }
+
+            return implode("\n", array_filter($parts, static fn ($p) => $p !== ''));
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE) ?: (string) $value;
     }
 
     /**
