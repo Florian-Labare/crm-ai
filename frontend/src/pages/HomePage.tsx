@@ -314,7 +314,7 @@ const HomePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {clients.map((client, index) => (
+                    {clients.map((client) => (
                       <tr
                         key={client.id}
                         className="hover:bg-gray-50 transition-colors"

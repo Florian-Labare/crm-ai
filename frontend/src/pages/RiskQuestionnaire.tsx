@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RiskProfileCard } from '../components/RiskProfileCard';
 
-interface QuestionnaireData {
-  financier: Record<string, string>;
-  connaissances: Record<string, boolean | string>;
-  quiz: Record<string, string>;
-}
-
 interface RadioOptionProps {
   name: string;
   value: string;

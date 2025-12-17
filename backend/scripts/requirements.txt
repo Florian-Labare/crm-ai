@@ -1,1 +1,3 @@
 openai-whisper
+whisperx
+pyannote.audio

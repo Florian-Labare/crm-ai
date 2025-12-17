@@ -47,9 +47,20 @@ RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-s
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# --- Installation de faster-whisper pour transcription locale ---
+# --- Installation des dépendances Python (Whisper, WhisperX, Pyannote) ---
+# Note: Cette étape peut prendre plusieurs minutes (torch, pyannote, etc.)
 RUN pip3 install --no-cache-dir --break-system-packages -r /var/www/html/scripts/requirements.txt \
-    && chmod +x /var/www/html/scripts/whisper_transcribe.py
+    && chmod +x /var/www/html/scripts/whisper_transcribe.py \
+    && chmod +x /var/www/html/scripts/diarize_audio.py \
+    && chmod +x /var/www/html/scripts/init_pyannote.py
+
+# --- Créer les dossiers nécessaires pour l'enregistrement audio ---
+RUN mkdir -p /var/www/html/storage/app/recordings \
+    && mkdir -p /var/www/html/storage/app/temp \
+    && chown -R www-data:www-data /var/www/html/storage/app/recordings \
+    && chown -R www-data:www-data /var/www/html/storage/app/temp \
+    && chmod -R 777 /var/www/html/storage/app/recordings \
+    && chmod -R 777 /var/www/html/storage/app/temp
 
 # --- Configuration Apache personnalisée ---
 COPY ./docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf

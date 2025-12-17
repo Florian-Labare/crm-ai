@@ -42,7 +42,63 @@ class BaeService
             $this->syncBaeEpargne($client, $data['bae_epargne']);
         }
 
+        // 4️⃣ Créer les entrées BAE vides basées sur les besoins du client
+        $this->ensureBaeForBesoins($client, $data['besoins'] ?? $client->besoins ?? []);
+
         Log::info("✅ [BAE] Synchronisation terminée pour le client #{$client->id}");
+    }
+
+    /**
+     * Crée les entrées BAE vides pour les besoins détectés
+     * Permet d'afficher les sections même si aucune donnée n'est renseignée
+     *
+     * @param  array  $besoins  Liste des besoins du client
+     */
+    public function ensureBaeForBesoins(Client $client, array $besoins): void
+    {
+        if (empty($besoins)) {
+            return;
+        }
+
+        Log::info("📋 [BAE] Vérification des entrées BAE pour les besoins", ['besoins' => $besoins]);
+
+        foreach ($besoins as $besoin) {
+            $besoinNormalized = $this->normalizeBesoinName($besoin);
+
+            switch ($besoinNormalized) {
+                case 'prevoyance':
+                    if (!$client->baePrevoyance()->exists()) {
+                        $client->baePrevoyance()->create([]);
+                        Log::info("✅ [BAE PRÉVOYANCE] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+
+                case 'retraite':
+                    if (!$client->baeRetraite()->exists()) {
+                        $client->baeRetraite()->create([]);
+                        Log::info("✅ [BAE RETRAITE] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+
+                case 'epargne':
+                case 'placement':
+                case 'investissement':
+                    if (!$client->baeEpargne()->exists()) {
+                        $client->baeEpargne()->create([]);
+                        Log::info("✅ [BAE ÉPARGNE] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+
+                case 'sante':
+                case 'mutuelle':
+                case 'complementaire':
+                    if (!$client->santeSouhait()->exists()) {
+                        $client->santeSouhait()->create([]);
+                        Log::info("✅ [SANTÉ SOUHAIT] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+            }
+        }
     }
 
     /**

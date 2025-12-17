@@ -28,6 +28,22 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
   formatDate,
   formatCurrency,
 }) => {
+  // Helper pour vérifier si un besoin est présent
+  const hasBesoin = (besoinKeywords: string[]): boolean => {
+    if (!client.besoins || !Array.isArray(client.besoins)) return false;
+    return client.besoins.some((besoin: string) =>
+      besoinKeywords.some((keyword) =>
+        besoin.toLowerCase().includes(keyword.toLowerCase())
+      )
+    );
+  };
+
+  // Déterminer si les sections doivent être affichées (besoin détecté OU données existantes)
+  const showSante = hasBesoin(['santé', 'sante', 'mutuelle', 'complémentaire', 'complementaire']) || client.sante_souhait;
+  const showPrevoyance = hasBesoin(['prévoyance', 'prevoyance', 'décès', 'deces', 'invalidité', 'invalidite']) || client.bae_prevoyance;
+  const showRetraite = hasBesoin(['retraite', 'per', 'pension']) || client.bae_retraite;
+  const showEpargne = hasBesoin(['épargne', 'epargne', 'placement', 'investissement', 'patrimoine']) || client.bae_epargne;
+
   // Calcul des statistiques clés
   const stats = [
     {
@@ -383,495 +399,399 @@ export const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
         </InfoCard>
       )}
 
-      {/* Carte Santé (si applicable) */}
-      {client.sante_souhait && (
+      {/* Carte Santé (si besoin détecté ou données existantes) */}
+      {showSante && (
         <InfoCard title="Santé" icon={<HeartIcon size={20} />} color="pink">
           <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-            {client.sante_souhait.contrat_en_place && (
-              <InfoItem label="Contrat en place" value={client.sante_souhait.contrat_en_place} />
-            )}
-            {client.sante_souhait.budget_mensuel_maximum && (
-              <InfoItem
-                label="Budget mensuel maximum"
-                value={formatCurrency(client.sante_souhait.budget_mensuel_maximum)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.sante_souhait.niveau_hospitalisation !== null && client.sante_souhait.niveau_hospitalisation !== undefined && (
-              <InfoItem
-                label="Niveau hospitalisation"
-                value={`${client.sante_souhait.niveau_hospitalisation}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_chambre_particuliere !== null && client.sante_souhait.niveau_chambre_particuliere !== undefined && (
-              <InfoItem
-                label="Niveau chambre particulière"
-                value={`${client.sante_souhait.niveau_chambre_particuliere}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_medecin_generaliste !== null && client.sante_souhait.niveau_medecin_generaliste !== undefined && (
-              <InfoItem
-                label="Niveau médecin généraliste"
-                value={`${client.sante_souhait.niveau_medecin_generaliste}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_analyses_imagerie !== null && client.sante_souhait.niveau_analyses_imagerie !== undefined && (
-              <InfoItem
-                label="Niveau analyses/imagerie"
-                value={`${client.sante_souhait.niveau_analyses_imagerie}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_auxiliaires_medicaux !== null && client.sante_souhait.niveau_auxiliaires_medicaux !== undefined && (
-              <InfoItem
-                label="Niveau auxiliaires médicaux"
-                value={`${client.sante_souhait.niveau_auxiliaires_medicaux}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_pharmacie !== null && client.sante_souhait.niveau_pharmacie !== undefined && (
-              <InfoItem
-                label="Niveau pharmacie"
-                value={`${client.sante_souhait.niveau_pharmacie}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_dentaire !== null && client.sante_souhait.niveau_dentaire !== undefined && (
-              <InfoItem
-                label="Niveau dentaire"
-                value={`${client.sante_souhait.niveau_dentaire}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_optique !== null && client.sante_souhait.niveau_optique !== undefined && (
-              <InfoItem
-                label="Niveau optique"
-                value={`${client.sante_souhait.niveau_optique}/10`}
-              />
-            )}
-            {client.sante_souhait.niveau_protheses_auditives !== null && client.sante_souhait.niveau_protheses_auditives !== undefined && (
-              <InfoItem
-                label="Niveau prothèses auditives"
-                value={`${client.sante_souhait.niveau_protheses_auditives}/10`}
-              />
-            )}
+            <InfoItem
+              label="Contrat en place"
+              value={client.sante_souhait?.contrat_en_place || "Non renseigné"}
+            />
+            <InfoItem
+              label="Budget mensuel maximum"
+              value={client.sante_souhait?.budget_mensuel_maximum ? formatCurrency(client.sante_souhait.budget_mensuel_maximum) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Niveau hospitalisation"
+              value={client.sante_souhait?.niveau_hospitalisation !== null && client.sante_souhait?.niveau_hospitalisation !== undefined ? `${client.sante_souhait.niveau_hospitalisation}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau chambre particulière"
+              value={client.sante_souhait?.niveau_chambre_particuliere !== null && client.sante_souhait?.niveau_chambre_particuliere !== undefined ? `${client.sante_souhait.niveau_chambre_particuliere}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau médecin généraliste"
+              value={client.sante_souhait?.niveau_medecin_generaliste !== null && client.sante_souhait?.niveau_medecin_generaliste !== undefined ? `${client.sante_souhait.niveau_medecin_generaliste}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau analyses/imagerie"
+              value={client.sante_souhait?.niveau_analyses_imagerie !== null && client.sante_souhait?.niveau_analyses_imagerie !== undefined ? `${client.sante_souhait.niveau_analyses_imagerie}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau auxiliaires médicaux"
+              value={client.sante_souhait?.niveau_auxiliaires_medicaux !== null && client.sante_souhait?.niveau_auxiliaires_medicaux !== undefined ? `${client.sante_souhait.niveau_auxiliaires_medicaux}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau pharmacie"
+              value={client.sante_souhait?.niveau_pharmacie !== null && client.sante_souhait?.niveau_pharmacie !== undefined ? `${client.sante_souhait.niveau_pharmacie}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau dentaire"
+              value={client.sante_souhait?.niveau_dentaire !== null && client.sante_souhait?.niveau_dentaire !== undefined ? `${client.sante_souhait.niveau_dentaire}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau optique"
+              value={client.sante_souhait?.niveau_optique !== null && client.sante_souhait?.niveau_optique !== undefined ? `${client.sante_souhait.niveau_optique}/10` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Niveau prothèses auditives"
+              value={client.sante_souhait?.niveau_protheses_auditives !== null && client.sante_souhait?.niveau_protheses_auditives !== undefined ? `${client.sante_souhait.niveau_protheses_auditives}/10` : "Non renseigné"}
+            />
           </dl>
         </InfoCard>
       )}
 
-      {/* Carte Prévoyance (si applicable) */}
-      {client.bae_prevoyance && (
+      {/* Carte Prévoyance (si besoin détecté ou données existantes) */}
+      {showPrevoyance && (
         <InfoCard title="Prévoyance" icon={<ShieldIcon size={20} />} color="orange">
           <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-            {client.bae_prevoyance.contrat_en_place && (
-              <InfoItem label="Contrat en place" value={client.bae_prevoyance.contrat_en_place} />
-            )}
-            {client.bae_prevoyance.date_effet && (
-              <InfoItem
-                label="Date d'effet"
-                value={formatDate(client.bae_prevoyance.date_effet)}
-                icon={<CalendarIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.cotisations && (
-              <InfoItem
-                label="Cotisations mensuelles"
-                value={formatCurrency(client.bae_prevoyance.cotisations)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.souhaite_couverture_invalidite !== null && client.bae_prevoyance.souhaite_couverture_invalidite !== undefined && (
-              <InfoItem
-                label="Couverture invalidité"
-                value={client.bae_prevoyance.souhaite_couverture_invalidite ? "Oui" : "Non"}
-              />
-            )}
-            {client.bae_prevoyance.revenu_a_garantir && (
-              <InfoItem
-                label="Revenu à garantir"
-                value={formatCurrency(client.bae_prevoyance.revenu_a_garantir)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.souhaite_couvrir_charges_professionnelles !== null && client.bae_prevoyance.souhaite_couvrir_charges_professionnelles !== undefined && (
-              <InfoItem
-                label="Couvrir charges pro"
-                value={client.bae_prevoyance.souhaite_couvrir_charges_professionnelles ? "Oui" : "Non"}
-              />
-            )}
-            {client.bae_prevoyance.montant_annuel_charges_professionnelles && (
-              <InfoItem
-                label="Montant charges pro (annuel)"
-                value={formatCurrency(client.bae_prevoyance.montant_annuel_charges_professionnelles)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.garantir_totalite_charges_professionnelles !== null && client.bae_prevoyance.garantir_totalite_charges_professionnelles !== undefined && (
-              <InfoItem
-                label="Garantir totalité charges"
-                value={client.bae_prevoyance.garantir_totalite_charges_professionnelles ? "Oui" : "Non"}
-              />
-            )}
-            {client.bae_prevoyance.montant_charges_professionnelles_a_garantir && (
-              <InfoItem
-                label="Montant charges à garantir"
-                value={formatCurrency(client.bae_prevoyance.montant_charges_professionnelles_a_garantir)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.duree_indemnisation_souhaitee && (
-              <InfoItem
-                label="Durée d'indemnisation"
-                value={client.bae_prevoyance.duree_indemnisation_souhaitee}
-              />
-            )}
-            {client.bae_prevoyance.capital_deces_souhaite && (
-              <InfoItem
-                label="Capital décès"
-                value={formatCurrency(client.bae_prevoyance.capital_deces_souhaite)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.garanties_obseques && (
-              <InfoItem
-                label="Garanties obsèques"
-                value={formatCurrency(client.bae_prevoyance.garanties_obseques)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.rente_enfants && (
-              <InfoItem
-                label="Rente enfants"
-                value={formatCurrency(client.bae_prevoyance.rente_enfants)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.rente_conjoint && (
-              <InfoItem
-                label="Rente conjoint"
-                value={formatCurrency(client.bae_prevoyance.rente_conjoint)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_prevoyance.payeur && (
-              <InfoItem label="Payeur" value={client.bae_prevoyance.payeur} />
-            )}
+            <InfoItem
+              label="Contrat en place"
+              value={client.bae_prevoyance?.contrat_en_place || "Non renseigné"}
+            />
+            <InfoItem
+              label="Date d'effet"
+              value={client.bae_prevoyance?.date_effet ? formatDate(client.bae_prevoyance.date_effet) : "Non renseigné"}
+              icon={<CalendarIcon size={14} />}
+            />
+            <InfoItem
+              label="Cotisations mensuelles"
+              value={client.bae_prevoyance?.cotisations ? formatCurrency(client.bae_prevoyance.cotisations) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Couverture invalidité"
+              value={client.bae_prevoyance?.souhaite_couverture_invalidite !== null && client.bae_prevoyance?.souhaite_couverture_invalidite !== undefined ? (client.bae_prevoyance.souhaite_couverture_invalidite ? "Oui" : "Non") : "Non renseigné"}
+            />
+            <InfoItem
+              label="Revenu à garantir"
+              value={client.bae_prevoyance?.revenu_a_garantir ? formatCurrency(client.bae_prevoyance.revenu_a_garantir) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Couvrir charges pro"
+              value={client.bae_prevoyance?.souhaite_couvrir_charges_professionnelles !== null && client.bae_prevoyance?.souhaite_couvrir_charges_professionnelles !== undefined ? (client.bae_prevoyance.souhaite_couvrir_charges_professionnelles ? "Oui" : "Non") : "Non renseigné"}
+            />
+            <InfoItem
+              label="Montant charges pro (annuel)"
+              value={client.bae_prevoyance?.montant_annuel_charges_professionnelles ? formatCurrency(client.bae_prevoyance.montant_annuel_charges_professionnelles) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Garantir totalité charges"
+              value={client.bae_prevoyance?.garantir_totalite_charges_professionnelles !== null && client.bae_prevoyance?.garantir_totalite_charges_professionnelles !== undefined ? (client.bae_prevoyance.garantir_totalite_charges_professionnelles ? "Oui" : "Non") : "Non renseigné"}
+            />
+            <InfoItem
+              label="Montant charges à garantir"
+              value={client.bae_prevoyance?.montant_charges_professionnelles_a_garantir ? formatCurrency(client.bae_prevoyance.montant_charges_professionnelles_a_garantir) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Durée d'indemnisation"
+              value={client.bae_prevoyance?.duree_indemnisation_souhaitee || "Non renseigné"}
+            />
+            <InfoItem
+              label="Capital décès"
+              value={client.bae_prevoyance?.capital_deces_souhaite ? formatCurrency(client.bae_prevoyance.capital_deces_souhaite) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Garanties obsèques"
+              value={client.bae_prevoyance?.garanties_obseques ? formatCurrency(client.bae_prevoyance.garanties_obseques) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Rente enfants"
+              value={client.bae_prevoyance?.rente_enfants ? formatCurrency(client.bae_prevoyance.rente_enfants) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Rente conjoint"
+              value={client.bae_prevoyance?.rente_conjoint ? formatCurrency(client.bae_prevoyance.rente_conjoint) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Payeur"
+              value={client.bae_prevoyance?.payeur || "Non renseigné"}
+            />
           </dl>
         </InfoCard>
       )}
 
-      {/* Carte Retraite (si applicable) */}
-      {client.bae_retraite && (
+      {/* Carte Retraite (si besoin détecté ou données existantes) */}
+      {showRetraite && (
         <InfoCard title="Retraite" icon={<TrendingUpIcon size={20} />} color="purple">
           <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-            {client.bae_retraite.revenus_annuels && (
-              <InfoItem
-                label="Revenus annuels"
-                value={formatCurrency(client.bae_retraite.revenus_annuels)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.revenus_annuels_foyer && (
-              <InfoItem
-                label="Revenus foyer"
-                value={formatCurrency(client.bae_retraite.revenus_annuels_foyer)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.impot_revenu && (
-              <InfoItem
-                label="Impôt sur le revenu"
-                value={formatCurrency(client.bae_retraite.impot_revenu)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.nombre_parts_fiscales && (
-              <InfoItem label="Parts fiscales" value={client.bae_retraite.nombre_parts_fiscales} />
-            )}
-            {client.bae_retraite.tmi && (
-              <InfoItem label="TMI" value={client.bae_retraite.tmi} />
-            )}
-            {client.bae_retraite.impot_paye_n_1 && (
-              <InfoItem
-                label="Impôt payé N-1"
-                value={formatCurrency(client.bae_retraite.impot_paye_n_1)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.age_depart_retraite && (
-              <InfoItem
-                label="Âge départ retraite"
-                value={`${client.bae_retraite.age_depart_retraite} ans`}
-                icon={<CalendarIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.age_depart_retraite_conjoint && (
-              <InfoItem
-                label="Âge départ retraite conjoint"
-                value={`${client.bae_retraite.age_depart_retraite_conjoint} ans`}
-                icon={<CalendarIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.pourcentage_revenu_a_maintenir && (
-              <InfoItem
-                label="Revenu à maintenir"
-                value={`${client.bae_retraite.pourcentage_revenu_a_maintenir}%`}
-              />
-            )}
-            {client.bae_retraite.contrat_en_place && (
-              <InfoItem label="Contrat en place" value={client.bae_retraite.contrat_en_place} />
-            )}
-            {client.bae_retraite.bilan_retraite_disponible !== null && client.bae_retraite.bilan_retraite_disponible !== undefined && (
-              <InfoItem
-                label="Bilan retraite disponible"
-                value={client.bae_retraite.bilan_retraite_disponible ? "Oui" : "Non"}
-              />
-            )}
-            {client.bae_retraite.complementaire_retraite_mise_en_place !== null && client.bae_retraite.complementaire_retraite_mise_en_place !== undefined && (
-              <InfoItem
-                label="Complémentaire retraite"
-                value={client.bae_retraite.complementaire_retraite_mise_en_place ? "Oui" : "Non"}
-              />
-            )}
-            {client.bae_retraite.designation_etablissement && (
-              <InfoItem label="Établissement" value={client.bae_retraite.designation_etablissement} />
-            )}
-            {client.bae_retraite.cotisations_annuelles && (
-              <InfoItem
-                label="Cotisations annuelles"
-                value={formatCurrency(client.bae_retraite.cotisations_annuelles)}
-                icon={<DollarSignIcon size={14} />}
-              />
-            )}
-            {client.bae_retraite.titulaire && (
-              <InfoItem label="Titulaire" value={client.bae_retraite.titulaire} />
-            )}
+            <InfoItem
+              label="Revenus annuels"
+              value={client.bae_retraite?.revenus_annuels ? formatCurrency(client.bae_retraite.revenus_annuels) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Revenus foyer"
+              value={client.bae_retraite?.revenus_annuels_foyer ? formatCurrency(client.bae_retraite.revenus_annuels_foyer) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Impôt sur le revenu"
+              value={client.bae_retraite?.impot_revenu ? formatCurrency(client.bae_retraite.impot_revenu) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Parts fiscales"
+              value={client.bae_retraite?.nombre_parts_fiscales || "Non renseigné"}
+            />
+            <InfoItem
+              label="TMI"
+              value={client.bae_retraite?.tmi || "Non renseigné"}
+            />
+            <InfoItem
+              label="Impôt payé N-1"
+              value={client.bae_retraite?.impot_paye_n_1 ? formatCurrency(client.bae_retraite.impot_paye_n_1) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Âge départ retraite"
+              value={client.bae_retraite?.age_depart_retraite ? `${client.bae_retraite.age_depart_retraite} ans` : "Non renseigné"}
+              icon={<CalendarIcon size={14} />}
+            />
+            <InfoItem
+              label="Âge départ retraite conjoint"
+              value={client.bae_retraite?.age_depart_retraite_conjoint ? `${client.bae_retraite.age_depart_retraite_conjoint} ans` : "Non renseigné"}
+              icon={<CalendarIcon size={14} />}
+            />
+            <InfoItem
+              label="Revenu à maintenir"
+              value={client.bae_retraite?.pourcentage_revenu_a_maintenir ? `${client.bae_retraite.pourcentage_revenu_a_maintenir}%` : "Non renseigné"}
+            />
+            <InfoItem
+              label="Contrat en place"
+              value={client.bae_retraite?.contrat_en_place || "Non renseigné"}
+            />
+            <InfoItem
+              label="Bilan retraite disponible"
+              value={client.bae_retraite?.bilan_retraite_disponible !== null && client.bae_retraite?.bilan_retraite_disponible !== undefined ? (client.bae_retraite.bilan_retraite_disponible ? "Oui" : "Non") : "Non renseigné"}
+            />
+            <InfoItem
+              label="Complémentaire retraite"
+              value={client.bae_retraite?.complementaire_retraite_mise_en_place !== null && client.bae_retraite?.complementaire_retraite_mise_en_place !== undefined ? (client.bae_retraite.complementaire_retraite_mise_en_place ? "Oui" : "Non") : "Non renseigné"}
+            />
+            <InfoItem
+              label="Établissement"
+              value={client.bae_retraite?.designation_etablissement || "Non renseigné"}
+            />
+            <InfoItem
+              label="Cotisations annuelles"
+              value={client.bae_retraite?.cotisations_annuelles ? formatCurrency(client.bae_retraite.cotisations_annuelles) : "Non renseigné"}
+              icon={<DollarSignIcon size={14} />}
+            />
+            <InfoItem
+              label="Titulaire"
+              value={client.bae_retraite?.titulaire || "Non renseigné"}
+            />
           </dl>
         </InfoCard>
       )}
 
-      {/* Carte Épargne (si applicable) */}
-      {client.bae_epargne && (
+      {/* Carte Épargne (si besoin détecté ou données existantes) */}
+      {showEpargne && (
         <InfoCard title="Épargne" icon={<DollarSignIcon size={20} />} color="green">
           <div className="space-y-6">
             {/* Informations générales */}
             <dl className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-              {client.bae_epargne.epargne_disponible !== null && client.bae_epargne.epargne_disponible !== undefined && (
-                <InfoItem
-                  label="Épargne disponible"
-                  value={client.bae_epargne.epargne_disponible ? "Oui" : "Non"}
-                />
-              )}
-              {client.bae_epargne.montant_epargne_disponible && (
-                <InfoItem
-                  label="Montant épargne"
-                  value={formatCurrency(client.bae_epargne.montant_epargne_disponible)}
-                  icon={<DollarSignIcon size={14} />}
-                />
-              )}
-              {client.bae_epargne.donation_realisee !== null && client.bae_epargne.donation_realisee !== undefined && (
-                <InfoItem
-                  label="Donation réalisée"
-                  value={client.bae_epargne.donation_realisee ? "Oui" : "Non"}
-                />
-              )}
-              {client.bae_epargne.donation_forme && (
-                <InfoItem label="Forme donation" value={client.bae_epargne.donation_forme} />
-              )}
-              {client.bae_epargne.donation_date && (
-                <InfoItem
-                  label="Date donation"
-                  value={formatDate(client.bae_epargne.donation_date)}
-                  icon={<CalendarIcon size={14} />}
-                />
-              )}
-              {client.bae_epargne.donation_montant && (
-                <InfoItem
-                  label="Montant donation"
-                  value={formatCurrency(client.bae_epargne.donation_montant)}
-                  icon={<DollarSignIcon size={14} />}
-                />
-              )}
-              {client.bae_epargne.donation_beneficiaires && (
-                <InfoItem label="Bénéficiaires donation" value={client.bae_epargne.donation_beneficiaires} />
-              )}
-              {client.bae_epargne.capacite_epargne_estimee && (
-                <InfoItem
-                  label="Capacité d'épargne"
-                  value={formatCurrency(client.bae_epargne.capacite_epargne_estimee)}
-                  icon={<DollarSignIcon size={14} />}
-                />
-              )}
+              <InfoItem
+                label="Épargne disponible"
+                value={client.bae_epargne?.epargne_disponible !== null && client.bae_epargne?.epargne_disponible !== undefined ? (client.bae_epargne.epargne_disponible ? "Oui" : "Non") : "Non renseigné"}
+              />
+              <InfoItem
+                label="Montant épargne"
+                value={client.bae_epargne?.montant_epargne_disponible ? formatCurrency(client.bae_epargne.montant_epargne_disponible) : "Non renseigné"}
+                icon={<DollarSignIcon size={14} />}
+              />
+              <InfoItem
+                label="Donation réalisée"
+                value={client.bae_epargne?.donation_realisee !== null && client.bae_epargne?.donation_realisee !== undefined ? (client.bae_epargne.donation_realisee ? "Oui" : "Non") : "Non renseigné"}
+              />
+              <InfoItem
+                label="Forme donation"
+                value={client.bae_epargne?.donation_forme || "Non renseigné"}
+              />
+              <InfoItem
+                label="Date donation"
+                value={client.bae_epargne?.donation_date ? formatDate(client.bae_epargne.donation_date) : "Non renseigné"}
+                icon={<CalendarIcon size={14} />}
+              />
+              <InfoItem
+                label="Montant donation"
+                value={client.bae_epargne?.donation_montant ? formatCurrency(client.bae_epargne.donation_montant) : "Non renseigné"}
+                icon={<DollarSignIcon size={14} />}
+              />
+              <InfoItem
+                label="Bénéficiaires donation"
+                value={client.bae_epargne?.donation_beneficiaires || "Non renseigné"}
+              />
+              <InfoItem
+                label="Capacité d'épargne"
+                value={client.bae_epargne?.capacite_epargne_estimee ? formatCurrency(client.bae_epargne.capacite_epargne_estimee) : "Non renseigné"}
+                icon={<DollarSignIcon size={14} />}
+              />
             </dl>
 
             {/* Actifs financiers */}
-            {(client.bae_epargne.actifs_financiers_pourcentage || client.bae_epargne.actifs_financiers_total || client.bae_epargne.actifs_financiers_details) && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                  <TrendingUpIcon size={16} />
-                  <span>Actifs Financiers</span>
-                </h4>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
-                  {client.bae_epargne.actifs_financiers_pourcentage && (
-                    <InfoItem
-                      label="Pourcentage"
-                      value={`${client.bae_epargne.actifs_financiers_pourcentage}%`}
-                    />
-                  )}
-                  {client.bae_epargne.actifs_financiers_total && (
-                    <InfoItem
-                      label="Total"
-                      value={formatCurrency(client.bae_epargne.actifs_financiers_total)}
-                      icon={<DollarSignIcon size={14} />}
-                    />
-                  )}
-                  {client.bae_epargne.actifs_financiers_details && (
-                    <div className="col-span-full">
-                      <InfoItem
-                        label="Détails"
-                        value={typeof client.bae_epargne.actifs_financiers_details === 'string'
-                          ? client.bae_epargne.actifs_financiers_details
-                          : JSON.stringify(client.bae_epargne.actifs_financiers_details)}
-                      />
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                <TrendingUpIcon size={16} />
+                <span>Actifs Financiers</span>
+              </h4>
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                <InfoItem
+                  label="Pourcentage"
+                  value={client.bae_epargne?.actifs_financiers_pourcentage ? `${client.bae_epargne.actifs_financiers_pourcentage}%` : "Non renseigné"}
+                />
+                <InfoItem
+                  label="Total"
+                  value={client.bae_epargne?.actifs_financiers_total ? formatCurrency(client.bae_epargne.actifs_financiers_total) : "Non renseigné"}
+                  icon={<DollarSignIcon size={14} />}
+                />
+                <div className="col-span-full">
+                  <InfoItem
+                    label="Détails"
+                    value={client.bae_epargne?.actifs_financiers_details
+                      ? (typeof client.bae_epargne.actifs_financiers_details === 'string'
+                        ? client.bae_epargne.actifs_financiers_details
+                        : JSON.stringify(client.bae_epargne.actifs_financiers_details))
+                      : "Non renseigné"}
+                  />
+                </div>
+              </dl>
+            </div>
 
             {/* Actifs immobiliers */}
-            {(client.bae_epargne.actifs_immo_pourcentage || client.bae_epargne.actifs_immo_total || client.bae_epargne.actifs_immo_details) && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                  <BuildingIcon size={16} />
-                  <span>Actifs Immobiliers</span>
-                </h4>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
-                  {client.bae_epargne.actifs_immo_pourcentage && (
-                    <InfoItem
-                      label="Pourcentage"
-                      value={`${client.bae_epargne.actifs_immo_pourcentage}%`}
-                    />
-                  )}
-                  {client.bae_epargne.actifs_immo_total && (
-                    <InfoItem
-                      label="Total"
-                      value={formatCurrency(client.bae_epargne.actifs_immo_total)}
-                      icon={<DollarSignIcon size={14} />}
-                    />
-                  )}
-                  {client.bae_epargne.actifs_immo_details && (
-                    <div className="col-span-full">
-                      <InfoItem
-                        label="Détails"
-                        value={typeof client.bae_epargne.actifs_immo_details === 'string'
-                          ? client.bae_epargne.actifs_immo_details
-                          : JSON.stringify(client.bae_epargne.actifs_immo_details)}
-                      />
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                <BuildingIcon size={16} />
+                <span>Actifs Immobiliers</span>
+              </h4>
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                <InfoItem
+                  label="Pourcentage"
+                  value={client.bae_epargne?.actifs_immo_pourcentage ? `${client.bae_epargne.actifs_immo_pourcentage}%` : "Non renseigné"}
+                />
+                <InfoItem
+                  label="Total"
+                  value={client.bae_epargne?.actifs_immo_total ? formatCurrency(client.bae_epargne.actifs_immo_total) : "Non renseigné"}
+                  icon={<DollarSignIcon size={14} />}
+                />
+                <div className="col-span-full">
+                  <InfoItem
+                    label="Détails"
+                    value={client.bae_epargne?.actifs_immo_details
+                      ? (typeof client.bae_epargne.actifs_immo_details === 'string'
+                        ? client.bae_epargne.actifs_immo_details
+                        : JSON.stringify(client.bae_epargne.actifs_immo_details))
+                      : "Non renseigné"}
+                  />
+                </div>
+              </dl>
+            </div>
 
             {/* Autres actifs */}
-            {(client.bae_epargne.actifs_autres_pourcentage || client.bae_epargne.actifs_autres_total || client.bae_epargne.actifs_autres_details) && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                  <InfoIcon size={16} />
-                  <span>Autres Actifs</span>
-                </h4>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
-                  {client.bae_epargne.actifs_autres_pourcentage && (
-                    <InfoItem
-                      label="Pourcentage"
-                      value={`${client.bae_epargne.actifs_autres_pourcentage}%`}
-                    />
-                  )}
-                  {client.bae_epargne.actifs_autres_total && (
-                    <InfoItem
-                      label="Total"
-                      value={formatCurrency(client.bae_epargne.actifs_autres_total)}
-                      icon={<DollarSignIcon size={14} />}
-                    />
-                  )}
-                  {client.bae_epargne.actifs_autres_details && (
-                    <div className="col-span-full">
-                      <InfoItem
-                        label="Détails"
-                        value={typeof client.bae_epargne.actifs_autres_details === 'string'
-                          ? client.bae_epargne.actifs_autres_details
-                          : JSON.stringify(client.bae_epargne.actifs_autres_details)}
-                      />
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                <InfoIcon size={16} />
+                <span>Autres Actifs</span>
+              </h4>
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                <InfoItem
+                  label="Pourcentage"
+                  value={client.bae_epargne?.actifs_autres_pourcentage ? `${client.bae_epargne.actifs_autres_pourcentage}%` : "Non renseigné"}
+                />
+                <InfoItem
+                  label="Total"
+                  value={client.bae_epargne?.actifs_autres_total ? formatCurrency(client.bae_epargne.actifs_autres_total) : "Non renseigné"}
+                  icon={<DollarSignIcon size={14} />}
+                />
+                <div className="col-span-full">
+                  <InfoItem
+                    label="Détails"
+                    value={client.bae_epargne?.actifs_autres_details
+                      ? (typeof client.bae_epargne.actifs_autres_details === 'string'
+                        ? client.bae_epargne.actifs_autres_details
+                        : JSON.stringify(client.bae_epargne.actifs_autres_details))
+                      : "Non renseigné"}
+                  />
+                </div>
+              </dl>
+            </div>
 
             {/* Passifs */}
-            {(client.bae_epargne.passifs_total_emprunts || client.bae_epargne.passifs_details) && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                  <InfoIcon size={16} />
-                  <span>Passifs</span>
-                </h4>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
-                  {client.bae_epargne.passifs_total_emprunts && (
-                    <InfoItem
-                      label="Total emprunts"
-                      value={formatCurrency(client.bae_epargne.passifs_total_emprunts)}
-                      icon={<DollarSignIcon size={14} />}
-                    />
-                  )}
-                  {client.bae_epargne.passifs_details && (
-                    <div className="col-span-full">
-                      <InfoItem
-                        label="Détails"
-                        value={typeof client.bae_epargne.passifs_details === 'string'
-                          ? client.bae_epargne.passifs_details
-                          : JSON.stringify(client.bae_epargne.passifs_details)}
-                      />
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                <InfoIcon size={16} />
+                <span>Passifs</span>
+              </h4>
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                <InfoItem
+                  label="Total emprunts"
+                  value={client.bae_epargne?.passifs_total_emprunts ? formatCurrency(client.bae_epargne.passifs_total_emprunts) : "Non renseigné"}
+                  icon={<DollarSignIcon size={14} />}
+                />
+                <div className="col-span-full">
+                  <InfoItem
+                    label="Détails"
+                    value={client.bae_epargne?.passifs_details
+                      ? (typeof client.bae_epargne.passifs_details === 'string'
+                        ? client.bae_epargne.passifs_details
+                        : JSON.stringify(client.bae_epargne.passifs_details))
+                      : "Non renseigné"}
+                  />
+                </div>
+              </dl>
+            </div>
 
             {/* Charges */}
-            {(client.bae_epargne.charges_totales || client.bae_epargne.charges_details) && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                  <DollarSignIcon size={16} />
-                  <span>Charges</span>
-                </h4>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
-                  {client.bae_epargne.charges_totales && (
-                    <InfoItem
-                      label="Total charges"
-                      value={formatCurrency(client.bae_epargne.charges_totales)}
-                      icon={<DollarSignIcon size={14} />}
-                    />
-                  )}
-                  {client.bae_epargne.charges_details && (
-                    <div className="col-span-full">
-                      <InfoItem
-                        label="Détails"
-                        value={typeof client.bae_epargne.charges_details === 'string'
-                          ? client.bae_epargne.charges_details
-                          : JSON.stringify(client.bae_epargne.charges_details)}
-                      />
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
+                <DollarSignIcon size={16} />
+                <span>Charges</span>
+              </h4>
+              <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pl-4">
+                <InfoItem
+                  label="Total charges"
+                  value={client.bae_epargne?.charges_totales ? formatCurrency(client.bae_epargne.charges_totales) : "Non renseigné"}
+                  icon={<DollarSignIcon size={14} />}
+                />
+                <div className="col-span-full">
+                  <InfoItem
+                    label="Détails"
+                    value={client.bae_epargne?.charges_details
+                      ? (typeof client.bae_epargne.charges_details === 'string'
+                        ? client.bae_epargne.charges_details
+                        : JSON.stringify(client.bae_epargne.charges_details))
+                      : "Non renseigné"}
+                  />
+                </div>
+              </dl>
+            </div>
 
             {/* Situation financière */}
-            {client.bae_epargne.situation_financiere_revenus_charges && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Situation financière (revenus/charges)</h4>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded">
-                  {client.bae_epargne.situation_financiere_revenus_charges}
-                </p>
-              </div>
-            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Situation financière (revenus/charges)</h4>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-3 rounded">
+                {client.bae_epargne?.situation_financiere_revenus_charges || "Non renseigné"}
+              </p>
+            </div>
           </div>
         </InfoCard>
       )}
