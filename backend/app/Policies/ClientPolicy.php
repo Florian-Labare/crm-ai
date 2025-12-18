@@ -13,8 +13,8 @@ class ClientPolicy
      */
     public function viewAny(User $user): bool
     {
-        // All team members can view clients
-        return $user->currentTeam() !== null;
+        // Tout utilisateur connecté peut voir les clients
+        return true;
     }
 
     /**
@@ -22,8 +22,8 @@ class ClientPolicy
      */
     public function view(User $user, Client $client): bool
     {
-        // User must belong to the client's team
-        return $user->belongsToTeam($client->team);
+        // Tout utilisateur connecté peut voir un client
+        return true;
     }
 
     /**
@@ -31,10 +31,8 @@ class ClientPolicy
      */
     public function create(User $user): bool
     {
-        $team = $user->currentTeam();
-
-        // Owner, admin, or member can create clients
-        return $team && $user->canManageResources($team);
+        // Tout utilisateur connecté peut créer un client
+        return true;
     }
 
     /**
@@ -42,9 +40,8 @@ class ClientPolicy
      */
     public function update(User $user, Client $client): bool
     {
-        // User must belong to team and have permission to manage resources
-        return $user->belongsToTeam($client->team)
-            && $user->canManageResources($client->team);
+        // Tout utilisateur connecté peut modifier un client
+        return true;
     }
 
     /**
@@ -52,9 +49,8 @@ class ClientPolicy
      */
     public function delete(User $user, Client $client): bool
     {
-        // Only owner and admin can delete clients
-        return $user->belongsToTeam($client->team)
-            && $user->canDeleteResources($client->team);
+        // Tout utilisateur connecté peut supprimer un client
+        return true;
     }
 
     /**
@@ -62,9 +58,7 @@ class ClientPolicy
      */
     public function restore(User $user, Client $client): bool
     {
-        // Only owner and admin can restore clients
-        return $user->belongsToTeam($client->team)
-            && $user->canDeleteResources($client->team);
+        return true;
     }
 
     /**
@@ -72,8 +66,6 @@ class ClientPolicy
      */
     public function forceDelete(User $user, Client $client): bool
     {
-        // Only owner can force delete
-        return $user->belongsToTeam($client->team)
-            && $user->isTeamOwner($client->team);
+        return true;
     }
 }

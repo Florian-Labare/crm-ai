@@ -62,7 +62,7 @@ class ClientController extends Controller
         $client = Client::create(
             array_merge($request->validated(), [
                 'user_id' => auth()->id(),
-                'team_id' => auth()->user()->currentTeam()->id,
+                'team_id' => 1, // Team par défaut pour beta
             ])
         );
 
