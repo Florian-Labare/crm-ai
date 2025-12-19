@@ -43,4 +43,9 @@ return [
         'token' => env('HUGGINGFACE_TOKEN'),
     ],
 
+    'pyannote' => [
+        'check_on_boot' => env('PYANNOTE_CHECK_ON_BOOT', false),
+        'model' => env('PYANNOTE_MODEL', 'pyannote/speaker-diarization-3.1'),
+    ],
+
 ];

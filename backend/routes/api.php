@@ -10,10 +10,18 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\QuestionnaireRisqueController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\RecordingController;
+use App\Http\Controllers\HealthController;
+use App\Http\Controllers\SpeakerCorrectionController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Health check endpoints (publics pour monitoring externe) - avec rate limiting
+Route::prefix('health')->middleware('throttle:health-check')->group(function () {
+    Route::get('/audio', [HealthController::class, 'audioSystem']);
+    Route::get('/pyannote', [HealthController::class, 'pyannote']);
+});
 
 // Routes protégées par authentification Sanctum
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -71,17 +79,34 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/documents/{documentId}/send-email', [DocumentController::class, 'sendDocumentByEmail']);
     Route::delete('/documents/{documentId}', [DocumentController::class, 'deleteDocument']);
 
-    // Envoi audio et traitement IA
-    Route::post('/audio/upload', [AudioController::class, 'upload']);
+    // Envoi audio et traitement IA - avec rate limiting
+    Route::post('/audio/upload', [AudioController::class, 'upload'])
+        ->middleware('throttle:audio-upload');
     Route::get('/audio/status/{id}', [AudioController::class, 'status']);
 
     Route::get('/recordings', [AudioRecordController::class, 'index']);
     Route::get('/recordings/{id}', [AudioRecordController::class, 'show']);
     Route::delete('/recordings/{id}', [AudioRecordController::class, 'destroy']);
 
-    // Enregistrements longs (jusqu'à 2h) avec chunks
-    Route::post('/recordings/chunk', [RecordingController::class, 'storeChunk']);
-    Route::post('/recordings/{sessionId}/finalize', [RecordingController::class, 'finalize']);
+    // Enregistrements longs (jusqu'à 2h) avec chunks - avec rate limiting
+    Route::post('/recordings/chunk', [RecordingController::class, 'storeChunk'])
+        ->middleware('throttle:audio-chunk');
+    Route::post('/recordings/{sessionId}/finalize', [RecordingController::class, 'finalize'])
+        ->middleware('throttle:audio-finalize');
+
+    // Correction des speakers (diarisation) - avec rate limiting
+    Route::prefix('audio-records/{audioRecord}/speakers')
+        ->middleware('throttle:speaker-correction')
+        ->group(function () {
+            Route::get('/', [SpeakerCorrectionController::class, 'show']);
+            Route::post('/correct', [SpeakerCorrectionController::class, 'correct']);
+            Route::post('/correct-batch', [SpeakerCorrectionController::class, 'correctBatch']);
+            Route::post('/reset', [SpeakerCorrectionController::class, 'reset']);
+        });
+    Route::get('/audio-records/needs-review', [SpeakerCorrectionController::class, 'needsReview']);
+
+    // Monitoring de la diarisation (admin/stats)
+    Route::get('/diarization/stats', [HealthController::class, 'diarizationStats']);
 
     // Questionnaire de risque
     Route::post('/questionnaire-risque/live', [QuestionnaireRisqueController::class, 'live']);
