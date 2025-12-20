@@ -151,4 +151,14 @@ class Client extends Model
     {
         return $this->hasMany(ClientAutreEpargne::class);
     }
+
+    public function audioRecords(): HasMany
+    {
+        return $this->hasMany(AudioRecord::class);
+    }
+
+    public function recordingSessions(): HasMany
+    {
+        return $this->hasMany(RecordingSession::class);
+    }
 }

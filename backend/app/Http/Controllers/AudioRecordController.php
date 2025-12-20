@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AudioRecord;
 use App\Models\DiarizationLog;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -12,6 +13,10 @@ use Illuminate\Support\Facades\Storage;
 
 class AudioRecordController extends Controller
 {
+    public function __construct(
+        private readonly AuditService $auditService
+    ) {
+    }
     /**
      * Lister tous les enregistrements audio de la team (avec client associé)
      */
@@ -72,6 +77,9 @@ class AudioRecordController extends Controller
             'audio_record_id' => $id,
             'user_id' => auth()->id()
         ]);
+
+        // Audit de la suppression
+        $this->auditService->logAudioDelete($record);
 
         return response()->json(['message' => 'Enregistrement supprimé avec succès.']);
     }
