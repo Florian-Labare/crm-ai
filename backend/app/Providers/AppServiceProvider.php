@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\Client;
-use App\Observers\ClientObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -25,15 +23,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
-        $this->registerObservers();
-    }
-
-    /**
-     * Enregistre les observers des modèles
-     */
-    protected function registerObservers(): void
-    {
-        Client::observe(ClientObserver::class);
     }
 
     /**

@@ -60,12 +60,13 @@ export default function ClientForm() {
         besoins: besoins.length > 0 ? besoins : null,
       };
       const response = await api.post("/clients", payload);
+      const clientData = response.data.data || response.data;
 
       toast.success("✅ Client créé avec succès !");
 
       // Rediriger vers la page de détail du client créé
       setTimeout(() => {
-        navigate(`/clients/${response.data.id}`);
+        navigate(`/clients/${clientData.id}`);
       }, 1000);
     } catch (err) {
       console.error(err);

@@ -14,11 +14,9 @@ use Illuminate\Support\Facades\Storage;
  */
 class DiarizationService
 {
-    private ?DiarizationMonitoringService $monitoringService = null;
-
-    public function __construct(?DiarizationMonitoringService $monitoringService = null)
+    public function __construct()
     {
-        $this->monitoringService = $monitoringService ?? app(DiarizationMonitoringService::class);
+        // Service autonome - pas de dépendances externes requises
     }
 
     /**

@@ -9,7 +9,7 @@
  *     'field' => 'nom_du_champ',
  *     'format' => 'date|currency|boolean|text', // optionnel
  *     'default' => 'valeur_par_defaut', // optionnel
- *     'computed' => function($client) { ... } // pour les champs calculés
+ *     'computed' => 'methodName' // pour les champs calculés (nom de méthode dans ComputedFieldResolver)
  * ]
  */
 
@@ -47,36 +47,9 @@ return [
 
     // === SANTÉ ET LOISIRS CLIENT ===
     'fumeur' => ['source' => 'client', 'field' => 'fumeur', 'format' => 'boolean'],
-    'activitéssportives' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            if (!$client->activites_sportives) {
-                return 'Non';
-            }
-            $details = $client->details_activites_sportives ? ' (' . $client->details_activites_sportives . ')' : '';
-            return 'Oui' . $details;
-        },
-    ],
-    'risquesparticuliers' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            if (!$client->risques_professionnels) {
-                return 'Non';
-            }
-            $details = $client->details_risques_professionnels ? ' (' . $client->details_risques_professionnels . ')' : '';
-            return 'Oui' . $details;
-        },
-    ],
-    'enfantacharge' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            if (!$client->enfants || $client->enfants->isEmpty()) {
-                return '0';
-            }
-            $aCharge = $client->enfants->where('fiscalement_a_charge', true)->count();
-            return (string) $aCharge;
-        },
-    ],
+    'activitéssportives' => ['source' => 'computed', 'computed' => 'activitesSportives'],
+    'risquesparticuliers' => ['source' => 'computed', 'computed' => 'risquesParticuliers'],
+    'enfantacharge' => ['source' => 'computed', 'computed' => 'enfantACharge'],
 
     // === INFORMATIONS CONJOINT ===
     'nomconjoint' => ['source' => 'conjoint', 'field' => 'nom'],
@@ -93,67 +66,14 @@ return [
     'actuelleconjointsituation' => ['source' => 'conjoint', 'field' => 'situation_actuelle_statut'],
 
     // === ENFANTS (3 enfants) ===
-    'nomprenomenfant1' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(0)
-            ? $client->enfants->get(0)->prenom . ' ' . $client->enfants->get(0)->nom
-            : ''
-    ],
-    'nomprenomenfant2' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(1)
-            ? $client->enfants->get(1)->prenom . ' ' . $client->enfants->get(1)->nom
-            : ''
-    ],
-    'nomprenomenfant3' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(2)
-            ? $client->enfants->get(2)->prenom . ' ' . $client->enfants->get(2)->nom
-            : ''
-    ],
-    'datenaissanceenfant11' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(0) && $client->enfants->get(0)->date_naissance
-            ? \Carbon\Carbon::parse($client->enfants->get(0)->date_naissance)->format('d/m/Y')
-            : ''
-    ],
-    'datenaissanceenfant2' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(1) && $client->enfants->get(1)->date_naissance
-            ? \Carbon\Carbon::parse($client->enfants->get(1)->date_naissance)->format('d/m/Y')
-            : ''
-    ],
-    'datenaissanceenfant3' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(2) && $client->enfants->get(2)->date_naissance
-            ? \Carbon\Carbon::parse($client->enfants->get(2)->date_naissance)->format('d/m/Y')
-            : ''
-    ],
-    'gardealternecas' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            if ($client->enfants->count() === 0) {
-                return '';
-            }
-
-            return $client->enfants->where('garde_alternee', true)->count() > 0 ? 'Oui' : 'Non';
-        },
-    ],
-    'parents' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            if ($client->enfants->count() === 0) {
-                return '';
-            }
-
-            $nomClient = trim(($client->prenom ?? '') . ' ' . ($client->nom ?? ''));
-            $nomConjoint = $client->conjoint
-                ? ' et ' . trim(($client->conjoint->prenom ?? '') . ' ' . ($client->conjoint->nom ?? ''))
-                : '';
-
-            return trim($nomClient . $nomConjoint);
-        },
-    ],
+    'nomprenomenfant1' => ['source' => 'computed', 'computed' => 'nomPrenomEnfant1'],
+    'nomprenomenfant2' => ['source' => 'computed', 'computed' => 'nomPrenomEnfant2'],
+    'nomprenomenfant3' => ['source' => 'computed', 'computed' => 'nomPrenomEnfant3'],
+    'datenaissanceenfant11' => ['source' => 'computed', 'computed' => 'dateNaissanceEnfant1'],
+    'datenaissanceenfant2' => ['source' => 'computed', 'computed' => 'dateNaissanceEnfant2'],
+    'datenaissanceenfant3' => ['source' => 'computed', 'computed' => 'dateNaissanceEnfant3'],
+    'gardealternecas' => ['source' => 'computed', 'computed' => 'gardeAlterneeCas'],
+    'parents' => ['source' => 'computed', 'computed' => 'parents'],
 
     // === BAE PRÉVOYANCE ===
     'prévoyanceindividuelle' => ['source' => 'bae_prevoyance', 'field' => 'contrat_en_place'],
@@ -167,21 +87,10 @@ return [
     // === BAE RETRAITE ===
     'ageretraitedepart' => ['source' => 'bae_retraite', 'field' => 'age_depart_retraite'],
     'ageretraitedepartconjoint' => ['source' => 'bae_retraite', 'field' => 'age_depart_retraite_conjoint'],
-    'siretraiteconjoint' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeRetraite && $client->baeRetraite->age_depart_retraite_conjoint ? 'Oui' : 'Non'
-    ],
-    'bilanretraitee' => [
-        'source' => 'bae_retraite',
-        'field' => 'bilan_retraite_disponible',
-        'format' => 'boolean'
-    ],
+    'siretraiteconjoint' => ['source' => 'computed', 'computed' => 'siRetraiteConjoint'],
+    'bilanretraitee' => ['source' => 'bae_retraite', 'field' => 'bilan_retraite_disponible', 'format' => 'boolean'],
     'contratenplacereraite' => ['source' => 'bae_retraite', 'field' => 'contrat_en_place'],
-    'complementaireretrairte' => [
-        'source' => 'bae_retraite',
-        'field' => 'complementaire_retraite_mise_en_place',
-        'format' => 'boolean'
-    ],
+    'complementaireretrairte' => ['source' => 'bae_retraite', 'field' => 'complementaire_retraite_mise_en_place', 'format' => 'boolean'],
     'cotisationannuelle' => ['source' => 'bae_retraite', 'field' => 'cotisations_annuelles', 'format' => 'currency'],
     'contrattitulaireenplace' => ['source' => 'bae_retraite', 'field' => 'titulaire'],
 
@@ -204,117 +113,39 @@ return [
     'objectifrapport' => ['default' => ''], // TODO: Ajouter champ dans BaeEpargne
 
     // === ACTIFS FINANCIERS (depuis bae_epargne, extraits du JSON) ===
-    'nature1financier' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
-            ? ($client->baeEpargne->actifs_financiers_details[0] ?? '')
-            : ''
-    ],
-    'naturefinancier2' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
-            ? ($client->baeEpargne->actifs_financiers_details[1] ?? '')
-            : ''
-    ],
-    'naturefinancier3' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
-            ? ($client->baeEpargne->actifs_financiers_details[2] ?? '')
-            : ''
-    ],
+    'nature1financier' => ['source' => 'computed', 'computed' => 'natureFinancier1'],
+    'naturefinancier2' => ['source' => 'computed', 'computed' => 'natureFinancier2'],
+    'naturefinancier3' => ['source' => 'computed', 'computed' => 'natureFinancier3'],
 
     // === ACTIFS IMMOBILIERS (depuis bae_epargne, extraits du JSON) ===
-    'designation4immo' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
-            ? ($client->baeEpargne->actifs_immo_details[0] ?? '')
-            : ''
-    ],
-    'designationimmo5' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
-            ? ($client->baeEpargne->actifs_immo_details[1] ?? '')
-            : ''
-    ],
-    'designationimmo6' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
-            ? ($client->baeEpargne->actifs_immo_details[2] ?? '')
-            : ''
-    ],
+    'designation4immo' => ['source' => 'computed', 'computed' => 'designationImmo1'],
+    'designationimmo5' => ['source' => 'computed', 'computed' => 'designationImmo2'],
+    'designationimmo6' => ['source' => 'computed', 'computed' => 'designationImmo3'],
 
     // === PASSIFS (depuis bae_epargne, extraits du JSON) ===
-    'preteur1passif' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
-            ? ($client->baeEpargne->passifs_details[0] ?? '')
-            : ''
-    ],
-    'preteur2' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
-            ? ($client->baeEpargne->passifs_details[1] ?? '')
-            : ''
-    ],
-    'preteur3' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
-            ? ($client->baeEpargne->passifs_details[2] ?? '')
-            : ''
-    ],
+    'preteur1passif' => ['source' => 'computed', 'computed' => 'preteur1'],
+    'preteur2' => ['source' => 'computed', 'computed' => 'preteur2'],
+    'preteur3' => ['source' => 'computed', 'computed' => 'preteur3'],
 
     // === CHARGES (depuis bae_epargne, extraits du JSON) ===
-    'fiscalcharge1' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
-            ? ($client->baeEpargne->charges_details[0] ?? '')
-            : ''
-    ],
-    'fiscalcharge2' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
-            ? ($client->baeEpargne->charges_details[1] ?? '')
-            : ''
-    ],
-    'fiscalcharge3' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
-            ? ($client->baeEpargne->charges_details[2] ?? '')
-            : ''
-    ],
+    'fiscalcharge1' => ['source' => 'computed', 'computed' => 'fiscalCharge1'],
+    'fiscalcharge2' => ['source' => 'computed', 'computed' => 'fiscalCharge2'],
+    'fiscalcharge3' => ['source' => 'computed', 'computed' => 'fiscalCharge3'],
 
     // === SANTÉ ===
     'contratsanteindiv' => ['source' => 'sante_souhait', 'field' => 'contrat_en_place'],
     'budgetsantemax' => ['source' => 'sante_souhait', 'field' => 'budget_mensuel_maximum', 'format' => 'currency'],
 
     // === QUESTIONNAIRE RISQUE ===
-    'profilrisqueclient' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->profil_calcule ?? 'Non défini'
-    ],
+    'profilrisqueclient' => ['source' => 'computed', 'computed' => 'profilRisqueClient'],
 
     // === BESOINS ===
-    'Siouiprévoyance' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            $besoins = is_array($client->besoins) ? $client->besoins : [];
-            return in_array('prévoyance', $besoins) ? 'Oui' : 'Non';
-        },
-    ],
+    'Siouiprévoyance' => ['source' => 'computed', 'computed' => 'siOuiPrevoyance'],
 
     // === DATES ET METADATA ===
-    'Date' => [
-        'source' => 'computed',
-        'computed' => fn($client) => now()->format('d/m/Y')
-    ],
-    'datedocument' => [
-        'source' => 'computed',
-        'computed' => fn($client) => now()->format('d/m/Y')
-    ],
-    'dategaranties' => [
-        'source' => 'computed',
-        'computed' => fn($client) => now()->addDays(30)->format('d/m/Y')
-    ],
+    'Date' => ['source' => 'computed', 'computed' => 'dateActuelle'],
+    'datedocument' => ['source' => 'computed', 'computed' => 'dateDocument'],
+    'dategaranties' => ['source' => 'computed', 'computed' => 'dateGaranties'],
 
     // === QUESTIONNAIRE - COMPORTEMENT FINANCIER ===
     'valeurinvestresterattendrerester' => [
@@ -342,8 +173,8 @@ return [
         'field' => 'reaction_baisse_25',
         'format' => 'enum',
         'mapping' => [
-            'vendre_partie' => 'J’hésite peut-être à vendre une partie',
-            'acheter_plus' => 'J’achète plus de ces actions',
+            'vendre_partie' => "J'hésite peut-être à vendre une partie",
+            'acheter_plus' => "J'achète plus de ces actions",
             'vendre_tout' => 'Je vends tout sans attendre',
         ],
     ],
@@ -353,8 +184,8 @@ return [
         'format' => 'enum',
         'mapping' => [
             'eviter_pertes' => 'Je redoute avant tout les pertes',
-            'recherche_gains' => 'Je m’intéresse surtout aux gains',
-            'equilibre_gains' => 'Je m’intéresse aux deux',
+            'recherche_gains' => "Je m'intéresse surtout aux gains",
+            'equilibre_gains' => "Je m'intéresse aux deux",
         ],
     ],
     'allocationepargneconvientmieux' => [
@@ -415,7 +246,7 @@ return [
             'perte_10' => '10% du capital investi',
             'perte_25' => '25% du capital investi',
             'perte_50' => '50% du capital investi',
-            'perte_capital' => 'Jusqu’à la totalité du capital',
+            'perte_capital' => "Jusqu'à la totalité du capital",
         ],
     ],
     'presentrapportobjectif' => [
@@ -447,268 +278,60 @@ return [
     ],
 
     // === QUESTIONNAIRE - CONNAISSANCES PRODUITS ===
-    'operationoligopcvm' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_obligations',
-        'format' => 'boolean',
-    ],
-    'montantopcvmobligannuel' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_obligations',
-        'format' => 'currency',
-    ],
-    'opcvmdominanteactionoperation' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_actions',
-        'format' => 'boolean',
-    ],
-    'montantannuelactionopcvm' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_actions',
-        'format' => 'currency',
-    ],
-    'fipfcpifcproperationrealis' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_fip_fcpi',
-        'format' => 'boolean',
-    ],
-    'montantannuelfipfcprfcpi' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_fip_fcpi',
-        'format' => 'currency',
-    ],
-    'realocpiscpioperatio' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_opci_scpi',
-        'format' => 'boolean',
-    ],
-    'montantmoyenoperationopciscpi' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_opci_scpi',
-        'format' => 'currency',
-    ],
-    'produitstrucutederivreal' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_produits_structures',
-        'format' => 'boolean',
-    ],
-    'montantannuelstrucderivoper' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_produits_structures',
-        'format' => 'currency',
-    ],
-    'produitmonétfondmonetopera' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_monetaires',
-        'format' => 'boolean',
-    ],
-    'operproditmonetairfondmonet' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_monetaires',
-        'format' => 'currency',
-    ],
-    'partsocialopertreal' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_parts_sociales',
-        'format' => 'boolean',
-    ],
-    'montannupartsocialopert' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_parts_sociales',
-        'format' => 'currency',
-    ],
-    'operttitreparticipareal' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_titres_participatifs',
-        'format' => 'boolean',
-    ],
-    'montantmoyentireparticipopert' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_titres_participatifs',
-        'format' => 'currency',
-    ],
-    'opertfpsslpreala' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_fps_slp',
-        'format' => 'boolean',
-    ],
-    'montaannuopertfpsslpp' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_fps_slp',
-        'format' => 'currency',
-    ],
-    'defiscagirardinopert' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'connaissance_girardin',
-        'format' => 'boolean',
-    ],
-    'defiscagirandinopéra' => [
-        'source' => 'questionnaire_connaissances',
-        'field' => 'montant_girardin',
-        'format' => 'currency',
-    ],
+    'operationoligopcvm' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_obligations', 'format' => 'boolean'],
+    'montantopcvmobligannuel' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_obligations', 'format' => 'currency'],
+    'opcvmdominanteactionoperation' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_actions', 'format' => 'boolean'],
+    'montantannuelactionopcvm' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_actions', 'format' => 'currency'],
+    'fipfcpifcproperationrealis' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_fip_fcpi', 'format' => 'boolean'],
+    'montantannuelfipfcprfcpi' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_fip_fcpi', 'format' => 'currency'],
+    'realocpiscpioperatio' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_opci_scpi', 'format' => 'boolean'],
+    'montantmoyenoperationopciscpi' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_opci_scpi', 'format' => 'currency'],
+    'produitstrucutederivreal' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_produits_structures', 'format' => 'boolean'],
+    'montantannuelstrucderivoper' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_produits_structures', 'format' => 'currency'],
+    'produitmonétfondmonetopera' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_monetaires', 'format' => 'boolean'],
+    'operproditmonetairfondmonet' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_monetaires', 'format' => 'currency'],
+    'partsocialopertreal' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_parts_sociales', 'format' => 'boolean'],
+    'montannupartsocialopert' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_parts_sociales', 'format' => 'currency'],
+    'operttitreparticipareal' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_titres_participatifs', 'format' => 'boolean'],
+    'montantmoyentireparticipopert' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_titres_participatifs', 'format' => 'currency'],
+    'opertfpsslpreala' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_fps_slp', 'format' => 'boolean'],
+    'montaannuopertfpsslpp' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_fps_slp', 'format' => 'currency'],
+    'defiscagirardinopert' => ['source' => 'questionnaire_connaissances', 'field' => 'connaissance_girardin', 'format' => 'boolean'],
+    'defiscagirandinopéra' => ['source' => 'questionnaire_connaissances', 'field' => 'montant_girardin', 'format' => 'currency'],
 
     // === QUESTIONNAIRE - QUIZ (VRAI / FAUX) ===
-    'volatiampleur' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'volatilite_risque_gain',
-        'format' => 'quiz',
-    ],
-    'instrufinancierbourse' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'instruments_tous_cotes',
-        'format' => 'quiz',
-    ],
-    'risqueliquiditeimportan' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'risque_liquidite_signification',
-        'format' => 'quiz',
-    ],
-    'hypothesetauxlivretA' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'livret_a_rendement_negatif',
-        'format' => 'quiz',
-    ],
-    'contratassurvieunitecompte' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'assurance_vie_valeur_rachats_uc',
-        'format' => 'quiz',
-    ],
-    'fiscaspecasdeces' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'assurance_vie_fiscalite_deces',
-        'format' => 'quiz',
-    ],
-    'perrachetableprincipe' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'per_non_rachatable',
-        'format' => 'quiz',
-    ],
-    'objectifperrevenu' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'per_objectif_revenus_retraite',
-        'format' => 'quiz',
-    ],
-    'comptetitreintermediairebroker' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'compte_titres_ordres_directs',
-        'format' => 'quiz',
-    ],
-    'peacomptetitreopcvm' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'pea_actions_europeennes',
-        'format' => 'quiz',
-    ],
-    'opcpertecapital' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'opc_pas_de_risque',
-        'format' => 'quiz',
-    ],
-    'opcinvestfondchoisissez' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'opc_definition_fonds_investissement',
-        'format' => 'quiz',
-    ],
-    'opcvmobligatoninvest' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'opcvm_actions_plus_risquees',
-        'format' => 'quiz',
-    ],
-    'revenusscpigarantie' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'scpi_revenus_garantis',
-        'format' => 'quiz',
-    ],
-    'inestopciscpisoumis' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'opci_scpi_capital_non_garanti',
-        'format' => 'quiz',
-    ],
-    'scpiplacmeznetliquide' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'scpi_liquides',
-        'format' => 'quiz',
-    ],
-    'remunerationobligationimportantre' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'obligations_risque_emetteur',
-        'format' => 'quiz',
-    ],
-    'obligcoteeoffrent' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'obligations_cotees_liquidite',
-        'format' => 'quiz',
-    ],
-    'obligrisqueprincipaldebiteur' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'obligation_risque_defaut',
-        'format' => 'quiz',
-    ],
-    'partsocialcoteenbourse' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'parts_sociales_cotees',
-        'format' => 'quiz',
-    ],
-    'participerdividencegeneral' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'parts_sociales_dividendes_voix',
-        'format' => 'quiz',
-    ],
-    'fcprfcpifipcotebourse' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'fonds_capital_investissement_non_cotes',
-        'format' => 'quiz',
-    ],
-    'rachetersespartfcprrr' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'fcp_rachetable_apres_dissolution',
-        'format' => 'quiz',
-    ],
-    'investirfipfcpirevenu' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'fip_fcpi_reduction_impot',
-        'format' => 'quiz',
-    ],
-    'investiractioncoteegenererisque' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'actions_non_cotees_risque_perte',
-        'format' => 'quiz',
-    ],
-    'investiractioncoteerendement' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'actions_cotees_rendement_duree',
-        'format' => 'quiz',
-    ],
-    'produitstructureperfo' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'produits_structures_complexes',
-        'format' => 'quiz',
-    ],
-    'capitalgarantieemetteurcapital' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'produits_structures_risque_defaut_banque',
-        'format' => 'quiz',
-    ],
-    'etftrackerbaissehausse' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'etf_fonds_indiciels',
-        'format' => 'quiz',
-    ],
-    'etfcotecontinujournee' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'etf_cotes_en_continu',
-        'format' => 'quiz',
-    ],
-    'loigirardinpourquoiparler' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'girardin_fonds_perdus',
-        'format' => 'quiz',
-    ],
-    'nonresidentdispogirardinbenef' => [
-        'source' => 'questionnaire_quiz',
-        'field' => 'girardin_non_residents',
-        'format' => 'quiz',
-    ],
+    'volatiampleur' => ['source' => 'questionnaire_quiz', 'field' => 'volatilite_risque_gain', 'format' => 'quiz'],
+    'instrufinancierbourse' => ['source' => 'questionnaire_quiz', 'field' => 'instruments_tous_cotes', 'format' => 'quiz'],
+    'risqueliquiditeimportan' => ['source' => 'questionnaire_quiz', 'field' => 'risque_liquidite_signification', 'format' => 'quiz'],
+    'hypothesetauxlivretA' => ['source' => 'questionnaire_quiz', 'field' => 'livret_a_rendement_negatif', 'format' => 'quiz'],
+    'contratassurvieunitecompte' => ['source' => 'questionnaire_quiz', 'field' => 'assurance_vie_valeur_rachats_uc', 'format' => 'quiz'],
+    'fiscaspecasdeces' => ['source' => 'questionnaire_quiz', 'field' => 'assurance_vie_fiscalite_deces', 'format' => 'quiz'],
+    'perrachetableprincipe' => ['source' => 'questionnaire_quiz', 'field' => 'per_non_rachatable', 'format' => 'quiz'],
+    'objectifperrevenu' => ['source' => 'questionnaire_quiz', 'field' => 'per_objectif_revenus_retraite', 'format' => 'quiz'],
+    'comptetitreintermediairebroker' => ['source' => 'questionnaire_quiz', 'field' => 'compte_titres_ordres_directs', 'format' => 'quiz'],
+    'peacomptetitreopcvm' => ['source' => 'questionnaire_quiz', 'field' => 'pea_actions_europeennes', 'format' => 'quiz'],
+    'opcpertecapital' => ['source' => 'questionnaire_quiz', 'field' => 'opc_pas_de_risque', 'format' => 'quiz'],
+    'opcinvestfondchoisissez' => ['source' => 'questionnaire_quiz', 'field' => 'opc_definition_fonds_investissement', 'format' => 'quiz'],
+    'opcvmobligatoninvest' => ['source' => 'questionnaire_quiz', 'field' => 'opcvm_actions_plus_risquees', 'format' => 'quiz'],
+    'revenusscpigarantie' => ['source' => 'questionnaire_quiz', 'field' => 'scpi_revenus_garantis', 'format' => 'quiz'],
+    'inestopciscpisoumis' => ['source' => 'questionnaire_quiz', 'field' => 'opci_scpi_capital_non_garanti', 'format' => 'quiz'],
+    'scpiplacmeznetliquide' => ['source' => 'questionnaire_quiz', 'field' => 'scpi_liquides', 'format' => 'quiz'],
+    'remunerationobligationimportantre' => ['source' => 'questionnaire_quiz', 'field' => 'obligations_risque_emetteur', 'format' => 'quiz'],
+    'obligcoteeoffrent' => ['source' => 'questionnaire_quiz', 'field' => 'obligations_cotees_liquidite', 'format' => 'quiz'],
+    'obligrisqueprincipaldebiteur' => ['source' => 'questionnaire_quiz', 'field' => 'obligation_risque_defaut', 'format' => 'quiz'],
+    'partsocialcoteenbourse' => ['source' => 'questionnaire_quiz', 'field' => 'parts_sociales_cotees', 'format' => 'quiz'],
+    'participerdividencegeneral' => ['source' => 'questionnaire_quiz', 'field' => 'parts_sociales_dividendes_voix', 'format' => 'quiz'],
+    'fcprfcpifipcotebourse' => ['source' => 'questionnaire_quiz', 'field' => 'fonds_capital_investissement_non_cotes', 'format' => 'quiz'],
+    'rachetersespartfcprrr' => ['source' => 'questionnaire_quiz', 'field' => 'fcp_rachetable_apres_dissolution', 'format' => 'quiz'],
+    'investirfipfcpirevenu' => ['source' => 'questionnaire_quiz', 'field' => 'fip_fcpi_reduction_impot', 'format' => 'quiz'],
+    'investiractioncoteegenererisque' => ['source' => 'questionnaire_quiz', 'field' => 'actions_non_cotees_risque_perte', 'format' => 'quiz'],
+    'investiractioncoteerendement' => ['source' => 'questionnaire_quiz', 'field' => 'actions_cotees_rendement_duree', 'format' => 'quiz'],
+    'produitstructureperfo' => ['source' => 'questionnaire_quiz', 'field' => 'produits_structures_complexes', 'format' => 'quiz'],
+    'capitalgarantieemetteurcapital' => ['source' => 'questionnaire_quiz', 'field' => 'produits_structures_risque_defaut_banque', 'format' => 'quiz'],
+    'etftrackerbaissehausse' => ['source' => 'questionnaire_quiz', 'field' => 'etf_fonds_indiciels', 'format' => 'quiz'],
+    'etfcotecontinujournee' => ['source' => 'questionnaire_quiz', 'field' => 'etf_cotes_en_continu', 'format' => 'quiz'],
+    'loigirardinpourquoiparler' => ['source' => 'questionnaire_quiz', 'field' => 'girardin_fonds_perdus', 'format' => 'quiz'],
+    'nonresidentdispogirardinbenef' => ['source' => 'questionnaire_quiz', 'field' => 'girardin_non_residents', 'format' => 'quiz'],
 
     // Variables non identifiées ou spécifiques à remplir plus tard
     'siretraitedateeven' => ['default' => ''],
@@ -733,7 +356,6 @@ return [
     'etablissementfinancier1' => ['default' => ''],
     'etablissementfinancier2' => ['default' => ''],
     'etablissementfinancier3' => ['default' => ''],
-    'fiscaspecasdeces' => ['default' => ''],
     'formedeproprioimmo5' => ['default' => ''],
     'formeproprioimmo4' => ['default' => ''],
     'formeproprioimmo6' => ['default' => ''],
@@ -769,37 +391,16 @@ return [
     // === MIGRATION COMPLÈTE - 57 VARIABLES AJOUTÉES ===
 
     // === SANTÉ - Mapping vers champs existants niveau_* ===
-    'AnalyseImagerie' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_analyses_imagerie ? 'Oui' : 'Non',
-    ],
-    'AuxiliairesMédicaux' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_auxiliaires_medicaux ? 'Oui' : 'Non',
-    ],
-    'Dentaire' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_dentaire ? 'Oui' : 'Non',
-    ],
-    'Hospitalisation' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_hospitalisation ? 'Oui' : 'Non',
-    ],
-    'MédecinGénéralisteetspécialiste' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_medecin_generaliste ? 'Oui' : 'Non',
-    ],
+    'AnalyseImagerie' => ['source' => 'computed', 'computed' => 'analyseImagerie'],
+    'AuxiliairesMédicaux' => ['source' => 'computed', 'computed' => 'auxiliairesMedicaux'],
+    'Dentaire' => ['source' => 'computed', 'computed' => 'dentaire'],
+    'Hospitalisation' => ['source' => 'computed', 'computed' => 'hospitalisation'],
+    'MédecinGénéralisteetspécialiste' => ['source' => 'computed', 'computed' => 'medecinGeneraliste'],
     'autresprotheses' => ['source' => 'sante_souhait', 'field' => 'souhaite_autres_protheses', 'format' => 'boolean'],
     'curesthermales' => ['source' => 'sante_souhait', 'field' => 'souhaite_cures_thermales', 'format' => 'boolean'],
     'medecinedouce' => ['source' => 'sante_souhait', 'field' => 'souhaite_medecine_douce', 'format' => 'boolean'],
-    'optiquelentilles' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_optique ? 'Oui' : 'Non',
-    ],
-    'protheseauditive' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_protheses_auditives ? 'Oui' : 'Non',
-    ],
+    'optiquelentilles' => ['source' => 'computed', 'computed' => 'optiqueLentilles'],
+    'protheseauditive' => ['source' => 'computed', 'computed' => 'protheseAuditive'],
     'protectionjuridique' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique', 'format' => 'boolean'],
     'protectionjuridiqueconjoint' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique_conjoint', 'format' => 'boolean'],
 
@@ -807,25 +408,11 @@ return [
     'Impôtsurlerevenupayéenn' => ['source' => 'bae_retraite', 'field' => 'impot_paye_n_1', 'format' => 'currency'],
     'Montantépargnedisponible' => ['source' => 'bae_epargne', 'field' => 'montant_epargne_disponible', 'format' => 'currency'],
     'Totalemprunts' => ['source' => 'bae_epargne', 'field' => 'passifs_total_emprunts', 'format' => 'currency'],
-    'Leclientdispose-t-ilduneépargnedisponible(liquide)' => [
-        'source' => 'computed',
-        'computed' => function ($client) {
-            if (!$client->baeEpargne || !$client->baeEpargne->montant_epargne_disponible) {
-                return 'Non';
-            }
-            return $client->baeEpargne->montant_epargne_disponible > 0 ? 'Oui' : 'Non';
-        },
-    ],
+    'Leclientdispose-t-ilduneépargnedisponible(liquide)' => ['source' => 'computed', 'computed' => 'clientDisposeEpargneDisponible'],
 
     // === PROFIL DE RISQUE - Mapping vers questionnaire_risque_financiers ===
-    'Latoléranceaurisqueduclientest' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->tolerance_risque ?? 'Non défini',
-    ],
-    'Pourcentagemaxperte' => [
-        'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->pourcentage_perte_max ?? '',
-    ],
+    'Latoléranceaurisqueduclientest' => ['source' => 'computed', 'computed' => 'toleranceRisqueClient'],
+    'Pourcentagemaxperte' => ['source' => 'computed', 'computed' => 'pourcentageMaxPerte'],
 
     // === PROFESSIONNELS ===
     'Travailleurindépendant' => ['source' => 'client', 'field' => 'travailleur_independant', 'format' => 'boolean'],
@@ -870,18 +457,9 @@ return [
     'adressepersop' => ['source' => 'client', 'field' => 'adresse'],
     'etatcivile' => ['source' => 'client', 'field' => 'situation_matrimoniale'],
     'genre' => ['source' => 'client', 'field' => 'genre', 'format' => 'enum'],
-    'SOCOGEAvousindique' => [
-        'source' => 'computed',
-        'computed' => fn($client) => 'SOCOGEA vous indique',
-    ],
-    'SOCOGEAvousindiqueque' => [
-        'source' => 'computed',
-        'computed' => fn($client) => 'SOCOGEA vous indique que',
-    ],
-    'Leprésentrapportrépond' => [
-        'source' => 'computed',
-        'computed' => fn($client) => 'Le présent rapport répond',
-    ],
+    'SOCOGEAvousindique' => ['source' => 'computed', 'computed' => 'socogeaVousIndique'],
+    'SOCOGEAvousindiqueque' => ['source' => 'computed', 'computed' => 'socogeaVousIndiqueQue'],
+    'Leprésentrapportrépond' => ['source' => 'computed', 'computed' => 'presentRapportRepond'],
 
     // === CONJOINT ===
     'situationconjointchomage' => ['source' => 'conjoint', 'field' => 'situation_chomage', 'format' => 'boolean'],
