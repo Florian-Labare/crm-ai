@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { BarChart3, AlertCircle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import api from '../api/apiClient';
 
 interface DailyStats {

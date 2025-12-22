@@ -1,0 +1,84 @@
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { Home, UserPlus, Calendar, LogOut } from 'lucide-react';
+
+export const VuexyNavigation: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const isHomePage = location.pathname === '/';
+  const isAuthPage = ['/login', '/register'].includes(location.pathname);
+
+  if (isHomePage || isAuthPage) return null;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  return (
+    <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-[#EBE9F1]">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <a href="/" className="flex items-center space-x-3 group">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-xl font-bold shadow-md shadow-purple-500/30">
+              🎧
+            </div>
+            <span className="text-xl font-bold text-[#5E5873] group-hover:text-[#7367F0] transition-colors">
+              Whisper CRM
+            </span>
+          </a>
+
+          {/* Navigation */}
+          <nav className="flex items-center space-x-4">
+            <a
+              href="/"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[#5E5873] hover:bg-[#F3F2F7] hover:text-[#7367F0] font-semibold transition-all duration-200"
+            >
+              <Home size={18} />
+              Accueil
+            </a>
+
+            <a
+              href="/der/new"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#7367F0] to-[#9055FD] hover:from-[#5E50EE] hover:to-[#7E3FF2] text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              <Calendar size={18} />
+              Nouveau rendez-vous
+            </a>
+
+            <a
+              href="/clients/new"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#7367F0] text-[#7367F0] hover:bg-[#7367F0] hover:text-white font-semibold transition-all duration-200"
+            >
+              <UserPlus size={18} />
+              Nouveau client
+            </a>
+
+            {/* User Menu */}
+            {user && (
+              <div className="flex items-center gap-4 pl-4 ml-4 border-l border-[#EBE9F1]">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F3F2F7]">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-sm font-semibold">
+                    {user.name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-sm font-semibold text-[#5E5873]">{user.name}</span>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[#EA5455] hover:bg-[#EA5455]/10 font-semibold transition-all duration-200"
+                >
+                  <LogOut size={18} />
+                  Déconnexion
+                </button>
+              </div>
+            )}
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
+};

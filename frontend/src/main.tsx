@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css"; // Tailwind
+import "./styles/vuexy-theme.css"; // Vuexy Theme
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
