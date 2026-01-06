@@ -12,6 +12,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\RecordingController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpeakerCorrectionController;
+use App\Http\Controllers\PendingChangesController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -66,10 +67,67 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/clients/{client}/autres-epargnes/{autreEpargne}', [ClientController::class, 'updateAutreEpargne']);
     Route::delete('/clients/{client}/autres-epargnes/{autreEpargne}', [ClientController::class, 'deleteAutreEpargne']);
 
+    // Conjoint
+    Route::post('/clients/{client}/conjoint', [ClientController::class, 'storeConjoint']);
+    Route::put('/clients/{client}/conjoint', [ClientController::class, 'updateConjoint']);
+    Route::delete('/clients/{client}/conjoint', [ClientController::class, 'deleteConjoint']);
+
+    // Enfants
+    Route::post('/clients/{client}/enfants', [ClientController::class, 'storeEnfant']);
+    Route::put('/clients/{client}/enfants/{enfant}', [ClientController::class, 'updateEnfant']);
+    Route::delete('/clients/{client}/enfants/{enfant}', [ClientController::class, 'deleteEnfant']);
+
+    // Santé / Souhait
+    Route::post('/clients/{client}/sante-souhait', [ClientController::class, 'storeSanteSouhait']);
+    Route::put('/clients/{client}/sante-souhait', [ClientController::class, 'updateSanteSouhait']);
+    Route::delete('/clients/{client}/sante-souhait', [ClientController::class, 'deleteSanteSouhait']);
+
+    // BAE Prévoyance
+    Route::post('/clients/{client}/bae-prevoyance', [ClientController::class, 'storeBaePrevoyance']);
+    Route::put('/clients/{client}/bae-prevoyance', [ClientController::class, 'updateBaePrevoyance']);
+    Route::delete('/clients/{client}/bae-prevoyance', [ClientController::class, 'deleteBaePrevoyance']);
+
+    // BAE Retraite
+    Route::post('/clients/{client}/bae-retraite', [ClientController::class, 'storeBaeRetraite']);
+    Route::put('/clients/{client}/bae-retraite', [ClientController::class, 'updateBaeRetraite']);
+    Route::delete('/clients/{client}/bae-retraite', [ClientController::class, 'deleteBaeRetraite']);
+
+    // BAE Épargne
+    Route::post('/clients/{client}/bae-epargne', [ClientController::class, 'storeBaeEpargne']);
+    Route::put('/clients/{client}/bae-epargne', [ClientController::class, 'updateBaeEpargne']);
+    Route::delete('/clients/{client}/bae-epargne', [ClientController::class, 'deleteBaeEpargne']);
+
     // Export Client
     Route::get('/clients/{id}/export/pdf', [ExportController::class, 'exportPdf']);
     Route::get('/clients/{id}/export/word', [ExportController::class, 'exportWord']);
     Route::get('/clients/{id}/questionnaires/export/pdf', [ExportController::class, 'exportQuestionnairePdf']);
+
+    // ============================================
+    // 🔒 PENDING CHANGES - Système de merge avec validation
+    // ============================================
+    Route::prefix('pending-changes')->group(function () {
+        // Liste tous les pending changes de l'utilisateur
+        Route::get('/', [PendingChangesController::class, 'index']);
+
+        // Détail d'un pending change
+        Route::get('/{pendingChange}', [PendingChangesController::class, 'show']);
+
+        // Appliquer les changements sélectionnés
+        Route::post('/{pendingChange}/apply', [PendingChangesController::class, 'apply']);
+
+        // Accepter tous les changements
+        Route::post('/{pendingChange}/accept-all', [PendingChangesController::class, 'acceptAll']);
+
+        // Rejeter tous les changements
+        Route::post('/{pendingChange}/reject-all', [PendingChangesController::class, 'rejectAll']);
+
+        // Appliquer automatiquement les changements sans conflit
+        Route::post('/{pendingChange}/auto-apply-safe', [PendingChangesController::class, 'autoApplySafe']);
+    });
+
+    // Pending changes par client
+    Route::get('/clients/{client}/pending-changes', [PendingChangesController::class, 'forClient']);
+    Route::get('/clients/{client}/pending-changes/count', [PendingChangesController::class, 'countForClient']);
 
     // Gestion des documents réglementaires
     Route::get('/document-templates', [DocumentController::class, 'listTemplates']);

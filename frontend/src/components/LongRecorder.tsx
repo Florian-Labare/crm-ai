@@ -74,7 +74,7 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       });
 
       const { data: audioRecord } = response.data;
-      const { status, client, error: errorMsg } = audioRecord;
+      const { status, client, error_message: errorMsg } = audioRecord;
 
       console.log(`📊 Statut audio #${audioRecordId}: ${status}`);
 
@@ -85,6 +85,15 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
           break;
         case 'processing':
           setProcessingStatus('🧠 Analyse IA en cours...');
+          break;
+        case 'pending_review':
+          // Modifications en attente de validation
+          setProcessingStatus('');
+          stopPolling();
+          toast.info(
+            '🔍 Modifications détectées ! Vérifiez le badge de notification pour valider les changements.',
+            { autoClose: 8000 }
+          );
           break;
         case 'done':
           setProcessingStatus('✅ Traitement terminé !');
@@ -97,8 +106,14 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
           handleError(errorMsg || 'Le traitement a échoué');
           break;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la vérification du statut:', err);
+      const apiMessage = err?.response?.data?.error || err?.response?.data?.message;
+      if (apiMessage) {
+        setProcessingStatus('');
+        stopPolling();
+        handleError(apiMessage);
+      }
     }
   };
 
@@ -286,9 +301,10 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       } else {
         throw new Error('Pas d\'ID d\'enregistrement retourné');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erreur lors de la finalisation:', error);
-      toast.error('Erreur lors de la finalisation de l\'enregistrement.');
+      const apiMessage = error?.response?.data?.error || error?.response?.data?.message;
+      toast.error(apiMessage || 'Erreur lors de la finalisation de l\'enregistrement.');
       setIsProcessing(false);
     } finally {
       setRecordingTime(0);
@@ -317,38 +333,46 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-lg shadow-md">
-      <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+    <div className="bg-[#F3F2F7] rounded-lg p-8 text-center">
+      <div className="mb-2">
+        <h3 className="text-lg font-semibold text-[#5E5873]">
           Enregistrement Long (jusqu'à 2h)
         </h3>
+      </div>
+
+      <div className="mb-6">
         {isRecording && (
-          <div className="text-2xl font-mono text-blue-600">
+          <div className="text-3xl font-mono text-[#00CFE8] mb-2">
             {formatTime(recordingTime)}
           </div>
         )}
         {!isRecording && !isProcessing && (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[#6E6B7B]">
             Enregistrement automatique par segments de 10 minutes
           </p>
         )}
         {isProcessing && (
-          <p className="text-sm text-blue-600 flex items-center justify-center gap-2">
+          <p className="text-sm text-[#00CFE8] flex items-center justify-center gap-2">
             <Loader2 className="animate-spin" size={16} />
             {processingStatus || 'Finalisation et transcription en cours...'}
           </p>
+        )}
+        {isRecording && (
+          <div className="text-xs text-[#B9B9C3] mt-2">
+            Session: {sessionId.substring(0, 8)}... | Chunk: {partIndex + 1}
+          </div>
         )}
       </div>
 
       <button
         onClick={isRecording ? stopRecording : startRecording}
         disabled={isProcessing}
-        className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all ${
+        className={`inline-flex items-center gap-3 px-6 py-3 rounded-lg font-semibold text-white transition-all ${
           isRecording
-            ? 'bg-red-500 hover:bg-red-600'
+            ? 'bg-[#EA5455] hover:bg-[#E63C3D] shadow-lg shadow-red-500/40 hover:-translate-y-0.5'
             : isProcessing
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-500 hover:bg-blue-600'
+            ? 'bg-[#B9B9C3] cursor-not-allowed'
+            : 'bg-[#00CFE8] hover:bg-[#00BAD1] shadow-lg shadow-cyan-500/40 hover:-translate-y-0.5'
         }`}
       >
         {isProcessing ? (
@@ -368,12 +392,6 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
           </>
         )}
       </button>
-
-      {isRecording && (
-        <div className="text-xs text-gray-500 text-center">
-          Session: {sessionId.substring(0, 8)}... | Chunk: {partIndex + 1}
-        </div>
-      )}
     </div>
   );
 };

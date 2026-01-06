@@ -70,6 +70,18 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient, onUploadSucc
         case 'processing':
           setProcessingStatus('🧠 Transcription et analyse IA en cours...');
           break;
+        case 'pending_review':
+          // 🔍 Modifications en attente de validation
+          setProcessingStatus('');
+          stopPolling();
+          toast.info(
+            '🔍 Modifications détectées ! Vérifiez le badge de notification pour valider les changements.',
+            { autoClose: 8000 }
+          );
+          if (onUploadSuccess) {
+            onUploadSuccess({ client, pendingReview: true });
+          }
+          break;
         case 'done':
           // ✅ Traitement terminé avec succès
           setProcessingStatus('✅ Traitement terminé !');

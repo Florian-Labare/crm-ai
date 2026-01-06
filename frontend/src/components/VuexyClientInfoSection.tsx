@@ -11,9 +11,14 @@ import {
   DollarSign,
   TrendingUp,
   Shield,
+  CreditCard,
+  Home,
+  Gem,
+  LineChart,
 } from 'lucide-react';
-import { VuexyInfoSection, VuexyInfoRow } from './VuexyInfoSection';
+import { VuexyInfoSection, VuexyInfoRow, VuexySubSection } from './VuexyInfoSection';
 import { VuexyStatCard } from './VuexyStatCard';
+import { Target } from 'lucide-react';
 
 interface VuexyClientInfoSectionProps {
   client: any;
@@ -97,7 +102,14 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   const showSante = hasBesoin(['santé', 'sante', 'mutuelle', 'complémentaire', 'complementaire']) || client.sante_souhait;
   const showPrevoyance = hasBesoin(['prévoyance', 'prevoyance', 'décès', 'deces', 'invalidité', 'invalidite']) || client.bae_prevoyance;
   const showRetraite = hasBesoin(['retraite', 'per', 'pension']) || client.bae_retraite;
-  const showEpargne = hasBesoin(['épargne', 'epargne', 'placement', 'investissement', 'patrimoine']) || client.bae_epargne;
+
+  // Section Épargne unifiée : afficher si BAE épargne OU actifs/passifs présents
+  const showEpargneSection =
+    client.actifs_financiers?.length > 0 ||
+    client.biens_immobiliers?.length > 0 ||
+    client.autres_epargnes?.length > 0 ||
+    client.passifs?.length > 0 ||
+    client.bae_epargne;
 
   return (
     <div className="space-y-8">
@@ -456,15 +468,312 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
               <tbody className="bg-white divide-y divide-[#EBE9F1]">
                 {client.revenus.map((revenu: any) => (
                   <tr key={revenu.id} className="hover:bg-[#F8F8F8] transition-colors">
-                    <td className="px-4 py-3 text-sm text-[#5E5873] font-medium">{revenu.nature || 'Non renseigné'}</td>
-                    <td className="px-4 py-3 text-sm text-[#6E6B7B]">{revenu.periodicite || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-[#5E5873] font-medium">{revenu.nature || <span className="text-[#B9B9C3] italic">Non renseigné</span>}</td>
+                    <td className="px-4 py-3 text-sm text-[#6E6B7B]">{revenu.periodicite || <span className="text-[#B9B9C3] italic">Non renseigné</span>}</td>
                     <td className="px-4 py-3 text-sm text-[#5E5873] text-right font-semibold">
-                      {revenu.montant ? formatCurrency(revenu.montant) : '-'}
+                      {revenu.montant ? formatCurrency(revenu.montant) : <span className="text-[#B9B9C3] italic font-normal">Non renseigné</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </VuexyInfoSection>
+      )}
+
+      {/* ========================================
+          SECTION MÈRE : ÉPARGNE (UNIFIÉE)
+          ======================================== */}
+      {showEpargneSection && (
+        <VuexyInfoSection title="Épargne & Patrimoine" icon={<DollarSign size={18} />}>
+          <div className="space-y-4">
+            {/* Sous-section : Synthèse patrimoniale (calculs dynamiques) */}
+            <VuexySubSection
+              title="Synthèse patrimoniale"
+              icon={<Target size={14} />}
+              color="blue"
+              defaultOpen={true}
+            >
+              {(() => {
+                // Calculs dynamiques depuis les sous-sections
+                const totalActifsFinanciers = (client.actifs_financiers || []).reduce(
+                  (sum: number, a: any) => sum + (Number(a.valeur_actuelle) || 0), 0
+                );
+                const totalActifsImmo = (client.biens_immobiliers || []).reduce(
+                  (sum: number, b: any) => sum + (Number(b.valeur_actuelle_estimee) || 0), 0
+                );
+                const totalAutresActifs = (client.autres_epargnes || []).reduce(
+                  (sum: number, e: any) => sum + (Number(e.valeur) || 0), 0
+                );
+                const totalPassifs = (client.passifs || []).reduce(
+                  (sum: number, p: any) => sum + (Number(p.capital_restant_du) || 0), 0
+                );
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <VuexyInfoRow
+                      label="Épargne disponible"
+                      value={client.bae_epargne?.montant_epargne_disponible ? formatCurrency(client.bae_epargne.montant_epargne_disponible) : undefined}
+                      empty={!client.bae_epargne?.montant_epargne_disponible}
+                    />
+                    <VuexyInfoRow
+                      label="Capacité d'épargne"
+                      value={client.bae_epargne?.capacite_epargne_estimee ? formatCurrency(client.bae_epargne.capacite_epargne_estimee) : undefined}
+                      empty={!client.bae_epargne?.capacite_epargne_estimee}
+                    />
+                    <VuexyInfoRow
+                      label="Actifs financiers"
+                      value={totalActifsFinanciers > 0 ? formatCurrency(totalActifsFinanciers) : undefined}
+                      empty={totalActifsFinanciers === 0}
+                    />
+                    <VuexyInfoRow
+                      label="Actifs immobiliers"
+                      value={totalActifsImmo > 0 ? formatCurrency(totalActifsImmo) : undefined}
+                      empty={totalActifsImmo === 0}
+                    />
+                    <VuexyInfoRow
+                      label="Autres actifs"
+                      value={totalAutresActifs > 0 ? formatCurrency(totalAutresActifs) : undefined}
+                      empty={totalAutresActifs === 0}
+                    />
+                    <VuexyInfoRow
+                      label="Total emprunts"
+                      value={totalPassifs > 0 ? formatCurrency(totalPassifs) : undefined}
+                      empty={totalPassifs === 0}
+                    />
+                  </div>
+                );
+              })()}
+            </VuexySubSection>
+
+            {/* Sous-section : Actifs Financiers */}
+            {client.actifs_financiers && client.actifs_financiers.length > 0 && (
+              <VuexySubSection
+                title="Actifs Financiers"
+                icon={<LineChart size={14} />}
+                count={client.actifs_financiers.length}
+                color="cyan"
+              >
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#EBE9F1]">
+                    <thead className="bg-[#F8F8F8]">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Nature</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Établissement</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-[#5E5873] uppercase">Valeur actuelle</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Détenteur</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Ouvert le</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-[#EBE9F1]">
+                      {client.actifs_financiers.map((actif: any) => (
+                        <tr key={actif.id} className="hover:bg-[#F8F8F8] transition-colors">
+                          <td className="px-3 py-2 text-sm text-[#5E5873] font-medium">{actif.nature || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">{actif.etablissement || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#28C76F] text-right font-semibold">
+                            {actif.valeur_actuelle ? formatCurrency(actif.valeur_actuelle) : <span className="text-[#B9B9C3] italic font-normal">-</span>}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">{actif.detenteur || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">
+                            {actif.date_ouverture_souscription ? formatDate(actif.date_ouverture_souscription) : <span className="text-[#B9B9C3] italic">-</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-[#E8FFFE]">
+                      <tr>
+                        <td colSpan={2} className="px-3 py-2 text-sm font-bold text-[#5E5873]">Total :</td>
+                        <td className="px-3 py-2 text-sm text-[#28C76F] text-right font-bold">
+                          {formatCurrency(client.actifs_financiers.reduce((sum: number, a: any) => sum + (Number(a.valeur_actuelle) || 0), 0))}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </VuexySubSection>
+            )}
+
+            {/* Sous-section : Biens Immobiliers */}
+            {client.biens_immobiliers && client.biens_immobiliers.length > 0 && (
+              <VuexySubSection
+                title="Biens Immobiliers & Pro"
+                icon={<Home size={14} />}
+                count={client.biens_immobiliers.length}
+                color="orange"
+              >
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#EBE9F1]">
+                    <thead className="bg-[#F8F8F8]">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Désignation</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Détenteur</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-[#5E5873] uppercase">Valeur actuelle</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Forme propriété</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-[#5E5873] uppercase">Acquisition</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-[#EBE9F1]">
+                      {client.biens_immobiliers.map((bien: any) => (
+                        <tr key={bien.id} className="hover:bg-[#F8F8F8] transition-colors">
+                          <td className="px-3 py-2 text-sm text-[#5E5873] font-medium">{bien.designation || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">{bien.detenteur || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#28C76F] text-right font-semibold">
+                            {bien.valeur_actuelle_estimee ? formatCurrency(bien.valeur_actuelle_estimee) : <span className="text-[#B9B9C3] italic font-normal">-</span>}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">{bien.forme_propriete || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B] text-center">{bien.annee_acquisition || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-[#FFF7ED]">
+                      <tr>
+                        <td colSpan={2} className="px-3 py-2 text-sm font-bold text-[#5E5873]">Total immo :</td>
+                        <td className="px-3 py-2 text-sm text-[#28C76F] text-right font-bold">
+                          {formatCurrency(client.biens_immobiliers.reduce((sum: number, b: any) => sum + (Number(b.valeur_actuelle_estimee) || 0), 0))}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </VuexySubSection>
+            )}
+
+            {/* Sous-section : Autres Épargnes */}
+            {client.autres_epargnes && client.autres_epargnes.length > 0 && (
+              <VuexySubSection
+                title="Autres Actifs"
+                icon={<Gem size={14} />}
+                count={client.autres_epargnes.length}
+                color="purple"
+              >
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#EBE9F1]">
+                    <thead className="bg-[#F8F8F8]">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Désignation</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-[#5E5873] uppercase">Détenteur</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-[#EBE9F1]">
+                      {client.autres_epargnes.map((epargne: any) => (
+                        <tr key={epargne.id} className="hover:bg-[#F8F8F8] transition-colors">
+                          <td className="px-3 py-2 text-sm text-[#5E5873] font-medium">
+                            {epargne.designation || <span className="text-[#B9B9C3] italic">-</span>}
+                            {epargne.valeur && (
+                              <span className="ml-2 text-[#28C76F] font-semibold">{formatCurrency(epargne.valeur)}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B] text-right">{epargne.detenteur || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-[#F5F0FF]">
+                      <tr>
+                        <td className="px-3 py-2 text-sm font-bold text-[#5E5873]">
+                          Total : <span className="text-[#28C76F]">{formatCurrency(client.autres_epargnes.reduce((sum: number, e: any) => sum + (Number(e.valeur) || 0), 0))}</span>
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </VuexySubSection>
+            )}
+
+            {/* Sous-section : Passifs */}
+            {client.passifs && client.passifs.length > 0 && (
+              <VuexySubSection
+                title="Passifs & Emprunts"
+                icon={<CreditCard size={14} />}
+                count={client.passifs.length}
+                color="red"
+              >
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#EBE9F1]">
+                    <thead className="bg-[#F8F8F8]">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Nature</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Prêteur</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-[#5E5873] uppercase">Montant remb.</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-[#5E5873] uppercase">Capital restant dû</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-[#5E5873] uppercase">Durée restante</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-[#EBE9F1]">
+                      {client.passifs.map((passif: any) => (
+                        <tr key={passif.id} className="hover:bg-[#F8F8F8] transition-colors">
+                          <td className="px-3 py-2 text-sm text-[#5E5873] font-medium">
+                            {passif.nature || <span className="text-[#B9B9C3] italic">-</span>}
+                            {passif.nature?.toLowerCase().includes('immobilier') && (
+                              <span className="ml-2 text-xs bg-[#FF9F43]/20 text-[#FF9F43] px-2 py-0.5 rounded-full">Immo</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">{passif.preteur || <span className="text-[#B9B9C3] italic">-</span>}</td>
+                          <td className="px-3 py-2 text-sm text-[#EA5455] text-right font-semibold">
+                            {passif.montant_remboursement ? formatCurrency(passif.montant_remboursement) : <span className="text-[#B9B9C3] italic font-normal">-</span>}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-[#EA5455] text-right font-semibold">
+                            {passif.capital_restant_du ? formatCurrency(passif.capital_restant_du) : <span className="text-[#B9B9C3] italic font-normal">-</span>}
+                          </td>
+                          <td className="px-3 py-2 text-sm text-[#6E6B7B]">
+                            {passif.duree_restante ? `${passif.duree_restante} mois` : <span className="text-[#B9B9C3] italic">-</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-[#FEF2F2]">
+                      <tr>
+                        <td colSpan={2} className="px-3 py-2 text-sm font-bold text-[#5E5873]">Total des emprunts :</td>
+                        <td className="px-3 py-2 text-sm text-[#EA5455] text-right font-bold">
+                          {formatCurrency(client.passifs.reduce((sum: number, p: any) => sum + (Number(p.montant_remboursement) || 0), 0))}/mois
+                        </td>
+                        <td className="px-3 py-2 text-sm text-[#EA5455] text-right font-bold">
+                          {formatCurrency(client.passifs.reduce((sum: number, p: any) => sum + (Number(p.capital_restant_du) || 0), 0))}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </VuexySubSection>
+            )}
+
+            {/* Synthèse Patrimoniale */}
+            <div className="mt-4 pt-4 border-t border-[#EBE9F1]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-[#E8FFFE] rounded-lg">
+                  <div className="text-xs text-[#6E6B7B] mb-1 font-medium">Actifs Financiers</div>
+                  <div className="text-lg font-bold text-[#00CFE8]">
+                    {formatCurrency((client.actifs_financiers || []).reduce((sum: number, a: any) => sum + (Number(a.valeur_actuelle) || 0), 0))}
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-[#FFF7ED] rounded-lg">
+                  <div className="text-xs text-[#6E6B7B] mb-1 font-medium">Actifs Immobiliers</div>
+                  <div className="text-lg font-bold text-[#FF9F43]">
+                    {formatCurrency((client.biens_immobiliers || []).reduce((sum: number, b: any) => sum + (Number(b.valeur_actuelle_estimee) || 0), 0))}
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-[#FEF2F2] rounded-lg">
+                  <div className="text-xs text-[#6E6B7B] mb-1 font-medium">Total Emprunts</div>
+                  <div className="text-lg font-bold text-[#EA5455]">
+                    -{formatCurrency((client.passifs || []).reduce((sum: number, p: any) => sum + (Number(p.capital_restant_du) || 0), 0))}
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-gradient-to-br from-[#7367F0]/10 to-[#9055FD]/10 rounded-lg border-2 border-[#7367F0]/30">
+                  <div className="text-xs text-[#6E6B7B] mb-1 font-medium">Patrimoine Net</div>
+                  <div className="text-lg font-bold text-[#7367F0]">
+                    {formatCurrency(
+                      (client.actifs_financiers || []).reduce((sum: number, a: any) => sum + (Number(a.valeur_actuelle) || 0), 0) +
+                      (client.biens_immobiliers || []).reduce((sum: number, b: any) => sum + (Number(b.valeur_actuelle_estimee) || 0), 0) +
+                      (client.autres_epargnes || []).reduce((sum: number, e: any) => sum + (Number(e.valeur) || 0), 0) -
+                      (client.passifs || []).reduce((sum: number, p: any) => sum + (Number(p.capital_restant_du) || 0), 0)
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </VuexyInfoSection>
       )}
@@ -619,6 +928,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
               empty={!client.bae_retraite.age_depart_retraite}
             />
             <VuexyInfoRow
+              label="Âge départ retraite conjoint"
+              value={client.bae_retraite.age_depart_retraite_conjoint ? `${client.bae_retraite.age_depart_retraite_conjoint} ans` : undefined}
+              empty={!client.bae_retraite.age_depart_retraite_conjoint}
+            />
+            <VuexyInfoRow
               label="Revenu à maintenir"
               value={client.bae_retraite.pourcentage_revenu_a_maintenir ? `${client.bae_retraite.pourcentage_revenu_a_maintenir}%` : undefined}
               empty={!client.bae_retraite.pourcentage_revenu_a_maintenir}
@@ -637,45 +951,6 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         </VuexyInfoSection>
       )}
 
-      {/* Épargne */}
-      {showEpargne && client.bae_epargne && (
-        <VuexyInfoSection title="Épargne" icon={<DollarSign size={18} />}>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <VuexyInfoRow
-                label="Montant épargne"
-                value={client.bae_epargne.montant_epargne_disponible ? formatCurrency(client.bae_epargne.montant_epargne_disponible) : undefined}
-                empty={!client.bae_epargne.montant_epargne_disponible}
-              />
-              <VuexyInfoRow
-                label="Capacité d'épargne"
-                value={client.bae_epargne.capacite_epargne_estimee ? formatCurrency(client.bae_epargne.capacite_epargne_estimee) : undefined}
-                empty={!client.bae_epargne.capacite_epargne_estimee}
-              />
-              <VuexyInfoRow
-                label="Actifs financiers"
-                value={client.bae_epargne.actifs_financiers_total ? formatCurrency(client.bae_epargne.actifs_financiers_total) : undefined}
-                empty={!client.bae_epargne.actifs_financiers_total}
-              />
-              <VuexyInfoRow
-                label="Actifs immobiliers"
-                value={client.bae_epargne.actifs_immo_total ? formatCurrency(client.bae_epargne.actifs_immo_total) : undefined}
-                empty={!client.bae_epargne.actifs_immo_total}
-              />
-              <VuexyInfoRow
-                label="Autres actifs"
-                value={client.bae_epargne.actifs_autres_total ? formatCurrency(client.bae_epargne.actifs_autres_total) : undefined}
-                empty={!client.bae_epargne.actifs_autres_total}
-              />
-              <VuexyInfoRow
-                label="Total emprunts"
-                value={client.bae_epargne.passifs_total_emprunts ? formatCurrency(client.bae_epargne.passifs_total_emprunts) : undefined}
-                empty={!client.bae_epargne.passifs_total_emprunts}
-              />
-            </div>
-          </div>
-        </VuexyInfoSection>
-      )}
     </div>
   );
 };

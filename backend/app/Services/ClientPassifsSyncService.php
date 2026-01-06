@@ -54,16 +54,14 @@ class ClientPassifsSyncService
             }
         }
 
-        // 2️⃣ Supprimer les passifs qui ne sont plus dans le tableau
-        if (!empty($passifsData)) {
-            $passifsToDelete = $existingPassifs->whereNotIn('id', $processedIds);
-            foreach ($passifsToDelete as $passif) {
-                Log::info("📉 [PASSIFS] Suppression du passif #{$passif->id} (plus dans le tableau)");
-                $passif->delete();
-            }
+        // 2️⃣ IMPORTANT: On ne supprime PAS les passifs existants qui ne sont pas mentionnés
+        // Les passifs s'accumulent au fil des conversations (un nouveau passif mentionné s'ajoute aux existants)
+        $keptPassifs = $existingPassifs->whereNotIn('id', $processedIds)->count();
+        if ($keptPassifs > 0) {
+            Log::info("📉 [PASSIFS] Conservation de {$keptPassifs} passif(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [PASSIFS] Synchronisation terminée - ' . count($processedIds) . ' passif(s)');
+        Log::info('✅ [PASSIFS] Synchronisation terminée - ' . count($processedIds) . ' passif(s) traité(s), total: ' . $client->passifs()->count());
     }
 
     /**

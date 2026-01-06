@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateClientRequest;
 use App\Http\Resources\ClientResource;
 use App\Models\Client;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Log;
 
@@ -388,6 +389,316 @@ class ClientController extends Controller
 
         $epargneModel = $client->autresEpargnes()->findOrFail($autreEpargne);
         $epargneModel->delete();
+
+        return response()->json(null, 204);
+    }
+
+    // ===== SANTÉ / SOUHAIT =====
+
+    public function storeSanteSouhait(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'contrat_en_place' => 'nullable|string|max:255',
+            'budget_mensuel_maximum' => 'nullable|numeric|min:0',
+            'niveau_hospitalisation' => 'nullable|integer|min:0|max:10',
+            'niveau_chambre_particuliere' => 'nullable|integer|min:0|max:10',
+            'niveau_medecin_generaliste' => 'nullable|integer|min:0|max:10',
+            'niveau_analyses_imagerie' => 'nullable|integer|min:0|max:10',
+            'niveau_auxiliaires_medicaux' => 'nullable|integer|min:0|max:10',
+            'niveau_pharmacie' => 'nullable|integer|min:0|max:10',
+            'niveau_dentaire' => 'nullable|integer|min:0|max:10',
+            'niveau_optique' => 'nullable|integer|min:0|max:10',
+            'niveau_protheses_auditives' => 'nullable|integer|min:0|max:10',
+        ]);
+
+        $validated['client_id'] = $client->id;
+
+        $santeSouhait = \App\Models\SanteSouhait::create($validated);
+
+        return response()->json($santeSouhait, 201);
+    }
+
+    public function updateSanteSouhait(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'contrat_en_place' => 'nullable|string|max:255',
+            'budget_mensuel_maximum' => 'nullable|numeric|min:0',
+            'niveau_hospitalisation' => 'nullable|integer|min:0|max:10',
+            'niveau_chambre_particuliere' => 'nullable|integer|min:0|max:10',
+            'niveau_medecin_generaliste' => 'nullable|integer|min:0|max:10',
+            'niveau_analyses_imagerie' => 'nullable|integer|min:0|max:10',
+            'niveau_auxiliaires_medicaux' => 'nullable|integer|min:0|max:10',
+            'niveau_pharmacie' => 'nullable|integer|min:0|max:10',
+            'niveau_dentaire' => 'nullable|integer|min:0|max:10',
+            'niveau_optique' => 'nullable|integer|min:0|max:10',
+            'niveau_protheses_auditives' => 'nullable|integer|min:0|max:10',
+        ]);
+
+        $santeSouhait = $client->santeSouhait;
+
+        if ($santeSouhait) {
+            $santeSouhait->update($validated);
+        } else {
+            $validated['client_id'] = $client->id;
+            $santeSouhait = \App\Models\SanteSouhait::create($validated);
+        }
+
+        return response()->json($santeSouhait);
+    }
+
+    public function deleteSanteSouhait(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        if ($client->santeSouhait) {
+            $client->santeSouhait->delete();
+        }
+
+        return response()->json(null, 204);
+    }
+
+    // ===== BAE PRÉVOYANCE =====
+
+    public function storeBaePrevoyance(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'contrat_en_place' => 'nullable|string|max:255',
+            'date_effet' => 'nullable|date',
+            'cotisations' => 'nullable|numeric|min:0',
+            'souhaite_couverture_invalidite' => 'nullable|boolean',
+            'revenu_a_garantir' => 'nullable|numeric|min:0',
+            'souhaite_couvrir_charges_professionnelles' => 'nullable|boolean',
+            'montant_annuel_charges_professionnelles' => 'nullable|numeric|min:0',
+            'garantir_totalite_charges_professionnelles' => 'nullable|boolean',
+            'montant_charges_professionnelles_a_garantir' => 'nullable|numeric|min:0',
+            'duree_indemnisation_souhaitee' => 'nullable|string|max:255',
+            'capital_deces_souhaite' => 'nullable|numeric|min:0',
+            'garanties_obseques' => 'nullable|string|max:255',
+            'rente_enfants' => 'nullable|string|max:255',
+            'rente_conjoint' => 'nullable|string|max:255',
+            'payeur' => 'nullable|string|max:255',
+        ]);
+
+        $validated['client_id'] = $client->id;
+
+        $baePrevoyance = \App\Models\BaePrevoyance::create($validated);
+
+        return response()->json($baePrevoyance, 201);
+    }
+
+    public function updateBaePrevoyance(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'contrat_en_place' => 'nullable|string|max:255',
+            'date_effet' => 'nullable|date',
+            'cotisations' => 'nullable|numeric|min:0',
+            'souhaite_couverture_invalidite' => 'nullable|boolean',
+            'revenu_a_garantir' => 'nullable|numeric|min:0',
+            'souhaite_couvrir_charges_professionnelles' => 'nullable|boolean',
+            'montant_annuel_charges_professionnelles' => 'nullable|numeric|min:0',
+            'garantir_totalite_charges_professionnelles' => 'nullable|boolean',
+            'montant_charges_professionnelles_a_garantir' => 'nullable|numeric|min:0',
+            'duree_indemnisation_souhaitee' => 'nullable|string|max:255',
+            'capital_deces_souhaite' => 'nullable|numeric|min:0',
+            'garanties_obseques' => 'nullable|string|max:255',
+            'rente_enfants' => 'nullable|string|max:255',
+            'rente_conjoint' => 'nullable|string|max:255',
+            'payeur' => 'nullable|string|max:255',
+        ]);
+
+        $baePrevoyance = $client->baePrevoyance;
+
+        if ($baePrevoyance) {
+            $baePrevoyance->update($validated);
+        } else {
+            $validated['client_id'] = $client->id;
+            $baePrevoyance = \App\Models\BaePrevoyance::create($validated);
+        }
+
+        return response()->json($baePrevoyance);
+    }
+
+    // ===== BAE RETRAITE =====
+
+    public function storeBaeRetraite(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'revenus_annuels' => 'nullable|numeric|min:0',
+            'revenus_annuels_foyer' => 'nullable|numeric|min:0',
+            'impot_revenu' => 'nullable|numeric|min:0',
+            'nombre_parts_fiscales' => 'nullable|numeric|min:0',
+            'tmi' => 'nullable|string|max:50',
+            'impot_paye_n_1' => 'nullable|numeric|min:0',
+            'age_depart_retraite' => 'nullable|integer|min:0|max:100',
+            'age_depart_retraite_conjoint' => 'nullable|integer|min:0|max:100',
+            'pourcentage_revenu_a_maintenir' => 'nullable|numeric|min:0|max:100',
+            'contrat_en_place' => 'nullable|string|max:255',
+            'bilan_retraite_disponible' => 'nullable|boolean',
+            'complementaire_retraite_mise_en_place' => 'nullable|boolean',
+            'designation_etablissement' => 'nullable|string|max:255',
+            'cotisations_annuelles' => 'nullable|numeric|min:0',
+            'titulaire' => 'nullable|string|max:255',
+        ]);
+
+        $validated['client_id'] = $client->id;
+
+        $baeRetraite = \App\Models\BaeRetraite::create($validated);
+
+        return response()->json($baeRetraite, 201);
+    }
+
+    public function updateBaeRetraite(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'revenus_annuels' => 'nullable|numeric|min:0',
+            'revenus_annuels_foyer' => 'nullable|numeric|min:0',
+            'impot_revenu' => 'nullable|numeric|min:0',
+            'nombre_parts_fiscales' => 'nullable|numeric|min:0',
+            'tmi' => 'nullable|string|max:50',
+            'impot_paye_n_1' => 'nullable|numeric|min:0',
+            'age_depart_retraite' => 'nullable|integer|min:0|max:100',
+            'age_depart_retraite_conjoint' => 'nullable|integer|min:0|max:100',
+            'pourcentage_revenu_a_maintenir' => 'nullable|numeric|min:0|max:100',
+            'contrat_en_place' => 'nullable|string|max:255',
+            'bilan_retraite_disponible' => 'nullable|boolean',
+            'complementaire_retraite_mise_en_place' => 'nullable|boolean',
+            'designation_etablissement' => 'nullable|string|max:255',
+            'cotisations_annuelles' => 'nullable|numeric|min:0',
+            'titulaire' => 'nullable|string|max:255',
+        ]);
+
+        $baeRetraite = $client->baeRetraite;
+
+        if ($baeRetraite) {
+            $baeRetraite->update($validated);
+        } else {
+            $validated['client_id'] = $client->id;
+            $baeRetraite = \App\Models\BaeRetraite::create($validated);
+        }
+
+        return response()->json($baeRetraite);
+    }
+
+    // ===== BAE ÉPARGNE =====
+
+    public function storeBaeEpargne(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'epargne_disponible' => 'nullable|boolean',
+            'montant_epargne_disponible' => 'nullable|numeric|min:0',
+            'donation_realisee' => 'nullable|boolean',
+            'donation_forme' => 'nullable|string|max:255',
+            'donation_date' => 'nullable|date',
+            'donation_montant' => 'nullable|numeric|min:0',
+            'donation_beneficiaires' => 'nullable|string',
+            'capacite_epargne_estimee' => 'nullable|numeric|min:0',
+            'actifs_financiers_pourcentage' => 'nullable|numeric|min:0|max:100',
+            'actifs_financiers_total' => 'nullable|numeric|min:0',
+            'actifs_financiers_details' => 'nullable|json',
+            'actifs_immo_pourcentage' => 'nullable|numeric|min:0|max:100',
+            'actifs_immo_total' => 'nullable|numeric|min:0',
+            'actifs_immo_details' => 'nullable|json',
+            'actifs_autres_pourcentage' => 'nullable|numeric|min:0|max:100',
+            'actifs_autres_total' => 'nullable|numeric|min:0',
+            'actifs_autres_details' => 'nullable|json',
+            'passifs_total_emprunts' => 'nullable|numeric|min:0',
+            'passifs_details' => 'nullable|json',
+            'charges_totales' => 'nullable|numeric|min:0',
+            'charges_details' => 'nullable|json',
+            'situation_financiere_revenus_charges' => 'nullable|string',
+        ]);
+
+        $validated['client_id'] = $client->id;
+
+        $baeEpargne = \App\Models\BaeEpargne::create($validated);
+
+        return response()->json($baeEpargne, 201);
+    }
+
+    public function updateBaeEpargne(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'epargne_disponible' => 'nullable|boolean',
+            'montant_epargne_disponible' => 'nullable|numeric|min:0',
+            'donation_realisee' => 'nullable|boolean',
+            'donation_forme' => 'nullable|string|max:255',
+            'donation_date' => 'nullable|date',
+            'donation_montant' => 'nullable|numeric|min:0',
+            'donation_beneficiaires' => 'nullable|string',
+            'capacite_epargne_estimee' => 'nullable|numeric|min:0',
+            'actifs_financiers_pourcentage' => 'nullable|numeric|min:0|max:100',
+            'actifs_financiers_total' => 'nullable|numeric|min:0',
+            'actifs_financiers_details' => 'nullable|json',
+            'actifs_immo_pourcentage' => 'nullable|numeric|min:0|max:100',
+            'actifs_immo_total' => 'nullable|numeric|min:0',
+            'actifs_immo_details' => 'nullable|json',
+            'actifs_autres_pourcentage' => 'nullable|numeric|min:0|max:100',
+            'actifs_autres_total' => 'nullable|numeric|min:0',
+            'actifs_autres_details' => 'nullable|json',
+            'passifs_total_emprunts' => 'nullable|numeric|min:0',
+            'passifs_details' => 'nullable|json',
+            'charges_totales' => 'nullable|numeric|min:0',
+            'charges_details' => 'nullable|json',
+            'situation_financiere_revenus_charges' => 'nullable|string',
+        ]);
+
+        $baeEpargne = $client->baeEpargne;
+
+        if ($baeEpargne) {
+            $baeEpargne->update($validated);
+        } else {
+            $validated['client_id'] = $client->id;
+            $baeEpargne = \App\Models\BaeEpargne::create($validated);
+        }
+
+        return response()->json($baeEpargne);
+    }
+
+    public function deleteBaePrevoyance(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        if ($client->baePrevoyance) {
+            $client->baePrevoyance->delete();
+        }
+
+        return response()->json(null, 204);
+    }
+
+    public function deleteBaeRetraite(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        if ($client->baeRetraite) {
+            $client->baeRetraite->delete();
+        }
+
+        return response()->json(null, 204);
+    }
+
+    public function deleteBaeEpargne(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        if ($client->baeEpargne) {
+            $client->baeEpargne->delete();
+        }
 
         return response()->json(null, 204);
     }

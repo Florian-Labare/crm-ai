@@ -54,16 +54,14 @@ class ClientActifsFinanciersSyncService
             }
         }
 
-        // 2️⃣ Supprimer les actifs qui ne sont plus dans le tableau
-        if (!empty($actifsData)) {
-            $actifsToDelete = $existingActifs->whereNotIn('id', $processedIds);
-            foreach ($actifsToDelete as $actif) {
-                Log::info("📈 [ACTIFS FINANCIERS] Suppression de l'actif #{$actif->id} (plus dans le tableau)");
-                $actif->delete();
-            }
+        // 2️⃣ IMPORTANT: On ne supprime PAS les actifs existants qui ne sont pas mentionnés
+        // Les actifs financiers s'accumulent au fil des conversations
+        $keptActifs = $existingActifs->whereNotIn('id', $processedIds)->count();
+        if ($keptActifs > 0) {
+            Log::info("📈 [ACTIFS FINANCIERS] Conservation de {$keptActifs} actif(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [ACTIFS FINANCIERS] Synchronisation terminée - ' . count($processedIds) . ' actif(s)');
+        Log::info('✅ [ACTIFS FINANCIERS] Synchronisation terminée - ' . count($processedIds) . ' actif(s) traité(s), total: ' . $client->actifsFinanciers()->count());
     }
 
     /**

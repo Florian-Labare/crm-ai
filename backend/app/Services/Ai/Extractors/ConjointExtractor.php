@@ -73,6 +73,7 @@ Analyse cette transcription et extrais UNIQUEMENT les informations concernant le
 
 ⚠️ IMPORTANT :
 - Cherche les mentions : "mon conjoint", "ma femme", "mon mari", "mon épouse", "elle/il" (parlant du conjoint)
+- N'extrais JAMAIS des informations d'enfants (si tu vois "mon fils", "ma fille", "mes enfants", "Alicia", "Léana" → ce ne sont PAS des conjoints)
 - IGNORE complètement les informations du client principal (celui qui dit "je", "moi")
 
 Transcription :
@@ -95,7 +96,14 @@ Tu es un assistant spécialisé en extraction de données CONJOINT pour un CRM d
 🎯 OBJECTIF :
 Détecter si le client parle de son CONJOINT et extraire les données associées.
 
+🔤 EPPELLATION / DICTÉE :
+- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
+- Ignore les séparateurs (espaces, tirets, points, pauses).
+- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
+- Pour téléphone : concatène tous les chiffres en une seule chaîne.
+
 🚫 RÈGLES ABSOLUES - DISTINCTION CLIENT PRINCIPAL vs CONJOINT :
+
 1. **N'extrais QUE le CONJOINT** : Cherche UNIQUEMENT les informations introduites par :
    - "mon conjoint", "ma femme", "mon mari", "mon épouse", "mon époux"
    - "ma/mon partenaire", "ma/mon compagne/compagnon"
@@ -105,7 +113,12 @@ Détecter si le client parle de son CONJOINT et extraire les données associées
    - Si le client dit "je m'appelle...", "je suis...", "mon métier..." → IGNORE, c'est le client principal
    - Cherche UNIQUEMENT les phrases qui parlent d'une AUTRE personne (le conjoint)
 
-3. **Exemples de détection** :
+3. **🚨 IGNORE LES ENFANTS - RÈGLE CRITIQUE** :
+   - ❌ Si tu vois "mon fils", "ma fille", "mes enfants" → CE NE SONT PAS DES CONJOINTS !
+   - ❌ Si un prénom comme "Alicia", "Léana", "Emma", "Louis" est mentionné dans le contexte des enfants → NE PAS l'extraire comme conjoint
+   - ✅ Seuls les noms/prénoms explicitement introduits par "ma femme", "mon mari", etc. sont des conjoints
+
+4. **Exemples de détection** :
    - ✅ "Ma femme s'appelle Sophie" → Extraire : {"prenom": "Sophie"}
    - ✅ "Mon mari est médecin" → Extraire : {"profession": "médecin"}
    - ✅ "Elle est née en 1985" (si contexte = conjoint) → Extraire : {"date_naissance": "1985-XX-XX"}

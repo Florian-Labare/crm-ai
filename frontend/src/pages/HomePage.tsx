@@ -6,8 +6,11 @@ import api from "../api/apiClient";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { extractCollection } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
-import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone } from "lucide-react";
+import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone, LogOut } from "lucide-react";
 import { VuexyStatCard } from "../components/VuexyStatCard";
+import { PendingChangesBadge } from "../components/PendingChangesBadge";
+import { ReviewChangesModal } from "../components/ReviewChangesModal";
+import { useAuth } from "../contexts/AuthContext";
 
 interface ExtendedClient extends Client {
   situation_matrimoniale?: string;
@@ -23,6 +26,13 @@ const HomePage: React.FC = () => {
     avecBesoins: 0,
   });
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -108,10 +118,39 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div className="vx-card">
-            <h1 className="text-3xl font-bold text-[#5E5873] mb-2">Tableau de bord</h1>
-            <p className="text-[#6E6B7B]">
-              Gérez vos clients et leurs besoins en un clin d'œil
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-[#5E5873] mb-2">Tableau de bord</h1>
+                <p className="text-[#6E6B7B]">
+                  Gérez vos clients et leurs besoins en un clin d'œil
+                </p>
+              </div>
+
+              {/* User Menu & Pending Changes */}
+              {user && (
+                <div className="flex items-center gap-4">
+                  {/* Pending Changes Badge */}
+                  <PendingChangesBadge
+                    onSelectChange={(id) => setSelectedPendingChangeId(id)}
+                  />
+
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F3F2F7]">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-sm font-semibold">
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <span className="text-sm font-semibold text-[#5E5873]">{user.name}</span>
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[#EA5455] hover:bg-[#EA5455]/10 font-semibold transition-all duration-200"
+                  >
+                    <LogOut size={18} />
+                    Déconnexion
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Statistiques */}
@@ -315,6 +354,18 @@ const HomePage: React.FC = () => {
         message={confirmDialog.message}
         type={confirmDialog.type}
       />
+
+      {/* Review Changes Modal */}
+      {selectedPendingChangeId && (
+        <ReviewChangesModal
+          pendingChangeId={selectedPendingChangeId}
+          onClose={() => setSelectedPendingChangeId(null)}
+          onApplied={() => {
+            setSelectedPendingChangeId(null);
+            fetchClients(); // Refresh clients list after applying changes
+          }}
+        />
+      )}
     </>
   );
 };

@@ -54,16 +54,14 @@ class ClientRevenusSyncService
             }
         }
 
-        // 2️⃣ Supprimer les revenus qui ne sont plus dans le tableau
-        if (!empty($revenusData)) {
-            $revenusToDelete = $existingRevenus->whereNotIn('id', $processedIds);
-            foreach ($revenusToDelete as $revenu) {
-                Log::info("💰 [REVENUS] Suppression du revenu #{$revenu->id} (plus dans le tableau)");
-                $revenu->delete();
-            }
+        // 2️⃣ IMPORTANT: On ne supprime PAS les revenus existants qui ne sont pas mentionnés
+        // Les revenus s'accumulent au fil des conversations
+        $keptRevenus = $existingRevenus->whereNotIn('id', $processedIds)->count();
+        if ($keptRevenus > 0) {
+            Log::info("💰 [REVENUS] Conservation de {$keptRevenus} revenu(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [REVENUS] Synchronisation terminée - ' . count($processedIds) . ' revenu(s)');
+        Log::info('✅ [REVENUS] Synchronisation terminée - ' . count($processedIds) . ' revenu(s) traité(s), total: ' . $client->revenus()->count());
     }
 
     /**

@@ -8,7 +8,8 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { VuexyClientHeader } from "../components/VuexyClientHeader";
 import { VuexyClientInfoSection } from "../components/VuexyClientInfoSection";
 import { VuexyTabs } from "../components/VuexyTabs";
-import { Info, ClipboardList, Folder } from "lucide-react";
+import { ReviewChangesModal } from "../components/ReviewChangesModal";
+import { Info, ClipboardList, Folder, AlertTriangle } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
 
@@ -55,6 +56,15 @@ interface ExtendedClient extends Client {
   santeSouhait?: SanteSouhait;
 }
 
+interface PendingChangeItem {
+  id: number;
+  source: string;
+  status: string;
+  changes_count: number;
+  conflicts_count: number;
+  created_at: string;
+}
+
 const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -67,6 +77,8 @@ const ClientDetailPage: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<'docx' | 'pdf'>('docx');
   const [generatingDocument, setGeneratingDocument] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<PendingChangeItem[]>([]);
+  const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
 
   // États pour les dialogues de confirmation
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -91,6 +103,15 @@ const ClientDetailPage: React.FC = () => {
       toast.error("Erreur lors du chargement du client");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingChanges = async () => {
+    try {
+      const res = await api.get(`/clients/${id}/pending-changes`);
+      setPendingChanges(res.data.pending_changes || []);
+    } catch (err) {
+      console.error("Erreur lors du chargement des pending changes :", err);
     }
   };
 
@@ -202,6 +223,7 @@ const ClientDetailPage: React.FC = () => {
 
   useEffect(() => {
     fetchClient();
+    fetchPendingChanges();
   }, [id]);
 
   useEffect(() => {
@@ -348,6 +370,43 @@ const ClientDetailPage: React.FC = () => {
             showExportQuestionnaireButton={activeTab === "questionnaires"}
             onExportQuestionnairePDF={handleExportQuestionnairePdf}
           />
+
+          {/* Pending Changes Banner */}
+          {pendingChanges.length > 0 && (
+            <div className="bg-gradient-to-r from-[#FF9F43]/10 to-[#FF9F43]/5 border border-[#FF9F43]/30 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#FF9F43]/20 rounded-lg">
+                    <AlertTriangle className="text-[#FF9F43]" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#5E5873]">
+                      {pendingChanges.length} modification(s) en attente de validation
+                    </h3>
+                    <p className="text-sm text-[#6E6B7B]">
+                      Des modifications ont été extraites d'enregistrements audio et nécessitent votre validation.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {pendingChanges.map((pc) => (
+                    <button
+                      key={pc.id}
+                      onClick={() => setSelectedPendingChangeId(pc.id)}
+                      className="px-4 py-2 bg-[#FF9F43] text-white rounded-lg hover:bg-[#FF9F43]/90 transition-colors font-medium text-sm flex items-center gap-2"
+                    >
+                      <span>{pc.changes_count} champ(s)</span>
+                      {pc.conflicts_count > 0 && (
+                        <span className="bg-white/20 px-2 py-0.5 rounded text-xs">
+                          {pc.conflicts_count} conflit(s)
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Vuexy Tabs */}
           <VuexyTabs
@@ -616,6 +675,20 @@ const ClientDetailPage: React.FC = () => {
         message={confirmDialog.message}
         type={confirmDialog.type}
       />
+
+      {/* Review Changes Modal */}
+      {selectedPendingChangeId && (
+        <ReviewChangesModal
+          pendingChangeId={selectedPendingChangeId}
+          onClose={() => setSelectedPendingChangeId(null)}
+          onApplied={() => {
+            setSelectedPendingChangeId(null);
+            fetchClient(); // Refresh client data
+            fetchPendingChanges(); // Refresh pending changes list
+            toast.success("Modifications appliquées avec succès");
+          }}
+        />
+      )}
     </>
   );
 };

@@ -135,6 +135,10 @@ class RecordingService
 
             Log::info("🎉 [RECORDING] Transcription finale : " . strlen($finalTranscription) . " caractères");
 
+            if (trim($finalTranscription) === '') {
+                throw new \Exception("Transcription vide après traitement des chunks");
+            }
+
             // Créer un AudioRecord avec la transcription pour traitement GPT
             $audioRecord = AudioRecord::create([
                 'team_id' => $session->team_id, // Added team_id

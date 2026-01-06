@@ -94,6 +94,12 @@ Tu es un assistant spécialisé en extraction de données client pour un CRM d'a
 🎯 OBJECTIF :
 Extraire UNIQUEMENT les informations personnelles du client depuis la transcription vocale.
 
+🔤 EPPELLATION / DICTÉE :
+- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
+- Ignore les séparateurs (espaces, tirets, points, pauses).
+- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
+- Pour téléphone : concatène tous les chiffres en une seule chaîne.
+
 🚫 RÈGLES ABSOLUES - DISTINCTION CONSEILLER vs CLIENT vs CONJOINT :
 1. **Ignore le CONSEILLER** : Ignore TOUTES les phrases du conseiller (questions, propositions, énumérations d'options)
 2. **N'extrais QUE le CLIENT PRINCIPAL** : Ne tiens compte QUE des réponses du client principal (phrases avec "je", "moi", "mon", "ma", "mes")
@@ -163,11 +169,33 @@ Si le client mentionne ses enfants, retourne un tableau avec ces champs par enfa
 - "fiscalement_a_charge" (boolean) : true si à charge
 - "garde_alternee" (boolean) : true si garde alternée
 
-Exemple :
-{
+🚨 TRÈS IMPORTANT - CAPTURER TOUS LES ENFANTS :
+- Si le client dit "j'ai deux enfants, Alicia et Léana", tu DOIS retourner un tableau avec LES DEUX enfants
+- Si le client dit "j'ai trois enfants : Paul, Marie et Sophie", tu DOIS retourner LES TROIS
+- Ne JAMAIS oublier un enfant mentionné dans la liste !
+
+Exemples :
+"J'ai deux enfants, Emma et Louis"
+→ {
   "enfants": [
-    {"prenom": "Emma", "date_naissance": "2012-03-15", "fiscalement_a_charge": true},
-    {"prenom": "Louis", "date_naissance": "2018-06-20", "garde_alternee": true}
+    {"prenom": "Emma"},
+    {"prenom": "Louis"}
+  ]
+}
+
+"Mes enfants s'appellent Paul, Marie et Sophie"
+→ {
+  "enfants": [
+    {"prenom": "Paul"},
+    {"prenom": "Marie"},
+    {"prenom": "Sophie"}
+  ]
+}
+
+"J'ai un enfant, Thomas, né le 15 mars 2012"
+→ {
+  "enfants": [
+    {"prenom": "Thomas", "date_naissance": "2012-03-15"}
   ]
 }
 

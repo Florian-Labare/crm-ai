@@ -13,12 +13,12 @@ interface RadioOptionProps {
 const RadioOption: React.FC<RadioOptionProps> = ({ name, value, label, checked, onChange }) => (
   <label
     className={`flex items-center justify-between w-full border rounded-2xl px-4 py-3 cursor-pointer transition-all ${
-      checked ? 'border-indigo-500 bg-indigo-50 shadow-sm' : 'border-gray-200 hover:border-indigo-200'
+      checked ? 'border-[#7367F0] bg-[#7367F0]/10 shadow-sm' : 'border-[#EBE9F1] hover:border-[#7367F0]/30'
     }`}
   >
-    <span className="text-gray-800">{label}</span>
-    <span className={`flex items-center justify-center h-5 w-5 rounded-full border-2 ${checked ? 'border-indigo-500' : 'border-gray-300'}`}>
-      <span className={`h-3 w-3 rounded-full ${checked ? 'bg-indigo-500' : 'bg-transparent'}`} />
+    <span className="text-[#5E5873]">{label}</span>
+    <span className={`flex items-center justify-center h-5 w-5 rounded-full border-2 ${checked ? 'border-[#7367F0]' : 'border-[#D8D6DE]'}`}>
+      <span className={`h-3 w-3 rounded-full ${checked ? 'bg-[#7367F0]/100' : 'bg-transparent'}`} />
     </span>
     <input
       type="radio"
@@ -40,13 +40,13 @@ interface CheckboxPillProps {
 const CheckboxPill: React.FC<CheckboxPillProps> = ({ label, checked, onChange }) => (
   <label
     className={`flex items-center justify-between border rounded-2xl px-4 py-2 cursor-pointer transition ${
-      checked ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm' : 'border-gray-200 text-gray-700 hover:border-emerald-200'
+      checked ? 'border-[#28C76F] bg-[#28C76F]/10 text-[#28C76F] shadow-sm' : 'border-[#EBE9F1] text-[#6E6B7B] hover:border-[#28C76F]/30'
     }`}
   >
     <span>{label}</span>
     <span
       className={`flex items-center justify-center h-5 w-5 border rounded ${
-        checked ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-300 text-transparent'
+        checked ? 'border-[#28C76F] bg-[#28C76F]/100 text-white' : 'border-[#D8D6DE] text-transparent'
       }`}
     >
       ✓
@@ -220,7 +220,7 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
 
   const renderRadioQuestion = (question: { field: string; label: string; options: { value: string; label: string }[] }) => (
     <div key={question.field} className="space-y-3">
-      <p className="font-semibold text-gray-800">{question.label}</p>
+      <p className="font-semibold text-[#5E5873]">{question.label}</p>
       <div className="space-y-2">
         {question.options.map((option) => (
           <RadioOption
@@ -321,32 +321,32 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
   };
 
   return (
-    <div className={embedded ? '' : 'min-h-screen bg-gray-50 p-6'}>
+    <div className={embedded ? '' : 'min-h-screen bg-[#F8F8F8] p-6'}>
       <div className={embedded ? '' : 'max-w-6xl mx-auto'}>
         {!embedded && (
           <div className="mb-6">
             <button
               onClick={() => navigate(`/clients/${resolvedClientId}`)}
-              className="text-blue-600 hover:text-blue-800 flex items-center gap-2 mb-4"
+              className="text-[#7367F0] hover:text-[#5E50EE] flex items-center gap-2 mb-4"
             >
               ← Retour à la fiche client
             </button>
-            <h1 className="text-3xl font-bold text-gray-800">Questionnaire de Risque</h1>
-            <p className="text-gray-600 mt-2">Évaluation du profil investisseur</p>
+            <h1 className="text-3xl font-bold text-[#5E5873]">Questionnaire de Risque</h1>
+            <p className="text-[#6E6B7B] mt-2">Évaluation du profil investisseur</p>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow">
-              <div className="border-b border-gray-200">
+              <div className="border-b border-[#EBE9F1]">
                 <nav className="flex">
                   <button
                     onClick={() => setActiveTab('comportement')}
                     className={`px-6 py-3 font-medium ${
                       activeTab === 'comportement'
-                        ? 'border-b-2 border-blue-500 text-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'border-b-2 border-[#7367F0] text-[#7367F0]'
+                        : 'text-[#B9B9C3] hover:text-[#6E6B7B]'
                     }`}
                   >
                     Comportement
@@ -355,8 +355,8 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                     onClick={() => setActiveTab('connaissances')}
                     className={`px-6 py-3 font-medium ${
                       activeTab === 'connaissances'
-                        ? 'border-b-2 border-blue-500 text-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'border-b-2 border-[#7367F0] text-[#7367F0]'
+                        : 'text-[#B9B9C3] hover:text-[#6E6B7B]'
                     }`}
                   >
                     Connaissances
@@ -365,8 +365,8 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                     onClick={() => setActiveTab('quiz')}
                     className={`px-6 py-3 font-medium ${
                       activeTab === 'quiz'
-                        ? 'border-b-2 border-blue-500 text-blue-600'
-                        : 'text-gray-500 hover:text-gray-700'
+                        ? 'border-b-2 border-[#7367F0] text-[#7367F0]'
+                        : 'text-[#B9B9C3] hover:text-[#6E6B7B]'
                     }`}
                   >
                     Quiz (32 questions)
@@ -391,7 +391,7 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
 
                     {yesNoQuestions.map((question) => (
                       <div key={question.field} className="space-y-3">
-                        <p className="font-semibold text-gray-800">{question.label}</p>
+                        <p className="font-semibold text-[#5E5873]">{question.label}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             { value: 'true', label: 'OUI' },
@@ -416,11 +416,11 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                     })}
 
                     <div className="space-y-3">
-                      <p className="font-semibold text-gray-800">Le présent rapport répond à (aux) objectif(s) suivant(s) :</p>
+                      <p className="font-semibold text-[#5E5873]">Le présent rapport répond à (aux) objectif(s) suivant(s) :</p>
                       <textarea
                         value={financier.objectifs_rapport || ''}
                         onChange={(e) => handleFinancierChange('objectifs_rapport', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                        className="w-full border border-[#D8D6DE] rounded-md px-3 py-2"
                         rows={3}
                         placeholder="Décrivez ici les objectifs énoncés pendant l’entretien"
                       />
@@ -432,16 +432,16 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                     })}
 
                     <div className="space-y-3">
-                      <p className="font-semibold text-gray-800">Le profil de risque du client est :</p>
+                      <p className="font-semibold text-[#5E5873]">Le profil de risque du client est :</p>
                       <div className="flex flex-wrap gap-4">
                         {['Prudent', 'Modéré', 'Dynamique'].map((option) => (
-                          <label key={option} className="flex items-center space-x-2 text-gray-700">
+                          <label key={option} className="flex items-center space-x-2 text-[#6E6B7B]">
                             <input
                               type="radio"
                               name="profil_calcule_display"
                               checked={profil === option}
                               readOnly
-                              className="h-4 w-4 text-blue-600 border-gray-300"
+                              className="h-4 w-4 text-[#7367F0] border-[#D8D6DE]"
                             />
                             <span>{option}</span>
                           </label>
@@ -455,7 +455,7 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                     })}
 
                     <div className="space-y-3">
-                      <p className="font-semibold text-gray-800">Pourcentage maximum de pertes :</p>
+                      <p className="font-semibold text-[#5E5873]">Pourcentage maximum de pertes :</p>
                       <div className="flex items-center space-x-3">
                         <input
                           type="number"
@@ -464,10 +464,10 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                           step="1"
                           value={financier.pourcentage_perte_max || ''}
                           onChange={(e) => handleFinancierChange('pourcentage_perte_max', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          className="w-full px-3 py-2 border border-[#D8D6DE] rounded-md"
                           placeholder="Ex : 25"
                         />
-                        <span className="text-gray-700 font-semibold">%</span>
+                        <span className="text-[#6E6B7B] font-semibold">%</span>
                       </div>
                     </div>
                   </div>
@@ -475,7 +475,7 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
 
                 {activeTab === 'connaissances' && (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-[#6E6B7B] mb-4">
                       Cochez les produits financiers que vous connaissez:
                     </p>
 
@@ -503,7 +503,7 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
 
                 {activeTab === 'quiz' && (
                   <div className="space-y-6">
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-[#6E6B7B] mb-4">
                       Répondez aux questions suivantes (Vrai / Faux / Aucune idée) :
                     </p>
 
@@ -541,8 +541,8 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                       { key: 'girardin_fonds_perdus', label: 'Le Girardin industriel est un investissement à fonds perdus' },
                       { key: 'girardin_non_residents', label: 'Le Girardin n\'est accessible qu\'aux non-résidents fiscaux français' },
                     ].map(({ key, label }) => (
-                      <div key={key} className="border-b border-gray-200 pb-4">
-                        <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
+                      <div key={key} className="border-b border-[#EBE9F1] pb-4">
+                        <p className="text-sm font-medium text-[#6E6B7B] mb-2">{label}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           {['vrai', 'faux', 'aucune_idee'].map((choice) => (
                             <RadioOption
@@ -561,7 +561,7 @@ export const RiskQuestionnaire: React.FC<RiskQuestionnaireProps> = ({ clientIdPr
                 )}
 
                 {loading && (
-                  <div className="mt-4 text-center text-sm text-gray-500">
+                  <div className="mt-4 text-center text-sm text-[#B9B9C3]">
                     Sauvegarde en cours...
                   </div>
                 )}
