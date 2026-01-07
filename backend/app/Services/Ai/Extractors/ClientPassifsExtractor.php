@@ -44,6 +44,11 @@ class ClientPassifsExtractor
                 return [];
             }
 
+            // 🔀 Déduplication intelligente des passifs
+            if (isset($data['client_passifs']) && is_array($data['client_passifs'])) {
+                $data['client_passifs'] = $this->deduplicatePassifs($data['client_passifs']);
+            }
+
             return $data;
 
         } catch (\Throwable $e) {
@@ -64,6 +69,103 @@ $transcription
 
 Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
+    }
+
+    /**
+     * Déduplique et fusionne les passifs qui concernent le même crédit
+     *
+     * Logique avancée :
+     * 1. Regrouper par nature + prêteur si les deux sont spécifiés
+     * 2. Si un passif n'a pas de prêteur, le fusionner avec un passif de même nature qui en a un
+     * 3. Si deux passifs de même nature n'ont pas de prêteur, les fusionner
+     */
+    private function deduplicatePassifs(array $passifs): array
+    {
+        if (count($passifs) <= 1) {
+            return $passifs;
+        }
+
+        // Étape 1: Séparer les passifs avec et sans prêteur
+        $withPreteur = [];
+        $withoutPreteur = [];
+
+        foreach ($passifs as $passif) {
+            $nature = strtolower($passif['nature'] ?? 'autre');
+            $preteur = trim($passif['preteur'] ?? '');
+
+            if (!empty($preteur)) {
+                $key = $nature . '_' . strtolower($preteur);
+                if (!isset($withPreteur[$key])) {
+                    $withPreteur[$key] = $passif;
+                } else {
+                    $withPreteur[$key] = $this->mergePassifData($withPreteur[$key], $passif);
+                }
+            } else {
+                $withoutPreteur[] = ['nature' => $nature, 'data' => $passif];
+            }
+        }
+
+        // Étape 2: Fusionner les passifs sans prêteur avec ceux qui en ont un (même nature)
+        foreach ($withoutPreteur as $item) {
+            $nature = $item['nature'];
+            $passif = $item['data'];
+            $merged = false;
+
+            // Chercher un passif de même nature avec prêteur
+            foreach ($withPreteur as $key => &$existing) {
+                if (str_starts_with($key, $nature . '_')) {
+                    $withPreteur[$key] = $this->mergePassifData($existing, $passif);
+                    $merged = true;
+                    Log::info('[ClientPassifsExtractor] 🔀 Fusion sans prêteur → avec prêteur', [
+                        'nature' => $nature,
+                        'preteur_existant' => $existing['preteur'] ?? 'inconnu'
+                    ]);
+                    break;
+                }
+            }
+
+            // Si pas trouvé, ajouter comme entrée séparée par nature
+            if (!$merged) {
+                if (!isset($withPreteur[$nature])) {
+                    $withPreteur[$nature] = $passif;
+                } else {
+                    $withPreteur[$nature] = $this->mergePassifData($withPreteur[$nature], $passif);
+                }
+            }
+        }
+
+        $result = array_values($withPreteur);
+
+        if (count($result) < count($passifs)) {
+            Log::info('[ClientPassifsExtractor] 🔀 Déduplication effectuée', [
+                'avant' => count($passifs),
+                'après' => count($result),
+                'passifs_fusionnés' => array_map(fn($p) => ($p['nature'] ?? 'inconnu') . ' (' . ($p['preteur'] ?? 'sans prêteur') . ')', $result)
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Fusionne deux passifs en gardant les informations les plus complètes
+     */
+    private function mergePassifData(array $existing, array $new): array
+    {
+        $fields = ['nature', 'preteur', 'periodicite', 'montant_remboursement', 'capital_restant_du', 'duree_restante'];
+
+        foreach ($fields as $field) {
+            // Si le champ existe dans new et pas dans existing (ou est vide/null)
+            if (isset($new[$field]) && !empty($new[$field])) {
+                if (!isset($existing[$field]) || empty($existing[$field])) {
+                    $existing[$field] = $new[$field];
+                }
+                // Si les deux ont une valeur, garder celle de existing (première mention)
+                // sauf si new a une valeur plus précise (non-nulle et différente de 0)
+            }
+        }
+
+        return $existing;
     }
 
     private function getSystemPrompt(): string
@@ -112,11 +214,17 @@ Retourne :
 - "duree_restante" (integer, optionnel) : Durée restante en mois
 
 ⚠️ RÈGLES IMPORTANTES :
-- Créer une entrée séparée pour chaque prêt
-- Si plusieurs prêts mentionnés, retourner un array avec plusieurs objets
+- Créer une entrée séparée pour chaque TYPE de prêt DIFFÉRENT
+- Si plusieurs prêts DE MÊME TYPE sont mentionnés à différents moments de la conversation, FUSIONNER les informations en UNE SEULE entrée
+- Exemple : "J'ai un crédit auto chez LCL de 131€" puis plus tard "le capital restant sur mon crédit auto c'est 4000€" → UN SEUL objet avec les deux infos
 - Convertir les années en mois pour duree_restante (ex: 10 ans = 120 mois)
 - Si "crédit immobilier" ou "prêt immo" → nature = "immobilier"
 - Si "crédit conso" ou "prêt personnel" → nature = "consommation"
+
+🔀 RÈGLE DE FUSION CRITIQUE :
+- Si le même type de crédit (ex: "immobilier", "auto") est mentionné plusieurs fois dans la transcription
+- REGROUPER toutes les informations dans UNE SEULE entrée
+- Ne PAS créer de doublons pour le même crédit avec des infos différentes
 
 ❌ SI LE CLIENT NE PARLE PAS DE PRÊTS :
 Retourne un objet vide :

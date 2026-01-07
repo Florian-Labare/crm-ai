@@ -44,6 +44,11 @@ class ClientBiensImmobiliersExtractor
                 return [];
             }
 
+            // 🔀 Déduplication intelligente des biens immobiliers
+            if (isset($data['client_biens_immobiliers']) && is_array($data['client_biens_immobiliers'])) {
+                $data['client_biens_immobiliers'] = $this->deduplicateBiens($data['client_biens_immobiliers']);
+            }
+
             return $data;
 
         } catch (\Throwable $e) {
@@ -64,6 +69,98 @@ $transcription
 
 Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
+    }
+
+    /**
+     * Déduplique et fusionne les biens immobiliers qui concernent le même bien
+     *
+     * Logique : Si 2 biens ont une désignation similaire (même type de bien),
+     * on les fusionne en gardant toutes les informations disponibles.
+     */
+    private function deduplicateBiens(array $biens): array
+    {
+        if (count($biens) <= 1) {
+            return $biens;
+        }
+
+        $merged = [];
+
+        foreach ($biens as $bien) {
+            $key = $this->normalizeBienKey($bien['designation'] ?? '');
+
+            if (!isset($merged[$key])) {
+                $merged[$key] = $bien;
+            } else {
+                $merged[$key] = $this->mergeBienData($merged[$key], $bien);
+            }
+        }
+
+        $result = array_values($merged);
+
+        if (count($result) < count($biens)) {
+            Log::info('[ClientBiensImmobiliersExtractor] 🔀 Déduplication effectuée', [
+                'avant' => count($biens),
+                'après' => count($result),
+                'biens_fusionnés' => array_map(fn($b) => $b['designation'] ?? 'inconnu', $result)
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Normalise la clé d'un bien pour la déduplication
+     * Ex: "Studio locatif" et "Studio en location" → "studio_locatif"
+     */
+    private function normalizeBienKey(string $designation): string
+    {
+        $designation = strtolower($designation);
+
+        // Types de biens principaux
+        $types = [
+            'residence_principale' => ['résidence principale', 'residence principale', 'rp', 'maison principale'],
+            'residence_secondaire' => ['résidence secondaire', 'residence secondaire', 'rs'],
+            'studio' => ['studio'],
+            'appartement' => ['appartement', 'appart'],
+            'maison' => ['maison'],
+            'terrain' => ['terrain'],
+            'immeuble' => ['immeuble'],
+            'locatif' => ['locatif', 'location', 'loué', 'louée', 'investissement'],
+        ];
+
+        $key = '';
+        foreach ($types as $type => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (str_contains($designation, $keyword)) {
+                    $key .= $type . '_';
+                }
+            }
+        }
+
+        return $key ?: 'bien_' . substr(md5($designation), 0, 8);
+    }
+
+    /**
+     * Fusionne deux biens en gardant les informations les plus complètes
+     */
+    private function mergeBienData(array $existing, array $new): array
+    {
+        $fields = ['designation', 'detenteur', 'forme_propriete', 'valeur_actuelle_estimee', 'annee_acquisition', 'valeur_acquisition'];
+
+        foreach ($fields as $field) {
+            if (isset($new[$field]) && !empty($new[$field])) {
+                if (!isset($existing[$field]) || empty($existing[$field])) {
+                    $existing[$field] = $new[$field];
+                }
+            }
+        }
+
+        // Pour la désignation, garder la plus longue (plus descriptive)
+        if (isset($new['designation']) && strlen($new['designation']) > strlen($existing['designation'] ?? '')) {
+            $existing['designation'] = $new['designation'];
+        }
+
+        return $existing;
     }
 
     private function getSystemPrompt(): string
@@ -112,10 +209,16 @@ Retourne :
 - "valeur_acquisition" (decimal, optionnel) : Prix d'achat
 
 ⚠️ RÈGLES IMPORTANTES :
-- Créer une entrée séparée pour chaque bien immobilier
-- Si plusieurs biens mentionnés, retourner un array avec plusieurs objets
+- Créer une entrée séparée pour chaque bien immobilier DIFFÉRENT
+- Si le même bien est mentionné plusieurs fois (avec des infos complémentaires), FUSIONNER en UNE SEULE entrée
+- Exemple : "J'ai un studio" puis "le studio vaut 64000€" → UN SEUL objet avec toutes les infos
 - Inclure le type de bien dans la désignation (maison, appartement, terrain, etc.)
 - Si localisation mentionnée, l'inclure dans la désignation
+
+🔀 RÈGLE DE FUSION CRITIQUE :
+- Si le même bien (ex: "studio", "maison", "appartement") est mentionné plusieurs fois
+- REGROUPER toutes les informations dans UNE SEULE entrée
+- Ne PAS créer de doublons pour le même bien avec des infos différentes
 
 ❌ SI LE CLIENT NE PARLE PAS DE BIENS IMMOBILIERS :
 Retourne un objet vide :
