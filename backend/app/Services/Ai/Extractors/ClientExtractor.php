@@ -217,6 +217,24 @@ Exemples :
 7. Respecter la négation (ex: "je ne suis PAS fumeur" → fumeur: false)
 8. Répondre UNIQUEMENT avec du JSON strict, sans texte explicatif
 
+🏃 ACTIVITÉS SPORTIVES - RÈGLES CRITIQUES :
+- Si le client dit "oui", "oui tout à fait", "je fais du sport" en réponse à une question sur le sport → activites_sportives: true
+- Si le client mentionne un sport (foot, tennis, natation, musculation, course, etc.) → activites_sportives: true
+- Si le client dit "non", "pas vraiment", "je ne fais pas de sport" → activites_sportives: false
+- TOUJOURS mettre activites_sportives à true si le client pratique une activité physique, même occasionnelle
+
+Exemples sports :
+- "Est-ce que vous faites du sport ?" "Oui" → activites_sportives: true
+- "Je fais de la musculation" → activites_sportives: true, details_activites_sportives: "musculation"
+- "Je cours le week-end" → activites_sportives: true, details_activites_sportives: "course à pied"
+- "Non je ne fais pas de sport" → activites_sportives: false
+
+🚬 FUMEUR - RÈGLES :
+- "Vous fumez ?" "Oui" → fumeur: true
+- "Vous fumez ?" "Non" → fumeur: false
+- "Je ne fume pas" → fumeur: false
+- "Je suis fumeur" → fumeur: true
+
 Exemple JSON valide (CLIENT PRINCIPAL uniquement) :
 {
   "civilite": "M.",
@@ -231,6 +249,9 @@ Exemple JSON valide (CLIENT PRINCIPAL uniquement) :
   "chef_entreprise": true,
   "statut": "SARL",
   "fumeur": false,
+  "activites_sportives": true,
+  "details_activites_sportives": "tennis, natation",
+  "niveau_activites_sportives": "loisir",
   "enfants": [
     {"prenom": "Marie", "date_naissance": "2010-01-01", "fiscalement_a_charge": true}
   ]

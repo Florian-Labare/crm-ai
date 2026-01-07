@@ -115,6 +115,15 @@ class AiDataNormalizer
             }
         }
 
+        // 🛡️ GARDE-FOU RENFORCÉ : Détection réponse positive au sport dans la transcription
+        // Si le client répond "oui" à une question sur le sport mais que GPT n'a pas mis true
+        if (empty($data['activites_sportives']) || $data['activites_sportives'] === false) {
+            if ($this->detectPositiveSportsResponse($transcription)) {
+                Log::info('🏃 [SPORTS GARDE-FOU RENFORCÉ] Réponse positive détectée dans la transcription → forcé à true');
+                $data['activites_sportives'] = true;
+            }
+        }
+
         // 🔁 Hydrate les champs entreprise depuis la transcription
         $this->hydrateEnterpriseFieldsFromTranscript($transcription, $data);
 
@@ -1004,5 +1013,77 @@ class AiDataNormalizer
         }
 
         return $data;
+    }
+
+    /**
+     * Détecte si le client a répondu positivement à une question sur le sport.
+     *
+     * Recherche des patterns comme:
+     * - "vous faites du sport ?" "oui"
+     * - "activités sportives ?" "oui tout à fait"
+     * - "pratiquez-vous une activité sportive ?" "oui"
+     */
+    private function detectPositiveSportsResponse(string $transcription): bool
+    {
+        $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
+
+        // Pattern 1: Question sur le sport suivie d'une réponse positive
+        $questionPatterns = [
+            'sport',
+            'activit[ée]s?\s+sportives?',
+            'activit[ée]\s+physique',
+            'pratiqu',
+        ];
+
+        $positiveResponses = [
+            'oui',
+            'tout à fait',
+            'tout a fait',
+            'absolument',
+            'effectivement',
+            'bien sûr',
+            'bien sur',
+            'exact',
+            'c\'est ça',
+            'je fais',
+            'je pratique',
+        ];
+
+        // Chercher une question sur le sport
+        $hasQuestionAboutSport = false;
+        foreach ($questionPatterns as $pattern) {
+            if (preg_match("/{$pattern}/ui", $text)) {
+                $hasQuestionAboutSport = true;
+                break;
+            }
+        }
+
+        if (!$hasQuestionAboutSport) {
+            return false;
+        }
+
+        // Chercher une réponse positive dans le contexte du sport
+        // On vérifie si "oui" apparaît dans les 200 caractères suivant une mention du sport
+        foreach ($questionPatterns as $questionPattern) {
+            if (preg_match("/{$questionPattern}.{0,200}(" . implode('|', array_map('preg_quote', $positiveResponses)) . ")/ui", $text)) {
+                Log::info('🏃 [SPORTS DETECTION] Pattern question+réponse positive trouvé', [
+                    'pattern' => $questionPattern
+                ]);
+                return true;
+            }
+        }
+
+        // Pattern 2: Réponse positive directe suivie d'une mention de sport
+        foreach ($positiveResponses as $response) {
+            $escaped = preg_quote($response, '/');
+            if (preg_match("/{$escaped}.{0,100}(" . implode('|', $questionPatterns) . ")/ui", $text)) {
+                Log::info('🏃 [SPORTS DETECTION] Pattern réponse+sport trouvé', [
+                    'response' => $response
+                ]);
+                return true;
+            }
+        }
+
+        return false;
     }
 }

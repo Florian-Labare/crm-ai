@@ -8,6 +8,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { VuexyClientHeader } from "../components/VuexyClientHeader";
 import { VuexyClientInfoSection } from "../components/VuexyClientInfoSection";
 import { VuexyTabs } from "../components/VuexyTabs";
+import { VuexyDocumentsSection } from "../components/VuexyDocumentsSection";
 import { ReviewChangesModal } from "../components/ReviewChangesModal";
 import { Info, ClipboardList, Folder, AlertTriangle } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
@@ -440,90 +441,13 @@ const ClientDetailPage: React.FC = () => {
                 label: "Documents",
                 icon: <Folder size={18} />,
                 content: (
-                  <div className="space-y-6">
-                    <div className="vx-card">
-                      <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-[#5E5873]">Documents réglementaires</h2>
-                        <button
-                          onClick={() => setShowGenerateModal(true)}
-                          className="bg-gradient-to-r from-[#7367F0] to-[#9055FD] hover:from-[#5E50EE] hover:to-[#7E3FF2] text-white px-6 py-3 rounded-lg transition-all flex items-center space-x-2 shadow-md hover:shadow-lg font-semibold"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          <span>Générer un document réglementaire</span>
-                        </button>
-                      </div>
-
-                      {documents.length === 0 ? (
-                        <div className="text-center py-12">
-                          <svg className="mx-auto h-16 w-16 text-[#B9B9C3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          <h3 className="mt-4 text-lg font-semibold text-[#5E5873]">Aucun document</h3>
-                          <p className="mt-2 text-sm text-[#6E6B7B]">
-                            Cliquez sur le bouton ci-dessus pour générer votre premier document réglementaire.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {documents.map((doc: any) => (
-                            <div key={doc.id} className="border border-[#EBE9F1] rounded-lg p-4 hover:shadow-md transition-all bg-white">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <h3 className="font-semibold text-[#5E5873]">{doc.document_template?.name}</h3>
-                                  <p className="text-sm text-[#6E6B7B] mt-1">{doc.document_template?.description}</p>
-                                  <div className="flex items-center space-x-4 mt-2 text-xs text-[#6E6B7B]">
-                                    <span>Généré le {new Date(doc.created_at).toLocaleDateString('fr-FR')}</span>
-                                    <span>Par {doc.user?.name || 'Utilisateur'}</span>
-                                    {doc.sent_by_email && (
-                                      <span className="flex items-center space-x-1 text-[#28C76F]">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <span>Envoyé par email</span>
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2 ml-4">
-                                  <button
-                                    onClick={() => handleDownloadDocument(doc.id)}
-                                    className="bg-gradient-to-br from-[#00CFE8] to-[#00A3C4] hover:from-[#00B8D4] hover:to-[#008FA3] text-white px-3 py-2 rounded-lg transition-all flex items-center space-x-1 text-sm font-semibold shadow-sm hover:shadow-md"
-                                    title="Télécharger"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                  </button>
-                                  {!doc.sent_by_email && (
-                                    <button
-                                      onClick={() => handleSendDocumentByEmail(doc.id)}
-                                      className="bg-gradient-to-br from-[#28C76F] to-[#1F9D57] hover:from-[#24B263] hover:to-[#1A8449] text-white px-3 py-2 rounded-lg transition-all flex items-center space-x-1 text-sm font-semibold shadow-sm hover:shadow-md"
-                                      title="Envoyer par email"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                      </svg>
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteDocument(doc.id)}
-                                    className="bg-gradient-to-br from-[#EA5455] to-[#D63031] hover:from-[#DC3545] hover:to-[#C23031] text-white px-3 py-2 rounded-lg transition-all flex items-center space-x-1 text-sm font-semibold shadow-sm hover:shadow-md"
-                                    title="Supprimer"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <VuexyDocumentsSection
+                    documents={documents}
+                    onGenerateClick={() => setShowGenerateModal(true)}
+                    onDownload={handleDownloadDocument}
+                    onSendEmail={handleSendDocumentByEmail}
+                    onDelete={handleDeleteDocument}
+                  />
                 ),
               },
             ]}
