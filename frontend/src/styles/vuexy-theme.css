@@ -1,0 +1,128 @@
+/* Vuexy Theme Variables */
+:root {
+  /* Primary Colors */
+  --vx-primary: #7367F0;
+  --vx-primary-dark: #5E50EE;
+  --vx-primary-light: #E8E7FD;
+
+  /* Status Colors */
+  --vx-success: #28C76F;
+  --vx-info: #00CFE8;
+  --vx-warning: #FF9F43;
+  --vx-danger: #EA5455;
+
+  /* Text Colors */
+  --vx-text-primary: #5E5873;
+  --vx-text-secondary: #6E6B7B;
+  --vx-text-disabled: #B9B9C3;
+
+  /* Background Colors */
+  --vx-bg-body: #F8F8F8;
+  --vx-bg-surface: #FFFFFF;
+  --vx-bg-hover: #F3F2F7;
+
+  /* Border & Shadow */
+  --vx-border-color: #EBE9F1;
+  --vx-shadow-sm: 0 2px 4px rgba(165, 163, 174, 0.3);
+  --vx-shadow-md: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --vx-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+
+  /* Border Radius */
+  --vx-radius-sm: 6px;
+  --vx-radius-md: 8px;
+  --vx-radius-lg: 12px;
+
+  /* Gradients */
+  --vx-gradient-primary: linear-gradient(135deg, #7367F0 0%, #9055FD 100%);
+  --vx-gradient-success: linear-gradient(135deg, #28C76F 0%, #48DA89 100%);
+  --vx-gradient-warning: linear-gradient(135deg, #FF9F43 0%, #FFB976 100%);
+  --vx-gradient-purple: linear-gradient(135deg, #9055FD 0%, #B085FF 100%);
+}
+
+/* Base Overrides */
+body {
+  font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  background: var(--vx-bg-body);
+  color: var(--vx-text-primary);
+}
+
+/* Animations */
+@keyframes vx-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vx-slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.vx-fade-in {
+  animation: vx-fadeIn 0.4s ease-out;
+}
+
+.vx-slide-in {
+  animation: vx-slideIn 0.5s ease-out;
+}
+
+/* Utility Classes */
+.vx-card {
+  background: var(--vx-bg-surface);
+  border-radius: var(--vx-radius-lg);
+  box-shadow: var(--vx-shadow-md);
+  padding: 2rem;
+}
+
+.vx-card-hover {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.vx-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--vx-shadow-lg);
+}
+
+.vx-gradient-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.vx-gradient-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  opacity: 0.1;
+  transform: translate(30%, -30%);
+}
+
+.vx-gradient-bg.blue::before {
+  background: #7367F0;
+}
+
+.vx-gradient-bg.green::before {
+  background: #28C76F;
+}
+
+.vx-gradient-bg.purple::before {
+  background: #9055FD;
+}
+
+.vx-gradient-bg.orange::before {
+  background: #FF9F43;
+}

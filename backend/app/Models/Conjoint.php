@@ -16,17 +16,30 @@ class Conjoint extends Model
         'lieu_naissance',
         'nationalite',
         'profession',
+        'situation_professionnelle',
+        'situation_chomage',
+        'statut',
         'chef_entreprise',
+        'travailleur_independant',
         'situation_actuelle_statut',
+        'niveau_activite_sportive',
+        'details_activites_sportives',
         'date_evenement_professionnel',
         'risques_professionnels',
         'details_risques_professionnels',
         'telephone',
         'adresse',
+        'code_postal',
+        'ville',
+        'fumeur',
+        'km_parcourus_annuels',
     ];
 
     protected $casts = [
         'risques_professionnels' => 'boolean',
+        'chef_entreprise' => 'boolean',
+        'travailleur_independant' => 'boolean',
+        'fumeur' => 'boolean',
     ];
 
     public function client(): BelongsTo

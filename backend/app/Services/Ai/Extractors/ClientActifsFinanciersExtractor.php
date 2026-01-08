@@ -44,6 +44,11 @@ class ClientActifsFinanciersExtractor
                 return [];
             }
 
+            // 🔀 Déduplication intelligente des actifs financiers
+            if (isset($data['client_actifs_financiers']) && is_array($data['client_actifs_financiers'])) {
+                $data['client_actifs_financiers'] = $this->deduplicateActifs($data['client_actifs_financiers']);
+            }
+
             return $data;
 
         } catch (\Throwable $e) {
@@ -66,6 +71,98 @@ Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
     }
 
+    /**
+     * Déduplique et fusionne les actifs financiers qui concernent le même produit
+     *
+     * Logique : Si 2 actifs ont la même nature (et même établissement si spécifié),
+     * on les fusionne en gardant toutes les informations disponibles.
+     */
+    private function deduplicateActifs(array $actifs): array
+    {
+        if (count($actifs) <= 1) {
+            return $actifs;
+        }
+
+        // Étape 1: Séparer les actifs avec et sans établissement
+        $withEtablissement = [];
+        $withoutEtablissement = [];
+
+        foreach ($actifs as $actif) {
+            $nature = strtolower($actif['nature'] ?? 'autre');
+            $etablissement = trim($actif['etablissement'] ?? '');
+
+            if (!empty($etablissement)) {
+                $key = $nature . '_' . strtolower($etablissement);
+                if (!isset($withEtablissement[$key])) {
+                    $withEtablissement[$key] = $actif;
+                } else {
+                    $withEtablissement[$key] = $this->mergeActifData($withEtablissement[$key], $actif);
+                }
+            } else {
+                $withoutEtablissement[] = ['nature' => $nature, 'data' => $actif];
+            }
+        }
+
+        // Étape 2: Fusionner les actifs sans établissement avec ceux qui en ont un (même nature)
+        foreach ($withoutEtablissement as $item) {
+            $nature = $item['nature'];
+            $actif = $item['data'];
+            $merged = false;
+
+            // Chercher un actif de même nature avec établissement
+            foreach ($withEtablissement as $key => &$existing) {
+                if (str_starts_with($key, $nature . '_')) {
+                    $withEtablissement[$key] = $this->mergeActifData($existing, $actif);
+                    $merged = true;
+                    Log::info('[ClientActifsFinanciersExtractor] 🔀 Fusion sans établissement → avec établissement', [
+                        'nature' => $nature,
+                        'etablissement_existant' => $existing['etablissement'] ?? 'inconnu'
+                    ]);
+                    break;
+                }
+            }
+
+            // Si pas trouvé, ajouter comme entrée séparée par nature
+            if (!$merged) {
+                if (!isset($withEtablissement[$nature])) {
+                    $withEtablissement[$nature] = $actif;
+                } else {
+                    $withEtablissement[$nature] = $this->mergeActifData($withEtablissement[$nature], $actif);
+                }
+            }
+        }
+
+        $result = array_values($withEtablissement);
+
+        if (count($result) < count($actifs)) {
+            Log::info('[ClientActifsFinanciersExtractor] 🔀 Déduplication effectuée', [
+                'avant' => count($actifs),
+                'après' => count($result),
+                'actifs_fusionnés' => array_map(fn($a) => ($a['nature'] ?? 'inconnu') . ' (' . ($a['etablissement'] ?? 'sans établissement') . ')', $result)
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Fusionne deux actifs en gardant les informations les plus complètes
+     */
+    private function mergeActifData(array $existing, array $new): array
+    {
+        $fields = ['nature', 'etablissement', 'detenteur', 'date_ouverture_souscription', 'valeur_actuelle'];
+
+        foreach ($fields as $field) {
+            if (isset($new[$field]) && !empty($new[$field])) {
+                if (!isset($existing[$field]) || empty($existing[$field])) {
+                    $existing[$field] = $new[$field];
+                }
+            }
+        }
+
+        return $existing;
+    }
+
     private function getSystemPrompt(): string
     {
         return <<<'PROMPT'
@@ -74,12 +171,24 @@ Tu es un assistant spécialisé en extraction d'ACTIFS FINANCIERS clients.
 🎯 OBJECTIF :
 Détecter et extraire tous les actifs financiers mentionnés par le client (assurance-vie, PEA, compte-titres, livrets, etc.).
 
+🔤 EPPELLATION / DICTÉE :
+- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
+- Ignore les séparateurs (espaces, tirets, points, pauses).
+- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
+- Pour téléphone : concatène tous les chiffres en une seule chaîne.
+
 🚫 RÈGLE ABSOLUE :
 - Ignore toutes les phrases du conseiller
 - Ne tiens compte QUE des phrases du client
 
 🔍 MOTS-CLÉS ACTIFS FINANCIERS :
-Assurance-vie, PEA, PER, compte-titres, livret A, LDDS, LDD, LEP, livret jeune, CEL, PEL, SCPI, OPCVM, actions, obligations, fonds euro
+Assurance-vie, PEA, PER, compte-titres, livret A, LDDS, LDD, LEP, livret jeune, CEL, PEL, SCPI, OPCVM, actions cotées en bourse, obligations, fonds euro, sicav, FCP, ETF
+
+🚫 À NE PAS INCLURE (géré par d'autres extracteurs) :
+- Cryptomonnaies (Bitcoin, Ethereum, etc.) → ClientAutresEpargnesExtractor
+- Or, lingots, métaux précieux → ClientAutresEpargnesExtractor
+- Biens immobiliers (maison, appartement) → ClientBiensImmobiliersExtractor
+- Objets d'art, collections → ClientAutresEpargnesExtractor
 
 ✅ SI LE CLIENT PARLE D'ACTIFS FINANCIERS :
 
@@ -104,10 +213,16 @@ Retourne :
 - "valeur_actuelle" (decimal, optionnel) : Valeur/montant actuel
 
 ⚠️ RÈGLES IMPORTANTES :
-- Créer une entrée séparée pour chaque produit
-- Si plusieurs produits mentionnés, retourner un array avec plusieurs objets
+- Créer une entrée séparée pour chaque produit DIFFÉRENT
+- Si le même produit est mentionné plusieurs fois (avec des infos complémentaires), FUSIONNER en UNE SEULE entrée
+- Exemple : "J'ai un livret A" puis "mon livret A contient 12000€" → UN SEUL objet avec toutes les infos
 - Si "contrat" ou "assurance vie" → nature = "assurance-vie"
 - Si année seulement mentionnée, utiliser YYYY-01-01
+
+🔀 RÈGLE DE FUSION CRITIQUE :
+- Si le même type de produit (ex: "livret-A", "PEA", "assurance-vie") est mentionné plusieurs fois
+- REGROUPER toutes les informations dans UNE SEULE entrée
+- Ne PAS créer de doublons pour le même produit avec des infos différentes
 
 ❌ SI LE CLIENT NE PARLE PAS D'ACTIFS FINANCIERS :
 Retourne un objet vide :

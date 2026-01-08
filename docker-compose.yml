@@ -14,6 +14,10 @@ services:
       - ./backend:/var/www/html
       - ./backend/.env:/var/www/html/.env
 
+    # Charger aussi ces variables comme ENV du container (pour pyannote, etc.)
+    env_file:
+      - ./backend/.env
+
     ports:
       - "${APP_PORT:-8000}:80"
 
@@ -98,6 +102,10 @@ services:
       - ./backend:/var/www/html
       - ./backend/.env:/var/www/html/.env
 
+    # Charger aussi ces variables comme ENV du container (pour pyannote, etc.)
+    env_file:
+      - ./backend/.env
+
     # Variables d'environnement identiques au backend
     environment:
       APP_ENV: ${APP_ENV:-local}
@@ -128,15 +136,6 @@ services:
         condition: service_healthy
 
   # --- MAILHOG (Serveur SMTP pour tests emails) ---
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: mailhog
-    restart: unless-stopped
-    ports:
-      - "1025:1025"  # SMTP server
-      - "8025:8025"  # Web UI
-    logging:
-      driver: 'none'  # Désactive les logs pour réduire le bruit
 
   # --- GOTENBERG (Conversion documents → PDF) ---
   gotenberg:

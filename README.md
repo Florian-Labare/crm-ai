@@ -1,66 +1,93 @@
-# 🎧 Whisper CRM - CRM avec reconnaissance vocale IA
+# 🎧 CRM Courtier IA - CRM avec reconnaissance vocale
 
 CRM intelligent avec analyse vocale pour conseillers en assurance et gestion de patrimoine.
 
-## 🚀 Démarrage rapide
+## ✨ Fonctionnalités
 
-### 1. Configuration des variables d'environnement
+- **Enregistrement vocal** : Enregistrez vos entretiens clients
+- **Transcription automatique** : Whisper (OpenAI)
+- **Diarisation** : Séparation courtier/client (Pyannote)
+- **Extraction intelligente** : GPT-4 extrait les informations automatiquement
+- **Génération de documents** : Documents réglementaires (recueil, mandat...)
+- **Fiche client complète** : État civil, famille, BAE (santé, prévoyance, retraite, épargne)
 
-**⚠️ IMPORTANT : Ne jamais commiter les fichiers `.env` avec des données sensibles**
+## 🚀 Installation rapide
 
-#### Configuration racine
 ```bash
+# Cloner et lancer l'installation
+git clone <repository-url>
+cd crm-ai-copie
+./install.sh
+```
+
+## 📋 Installation manuelle
+
+### 1. Prérequis
+
+- **Docker** et **Docker Compose**
+- **Node.js** 18+ et **npm**
+- Clé API **OpenAI** (obligatoire) - https://platform.openai.com/api-keys
+- Token **HuggingFace** (optionnel) - https://huggingface.co/settings/tokens
+
+### 2. Configuration Backend
+
+```bash
+cd backend
 cp .env.example .env
 ```
-Éditer `.env` et renseigner :
-- `API_ACCESS_KEY` : Votre clé API
-- `DB_PASSWORD` : Mot de passe base de données
-- `APP_KEY` : Généré automatiquement par Laravel
 
-#### Configuration backend
+**Éditez `.env` et configurez :**
+- `OPENAI_API_KEY` : Votre clé API OpenAI (obligatoire)
+- `DB_PASSWORD` : Mot de passe MySQL
+- `HUGGINGFACE_TOKEN` : Token HuggingFace (optionnel, pour la diarisation)
+
+### 3. Lancer les containers Docker
+
 ```bash
-cp backend/.env.example backend/.env
+docker compose up -d --build
 ```
-Éditer `backend/.env` et renseigner :
-- `OPENAI_API_KEY` : Votre clé API OpenAI (obtenir sur https://platform.openai.com/api-keys)
-- `OPENAI_PROJECT_ID` : Votre ID de projet OpenAI
-- `DB_PASSWORD` : Mot de passe base de données (doit correspondre au .env racine)
 
-Générer la clé Laravel :
+### 4. Initialiser la base de données
+
 ```bash
+# Générer la clé Laravel
 docker compose exec backend php artisan key:generate
+
+# Migrations
+docker compose exec backend php artisan migrate
+
+# Données initiales (utilisateur admin, templates, équipe)
+docker compose exec backend php artisan db:seed
+
+# Lien de stockage
+docker compose exec backend php artisan storage:link
 ```
 
-#### Configuration frontend
-```bash
-cp frontend/.env.example frontend/.env
-```
-Éditer `frontend/.env` et renseigner :
-- `VITE_API_KEY` : Votre clé API (doit correspondre au .env racine)
-
-### 2. Lancer le projet
+### 5. Installer et lancer le frontend
 
 ```bash
-docker compose up -d
-```
-
-### 3. Installer les dépendances
-
-```bash
-# Backend
-docker compose exec backend composer install
-
-# Frontend
 cd frontend
 npm install
 npm run dev
 ```
 
-### 4. Exécuter les migrations
+### 6. Démarrer le worker audio (IMPORTANT)
 
 ```bash
-docker compose exec backend php artisan migrate
+docker compose exec backend php artisan queue:work redis --tries=3
 ```
+
+## 🔑 Accès à l'application
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+
+### Identifiants par défaut
+
+- **Email** : `admin@courtier.fr`
+- **Mot de passe** : `password`
 
 ## 🔐 Sécurité
 
@@ -174,13 +201,82 @@ crm-ai/
 └── .env.example
 ```
 
-## 🆘 Support
+## 🆘 Résolution de problèmes
 
-En cas de problème :
-1. Vérifier les logs : `docker compose logs -f`
-2. Vérifier que tous les services sont up : `docker compose ps`
-3. Vérifier les variables d'environnement dans les `.env`
-4. Redémarrer les containers : `docker compose restart`
+### ❌ Erreur de migration (FK team_id)
+
+Si vous avez une erreur de foreign key sur `team_id` :
+
+```bash
+# Réinitialiser complètement la base de données
+docker compose exec backend php artisan migrate:fresh --seed
+```
+
+### ❌ L'enregistrement vocal ne remplit pas les champs client
+
+1. **Vérifiez que le worker est lancé** (OBLIGATOIRE) :
+   ```bash
+   docker compose exec backend php artisan queue:work redis --tries=3
+   ```
+
+2. **Vérifiez les logs** :
+   ```bash
+   docker compose logs -f backend
+   cat backend/storage/logs/laravel.log | tail -100
+   ```
+
+3. **Vérifiez que `OPENAI_API_KEY` est configuré** dans `backend/.env`
+
+### ❌ La diarisation (Pyannote) ne fonctionne pas
+
+1. Configurez `HUGGINGFACE_TOKEN` dans `backend/.env`
+2. Téléchargez le modèle :
+   ```bash
+   docker compose exec backend bash -c 'export HUGGINGFACE_TOKEN=$(grep HUGGINGFACE_TOKEN .env | cut -d= -f2) && python3 scripts/init_pyannote.py --download-model'
+   ```
+
+### ❌ Erreur 500 lors de la création/modification de client
+
+Le cache Laravel est peut-être corrompu :
+```bash
+docker compose exec backend php artisan optimize:clear
+```
+
+### ❌ Les documents ne se génèrent pas
+
+1. Vérifiez que Gotenberg est lancé : `docker compose ps gotenberg`
+2. Vérifiez que les templates existent : `ls backend/storage/app/templates/`
+
+## 📦 Services Docker
+
+| Service | Description | Port |
+|---------|-------------|------|
+| backend | Laravel (Apache + PHP 8.3) | 8000 |
+| db | MySQL 8 | 3306 |
+| redis | Redis (cache, queues) | 6379 |
+| gotenberg | Conversion DOCX → PDF | 3000 |
+
+## 🔧 Commandes utiles
+
+```bash
+# Voir les logs en temps réel
+docker compose logs -f backend
+
+# Accéder au container backend
+docker compose exec backend bash
+
+# Relancer le worker
+docker compose exec backend php artisan queue:restart
+
+# Vider le cache Laravel
+docker compose exec backend php artisan optimize:clear
+
+# Rebuilder le backend (après modification Dockerfile)
+docker compose build backend && docker compose up -d backend
+
+# Réinitialiser complètement la BDD
+docker compose exec backend php artisan migrate:fresh --seed
+```
 
 ## 📄 Licence
 

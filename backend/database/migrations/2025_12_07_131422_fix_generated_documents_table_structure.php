@@ -11,16 +11,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('generated_documents', function (Blueprint $table) {
-            // Ajouter les colonnes manquantes
-            $table->foreignId('user_id')->after('client_id')->constrained()->onDelete('cascade');
-            $table->string('format')->default('pdf')->after('file_path');
-            $table->boolean('sent_by_email')->default(false)->after('format');
-            $table->timestamp('sent_at')->nullable()->after('sent_by_email');
+        // Ajouter les colonnes manquantes
+        if (!Schema::hasColumn('generated_documents', 'user_id')) {
+            Schema::table('generated_documents', function (Blueprint $table) {
+                $table->foreignId('user_id')->nullable()->after('client_id');
+            });
+        }
+        if (!Schema::hasColumn('generated_documents', 'format')) {
+            Schema::table('generated_documents', function (Blueprint $table) {
+                $table->string('format')->default('pdf')->after('file_path');
+            });
+        }
+        if (!Schema::hasColumn('generated_documents', 'sent_by_email')) {
+            Schema::table('generated_documents', function (Blueprint $table) {
+                $table->boolean('sent_by_email')->default(false);
+            });
+        }
+        if (!Schema::hasColumn('generated_documents', 'sent_at')) {
+            Schema::table('generated_documents', function (Blueprint $table) {
+                $table->timestamp('sent_at')->nullable();
+            });
+        }
 
-            // Supprimer les colonnes obsolètes
-            $table->dropColumn(['status', 'generated_at']);
-        });
+        // Supprimer les colonnes obsolètes
+        if (Schema::hasColumn('generated_documents', 'status')) {
+            Schema::table('generated_documents', function (Blueprint $table) {
+                $table->dropColumn('status');
+            });
+        }
+        if (Schema::hasColumn('generated_documents', 'generated_at')) {
+            Schema::table('generated_documents', function (Blueprint $table) {
+                $table->dropColumn('generated_at');
+            });
+        }
     }
 
     /**

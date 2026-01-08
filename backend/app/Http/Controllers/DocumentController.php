@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\DocumentTemplate;
 use App\Models\GeneratedDocument;
 use App\Services\DocumentGeneratorService;
+use App\Services\DocumentTemplateFormService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -14,10 +15,15 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class DocumentController extends Controller
 {
     private DocumentGeneratorService $documentGeneratorService;
+    private DocumentTemplateFormService $formService;
 
-    public function __construct(DocumentGeneratorService $documentGeneratorService)
+    public function __construct(
+        DocumentGeneratorService $documentGeneratorService,
+        DocumentTemplateFormService $formService
+    )
     {
         $this->documentGeneratorService = $documentGeneratorService;
+        $this->formService = $formService;
     }
 
     /**
@@ -66,12 +72,15 @@ class DocumentController extends Controller
             $template = DocumentTemplate::findOrFail($request->template_id);
             $format = $request->format ?? 'docx';
 
+            $overrides = $this->formService->getSavedValues($template, $client);
+
             // Générer le document
             $generatedDocument = $this->documentGeneratorService->generateDocument(
                 $client,
                 $template,
                 auth()->id() ?? 1, // Utiliser l'utilisateur connecté
-                $format
+                $format,
+                $overrides
             );
 
             // Charger les relations pour la réponse
@@ -86,6 +95,65 @@ class DocumentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la génération du document',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Retourne le formulaire associé à un template pour un client.
+     */
+    public function showForm(int $clientId, int $templateId): JsonResponse
+    {
+        $client = Client::findOrFail($clientId);
+        $template = DocumentTemplate::findOrFail($templateId);
+
+        try {
+            $fields = $this->formService->getFields($template, $client);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'template' => [
+                        'id' => $template->id,
+                        'name' => $template->name,
+                        'file_path' => $template->file_path,
+                    ],
+                    'fields' => $fields,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement du formulaire',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Sauvegarde les valeurs du formulaire associé à un template.
+     */
+    public function saveForm(Request $request, int $clientId, int $templateId): JsonResponse
+    {
+        $request->validate([
+            'values' => 'required|array',
+        ]);
+
+        $client = Client::findOrFail($clientId);
+        $template = DocumentTemplate::findOrFail($templateId);
+
+        try {
+            $this->formService->saveValues($template, $client, $request->input('values', []));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Formulaire enregistré',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'enregistrement du formulaire',
                 'error' => $e->getMessage(),
             ], 500);
         }

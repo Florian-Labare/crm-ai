@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AudioRecord;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class DiarizationService
 {
+    private ?DiarizationMonitoringService $monitoringService = null;
+
+    public function __construct(?DiarizationMonitoringService $monitoringService = null)
+    {
+        $this->monitoringService = $monitoringService ?? app(DiarizationMonitoringService::class);
+    }
+
     /**
      * Effectue la diarisation d'un fichier audio
      *
@@ -41,6 +49,74 @@ class DiarizationService
         }
 
         return $available;
+    }
+
+    /**
+     * Effectue la diarisation avec monitoring et stockage des résultats
+     *
+     * @param string $audioPath Chemin vers le fichier audio
+     * @param array $context Contexte optionnel (audio_record_id, team_id, user_id, etc.)
+     * @return array
+     */
+    public function diarizeWithMonitoring(string $audioPath, array $context = []): array
+    {
+        $startTime = microtime(true);
+        $fileSize = file_exists($audioPath) ? filesize($audioPath) : null;
+
+        $result = $this->diarize($audioPath);
+
+        $durationMs = (int) ((microtime(true) - $startTime) * 1000);
+
+        // Logger le résultat
+        if ($this->monitoringService) {
+            if ($result['success']) {
+                $this->monitoringService->logSuccess(
+                    audioRecordId: $context['audio_record_id'] ?? null,
+                    recordingSessionId: $context['recording_session_id'] ?? null,
+                    teamId: $context['team_id'] ?? null,
+                    userId: $context['user_id'] ?? null,
+                    diarizationResult: $result,
+                    durationMs: $durationMs,
+                    audioDurationSeconds: $context['audio_duration_seconds'] ?? null,
+                    fileSizeBytes: $fileSize
+                );
+            } elseif ($result['fallback'] ?? false) {
+                $this->monitoringService->logFailure(
+                    audioRecordId: $context['audio_record_id'] ?? null,
+                    recordingSessionId: $context['recording_session_id'] ?? null,
+                    teamId: $context['team_id'] ?? null,
+                    userId: $context['user_id'] ?? null,
+                    status: 'fallback',
+                    errorMessage: $result['error'] ?? 'Pyannote unavailable',
+                    durationMs: $durationMs,
+                    fileSizeBytes: $fileSize
+                );
+            } else {
+                $this->monitoringService->logFailure(
+                    audioRecordId: $context['audio_record_id'] ?? null,
+                    recordingSessionId: $context['recording_session_id'] ?? null,
+                    teamId: $context['team_id'] ?? null,
+                    userId: $context['user_id'] ?? null,
+                    status: 'failed',
+                    errorMessage: $result['error'] ?? 'Unknown error',
+                    durationMs: $durationMs,
+                    fileSizeBytes: $fileSize
+                );
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Met à jour un AudioRecord avec les résultats de diarisation
+     */
+    public function updateAudioRecordWithDiarization(AudioRecord $audioRecord, array $diarizationResult): void
+    {
+        $audioRecord->update([
+            'diarization_data' => $diarizationResult,
+            'diarization_success' => $diarizationResult['success'] ?? false,
+        ]);
     }
 
     public function diarize(string $audioPath): array
@@ -72,7 +148,7 @@ class DiarizationService
 
         try {
             // Créer un fichier temporaire pour les résultats JSON
-            $outputJson = storage_path('app/temp/diarization_' . uniqid() . '.json');
+            $outputJson = storage_path('app/temp/diarization_' . bin2hex(random_bytes(8)) . '.json');
 
             // Créer le dossier temp s'il n'existe pas
             $tempDir = storage_path('app/temp');
@@ -80,22 +156,29 @@ class DiarizationService
                 mkdir($tempDir, 0755, true);
             }
 
-            // Construire la commande Python avec les variables d'environnement
+            // Construire la commande Python
             $scriptPath = base_path('scripts/diarize_audio.py');
-            $hfToken = config('services.huggingface.token') ?: env('HUGGINGFACE_TOKEN');
 
-            // Passer le token HuggingFace via variable d'environnement
-            $envPrefix = $hfToken ? "HUGGINGFACE_TOKEN={$hfToken} " : '';
-
+            // SECURITE: Ne pas passer le token dans la ligne de commande (visible dans ps aux)
+            // Utiliser proc_open avec le paramètre env pour passer les variables d'environnement
             $command = sprintf(
-                '%spython3 %s %s %s 2>&1',
-                $envPrefix,
+                'python3 %s %s %s',
                 escapeshellarg($scriptPath),
                 escapeshellarg($audioPath),
                 escapeshellarg($outputJson)
             );
 
-            Log::info('[DIARIZATION] Commande', ['command' => preg_replace('/HUGGINGFACE_TOKEN=\S+/', 'HUGGINGFACE_TOKEN=***', $command)]);
+            Log::info('[DIARIZATION] Commande', ['command' => $command]);
+
+            // Préparer l'environnement sécurisé (token non visible dans ps aux)
+            $hfToken = config('services.huggingface.token') ?: env('HUGGINGFACE_TOKEN');
+            $processEnv = array_merge($_ENV, $_SERVER, [
+                'HUGGINGFACE_TOKEN' => $hfToken ?? '',
+                'HOME' => $_SERVER['HOME'] ?? '/tmp',
+                'PATH' => $_SERVER['PATH'] ?? '/usr/local/bin:/usr/bin:/bin',
+            ]);
+            // Nettoyer les variables qui ne sont pas des strings
+            $processEnv = array_filter($processEnv, fn($v) => is_string($v));
 
             // Exécuter la diarisation avec timeout (5 minutes max)
             $timeout = 300; // 5 minutes
@@ -105,7 +188,8 @@ class DiarizationService
                 2 => ['pipe', 'w']
             ];
 
-            $process = proc_open($command, $descriptors, $pipes);
+            // SECURITE: Passer l'environnement via le 5ème paramètre de proc_open
+            $process = proc_open($command, $descriptors, $pipes, null, $processEnv);
 
             if (!is_resource($process)) {
                 throw new \Exception('Impossible de démarrer le processus de diarisation');

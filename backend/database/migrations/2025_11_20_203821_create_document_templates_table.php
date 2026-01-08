@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('document_templates', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('team_id')->nullable()->constrained('teams')->onDelete('cascade');
+            $table->foreignId('team_id')->nullable()->index();
             $table->string('name'); // Nom du template (ex: "Recueil Global PP")
             $table->string('description')->nullable();
             $table->string('file_path'); // Chemin vers le template DOCX dans storage

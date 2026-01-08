@@ -28,6 +28,9 @@ class TranscriptionService
             if (! file_exists($audioPath)) {
                 throw new \Exception("Fichier audio introuvable : {$audioPath}");
             }
+            if (! is_file($audioPath)) {
+                throw new \Exception("Chemin audio invalide (pas un fichier) : {$audioPath}");
+            }
 
             // Chemin vers le script Python
             $scriptPath = base_path('scripts/whisper_transcribe.py');
@@ -88,6 +91,13 @@ class TranscriptionService
     private function transcribeOpenAI(string $audioPath): ?string
     {
         try {
+            if (! file_exists($audioPath)) {
+                throw new \Exception("Fichier audio introuvable : {$audioPath}");
+            }
+            if (! is_file($audioPath)) {
+                throw new \Exception("Chemin audio invalide (pas un fichier) : {$audioPath}");
+            }
+
             $apiKey = config('openai.api_key');
             if (! $apiKey) {
                 throw new \Exception('Clé API OpenAI manquante.');

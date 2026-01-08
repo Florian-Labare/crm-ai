@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Client;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Store Audio Request
  *
  * Validation pour l'upload d'un fichier audio
+ * Inclut la validation de l'appartenance du client à la team de l'utilisateur
  */
 class StoreAudioRequest extends FormRequest
 {
@@ -16,6 +18,21 @@ class StoreAudioRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        // L'utilisateur doit être authentifié et avoir une team
+        $user = $this->user();
+        if (!$user || !$user->currentTeam()) {
+            return false;
+        }
+
+        // Si un client_id est fourni, vérifier qu'il appartient à la team
+        $clientId = $this->input('client_id');
+        if ($clientId) {
+            $client = Client::find($clientId);
+            if (!$client || $client->team_id !== $user->currentTeam()->id) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -26,6 +43,8 @@ class StoreAudioRequest extends FormRequest
      */
     public function rules(): array
     {
+        $teamId = $this->user()?->currentTeam()?->id;
+
         return [
             'audio' => [
                 'required',
@@ -36,7 +55,17 @@ class StoreAudioRequest extends FormRequest
             'client_id' => [
                 'nullable',
                 'integer',
-                'exists:clients,id',
+                // Valider que le client existe ET appartient à la team de l'utilisateur
+                function ($attribute, $value, $fail) use ($teamId) {
+                    if ($value && $teamId) {
+                        $exists = Client::where('id', $value)
+                            ->where('team_id', $teamId)
+                            ->exists();
+                        if (!$exists) {
+                            $fail('Le client spécifié n\'existe pas ou n\'appartient pas à votre équipe.');
+                        }
+                    }
+                },
             ],
         ];
     }

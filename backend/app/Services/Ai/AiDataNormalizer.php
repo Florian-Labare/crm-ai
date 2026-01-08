@@ -103,6 +103,27 @@ class AiDataNormalizer
         // 🛑 Applique les négations/affirmations orales depuis la transcription
         $this->applyBooleanNegationsFromTranscript($transcription, $data);
 
+        // 🏃 Détecte et extrait les activités sportives spécifiques
+        $this->detectSportsFromTranscript($transcription, $data);
+
+        // 🛡️ GARDE-FOU : Cohérence activités sportives
+        // Si details_activites_sportives est rempli → activites_sportives DOIT être true
+        if (!empty($data['details_activites_sportives']) || !empty($data['niveau_activites_sportives'])) {
+            if (empty($data['activites_sportives']) || $data['activites_sportives'] === false) {
+                Log::info('🏃 [SPORTS GARDE-FOU] Correction incohérence: details remplis mais boolean false → forcé à true');
+                $data['activites_sportives'] = true;
+            }
+        }
+
+        // 🛡️ GARDE-FOU RENFORCÉ : Détection réponse positive au sport dans la transcription
+        // Si le client répond "oui" à une question sur le sport mais que GPT n'a pas mis true
+        if (empty($data['activites_sportives']) || $data['activites_sportives'] === false) {
+            if ($this->detectPositiveSportsResponse($transcription)) {
+                Log::info('🏃 [SPORTS GARDE-FOU RENFORCÉ] Réponse positive détectée dans la transcription → forcé à true');
+                $data['activites_sportives'] = true;
+            }
+        }
+
         // 🔁 Hydrate les champs entreprise depuis la transcription
         $this->hydrateEnterpriseFieldsFromTranscript($transcription, $data);
 
@@ -200,6 +221,9 @@ class AiDataNormalizer
     {
         try {
             $date = trim($date);
+            if ($date === '') {
+                return null;
+            }
 
             // Si déjà au format ISO
             if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
@@ -216,14 +240,52 @@ class AiDataNormalizer
                 return "{$matches[3]}-{$matches[2]}-{$matches[1]}";
             }
 
-            // Tentative avec Carbon
-            $carbonDate = \Carbon\Carbon::parse($date);
+            // Tentative avec Carbon (formats et mois FR)
+            $normalizedDate = $this->normalizeFrenchDateString($date);
+            $carbonDate = \Carbon\Carbon::parse($normalizedDate);
             return $carbonDate->format('Y-m-d');
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser la date', ['date' => $date, 'error' => $e->getMessage()]);
             return null;
         }
+    }
+
+    /**
+     * Normalise une date avec mois français vers une chaîne parsable par Carbon.
+     */
+    private function normalizeFrenchDateString(string $date): string
+    {
+        $normalized = mb_strtolower($date, 'UTF-8');
+        $normalized = preg_replace('/\b1er\b/u', '1', $normalized);
+
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+        if ($ascii !== false) {
+            $normalized = $ascii;
+        }
+
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+
+        $monthMap = [
+            'janvier' => 'january',
+            'fevrier' => 'february',
+            'mars' => 'march',
+            'avril' => 'april',
+            'mai' => 'may',
+            'juin' => 'june',
+            'juillet' => 'july',
+            'aout' => 'august',
+            'septembre' => 'september',
+            'octobre' => 'october',
+            'novembre' => 'november',
+            'decembre' => 'december',
+        ];
+
+        foreach ($monthMap as $fr => $en) {
+            $normalized = preg_replace('/\b' . $fr . '\b/', $en, $normalized);
+        }
+
+        return $normalized;
     }
 
     /**
@@ -428,12 +490,17 @@ class AiDataNormalizer
                     "/je\s+ne\s+fais\s+pas\s+de?\s+sport/u",
                     "/je\s+ne\s+fais\s+plus\s+de?\s+sport/u",
                     "/je\s+ne\s+pratique\s+pas\s+de?\s+sport/u",
-                    "/aucune?\s+activité\s+sportive/u",
+                    "/aucune?\s+activit[ée]\s+sportive/u",
+                    "/pas\s+d['e]?\s*activit[ée]\s+sportive/u",
+                    "/pas\s+de?\s+sport/u",
                 ],
                 'positive' => [
                     "/je\s+fais\s+du\s+sport/u",
-                    "/je\s+pratique\s+un\s+sport/u",
-                    "/je\s+fais\s+de\s+l['e]\s+sport/u",
+                    "/je\s+pratique\s+(?:un|le|la|du|de\s+la)\s+\w+/u",
+                    "/je\s+fais\s+(?:du|de\s+la|de\s+l['e]?)\s+\w+/u",
+                    "/activit[ée]s?\s+sportives?/u",
+                    // Sports spécifiques
+                    "/\b(?:football|foot|tennis|natation|course|running|jogging|musculation|fitness|gym|yoga|pilates|boxe|judo|karate|vélo|cyclisme|randonnée|ski|snowboard|surf|plongée|escalade|basketball|basket|volleyball|volley|handball|rugby|golf|équitation|danse|badminton|squash|paddle|crossfit|triathlon|marathon|athlétisme)\b/ui",
                 ],
             ],
             'risques_professionnels' => [
@@ -517,6 +584,132 @@ class AiDataNormalizer
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Détecte et extrait les activités sportives depuis la transcription.
+     * Remplit activites_sportives (boolean) et details_activites_sportives (string).
+     */
+    private function detectSportsFromTranscript(string $transcription, array &$data): void
+    {
+        $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
+
+        // Liste des sports à détecter
+        $sportsMap = [
+            'football' => 'Football',
+            'foot' => 'Football',
+            'tennis' => 'Tennis',
+            'natation' => 'Natation',
+            'course' => 'Course à pied',
+            'running' => 'Running',
+            'jogging' => 'Jogging',
+            'musculation' => 'Musculation',
+            'fitness' => 'Fitness',
+            'gym' => 'Gym',
+            'yoga' => 'Yoga',
+            'pilates' => 'Pilates',
+            'boxe' => 'Boxe',
+            'judo' => 'Judo',
+            'karaté' => 'Karaté',
+            'karate' => 'Karaté',
+            'vélo' => 'Vélo',
+            'velo' => 'Vélo',
+            'cyclisme' => 'Cyclisme',
+            'randonnée' => 'Randonnée',
+            'randonnee' => 'Randonnée',
+            'ski' => 'Ski',
+            'snowboard' => 'Snowboard',
+            'surf' => 'Surf',
+            'plongée' => 'Plongée',
+            'plongee' => 'Plongée',
+            'escalade' => 'Escalade',
+            'basketball' => 'Basketball',
+            'basket' => 'Basketball',
+            'volleyball' => 'Volleyball',
+            'volley' => 'Volleyball',
+            'handball' => 'Handball',
+            'rugby' => 'Rugby',
+            'golf' => 'Golf',
+            'équitation' => 'Équitation',
+            'equitation' => 'Équitation',
+            'danse' => 'Danse',
+            'badminton' => 'Badminton',
+            'squash' => 'Squash',
+            'paddle' => 'Paddle',
+            'crossfit' => 'CrossFit',
+            'triathlon' => 'Triathlon',
+            'marathon' => 'Marathon',
+            'athlétisme' => 'Athlétisme',
+            'athletisme' => 'Athlétisme',
+            'moto' => 'Moto',
+            'motocross' => 'Motocross',
+            'parachutisme' => 'Parachutisme',
+            'parapente' => 'Parapente',
+            'alpinisme' => 'Alpinisme',
+            'voile' => 'Voile',
+            'aviron' => 'Aviron',
+            'canoë' => 'Canoë',
+            'canoe' => 'Canoë',
+            'kayak' => 'Kayak',
+            'shooting' => 'Tir sportif',
+            'tir' => 'Tir sportif',
+            'tir sportif' => 'Tir sportif',
+            'chasse' => 'Chasse',
+            'pêche' => 'Pêche',
+            'peche' => 'Pêche',
+        ];
+
+        $detectedSports = [];
+
+        // Patterns pour détecter les sports avec contexte
+        $patterns = [
+            "/je\s+(?:fais|pratique)\s+(?:du|de\s+la|de\s+l['e]?)\s+(\w+)/ui",
+            "/je\s+joue\s+(?:au|à\s+la|à\s+l['e]?)\s+(\w+)/ui",
+            "/(?:mon|ma)\s+sport\s+(?:c'?est|principal)\s+(?:le|la|l['e]?)\s+(\w+)/ui",
+        ];
+
+        // Chercher via patterns contextuels
+        foreach ($patterns as $pattern) {
+            if (preg_match_all($pattern, $text, $matches)) {
+                foreach ($matches[1] as $sportMention) {
+                    $sportKey = mb_strtolower(trim($sportMention), 'UTF-8');
+                    if (isset($sportsMap[$sportKey])) {
+                        $detectedSports[] = $sportsMap[$sportKey];
+                    }
+                }
+            }
+        }
+
+        // Chercher les sports mentionnés directement
+        foreach ($sportsMap as $keyword => $sportName) {
+            $pattern = '/\b' . preg_quote($keyword, '/') . '\b/ui';
+            if (preg_match($pattern, $text) && !in_array($sportName, $detectedSports)) {
+                // Vérifier que ce n'est pas dans un contexte négatif
+                $negativePattern = "/(?:pas|plus|jamais|aucun)\s+(?:de\s+)?" . preg_quote($keyword, '/') . "/ui";
+                if (!preg_match($negativePattern, $text)) {
+                    $detectedSports[] = $sportName;
+                }
+            }
+        }
+
+        // Si des sports ont été détectés
+        if (!empty($detectedSports)) {
+            $uniqueSports = array_unique($detectedSports);
+
+            // Mettre activites_sportives à true
+            $data['activites_sportives'] = true;
+
+            // Remplir details_activites_sportives si pas déjà défini
+            if (empty($data['details_activites_sportives'])) {
+                $data['details_activites_sportives'] = implode(', ', $uniqueSports);
+            }
+
+            Log::info('🏃 [SPORTS] Activités sportives détectées', [
+                'sports' => $uniqueSports,
+                'activites_sportives' => true,
+                'details' => $data['details_activites_sportives'],
+            ]);
         }
     }
 
@@ -820,5 +1013,77 @@ class AiDataNormalizer
         }
 
         return $data;
+    }
+
+    /**
+     * Détecte si le client a répondu positivement à une question sur le sport.
+     *
+     * Recherche des patterns comme:
+     * - "vous faites du sport ?" "oui"
+     * - "activités sportives ?" "oui tout à fait"
+     * - "pratiquez-vous une activité sportive ?" "oui"
+     */
+    private function detectPositiveSportsResponse(string $transcription): bool
+    {
+        $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
+
+        // Pattern 1: Question sur le sport suivie d'une réponse positive
+        $questionPatterns = [
+            'sport',
+            'activit[ée]s?\s+sportives?',
+            'activit[ée]\s+physique',
+            'pratiqu',
+        ];
+
+        $positiveResponses = [
+            'oui',
+            'tout à fait',
+            'tout a fait',
+            'absolument',
+            'effectivement',
+            'bien sûr',
+            'bien sur',
+            'exact',
+            'c\'est ça',
+            'je fais',
+            'je pratique',
+        ];
+
+        // Chercher une question sur le sport
+        $hasQuestionAboutSport = false;
+        foreach ($questionPatterns as $pattern) {
+            if (preg_match("/{$pattern}/ui", $text)) {
+                $hasQuestionAboutSport = true;
+                break;
+            }
+        }
+
+        if (!$hasQuestionAboutSport) {
+            return false;
+        }
+
+        // Chercher une réponse positive dans le contexte du sport
+        // On vérifie si "oui" apparaît dans les 200 caractères suivant une mention du sport
+        foreach ($questionPatterns as $questionPattern) {
+            if (preg_match("/{$questionPattern}.{0,200}(" . implode('|', array_map('preg_quote', $positiveResponses)) . ")/ui", $text)) {
+                Log::info('🏃 [SPORTS DETECTION] Pattern question+réponse positive trouvé', [
+                    'pattern' => $questionPattern
+                ]);
+                return true;
+            }
+        }
+
+        // Pattern 2: Réponse positive directe suivie d'une mention de sport
+        foreach ($positiveResponses as $response) {
+            $escaped = preg_quote($response, '/');
+            if (preg_match("/{$escaped}.{0,100}(" . implode('|', $questionPatterns) . ")/ui", $text)) {
+                Log::info('🏃 [SPORTS DETECTION] Pattern réponse+sport trouvé', [
+                    'response' => $response
+                ]);
+                return true;
+            }
+        }
+
+        return false;
     }
 }

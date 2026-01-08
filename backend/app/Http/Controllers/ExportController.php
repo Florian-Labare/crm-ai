@@ -18,7 +18,7 @@ class ExportController extends Controller
      */
     public function exportPdf($id)
     {
-        $client = Client::with(['conjoint', 'enfants', 'entreprise', 'santeSouhait'])->findOrFail($id);
+        $client = Client::with(['conjoint', 'enfants', 'santeSouhait'])->findOrFail($id);
 
         $pdf = Pdf::loadView('exports.client-pdf', [
             'client' => $client
@@ -34,7 +34,7 @@ class ExportController extends Controller
      */
     public function exportWord($id)
     {
-        $client = Client::with(['conjoint', 'enfants', 'entreprise', 'santeSouhait'])->findOrFail($id);
+        $client = Client::with(['conjoint', 'enfants', 'santeSouhait'])->findOrFail($id);
 
         $phpWord = new PhpWord();
 

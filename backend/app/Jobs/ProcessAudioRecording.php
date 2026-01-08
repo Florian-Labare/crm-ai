@@ -14,6 +14,9 @@ use App\Services\ClientPassifsSyncService;
 use App\Services\ClientActifsFinanciersSyncService;
 use App\Services\ClientBiensImmobiliersSyncService;
 use App\Services\ClientAutresEpargnesSyncService;
+use App\Services\MergeService;
+use App\Services\AuditService;
+use App\Services\AssetCategorizationService;
 use Illuminate\Queue\SerializesModels;
 use App\Services\ClientSyncService;
 use Illuminate\Queue\InteractsWithQueue;
@@ -53,12 +56,23 @@ class ProcessAudioRecording implements ShouldQueue
     protected ?int $existingClientId;
 
     /**
-     * Créer une nouvelle instance du job
+     * Mode review : crée des PendingChanges au lieu d'appliquer directement
+     * RECOMMANDÉ pour les clients existants avec données sensibles
      */
-    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null)
+    protected bool $reviewMode;
+
+    /**
+     * Créer une nouvelle instance du job
+     *
+     * @param AudioRecord $audioRecord
+     * @param int|null $existingClientId
+     * @param bool $reviewMode Si true, crée des PendingChanges pour validation manuelle
+     */
+    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null, bool $reviewMode = true)
     {
         $this->audioRecord = $audioRecord;
         $this->existingClientId = $existingClientId;
+        $this->reviewMode = $reviewMode;
     }
 
     /**
@@ -67,7 +81,9 @@ class ProcessAudioRecording implements ShouldQueue
     public function handle(
         TranscriptionService $transcriptionService,
         AnalysisService $analysisService,
-        ClientSyncService $clientSyncService
+        ClientSyncService $clientSyncService,
+        MergeService $mergeService,
+        AssetCategorizationService $assetCategorizationService
     ): void {
         try {
             Log::info("🎵 Début du traitement audio #{$this->audioRecord->id}");
@@ -85,8 +101,15 @@ class ProcessAudioRecording implements ShouldQueue
                 Log::info("🧠 Transcription audio #{$this->audioRecord->id}...");
                 $audioPath = storage_path("app/public/{$this->audioRecord->path}");
 
-                if (!file_exists($audioPath)) {
-                    throw new Exception("Fichier audio introuvable : {$audioPath}");
+                if (!file_exists($audioPath) || !is_file($audioPath)) {
+                    $message = "Chemin audio invalide ou introuvable : {$audioPath}";
+                    Log::error("❌ {$message}");
+                    $this->audioRecord->update([
+                        'status' => 'failed',
+                        'transcription' => $message,
+                    ]);
+                    $this->fail(new Exception($message));
+                    return;
                 }
 
                 $transcription = $transcriptionService->transcribe($audioPath);
@@ -101,6 +124,10 @@ class ProcessAudioRecording implements ShouldQueue
             // 3️⃣ Analyse GPT pour extraction des données
             Log::info("💬 Analyse GPT-4 des données client...");
             $data = $analysisService->extractClientData($transcription);
+
+            // 🛡️ GARDE-FOU : Validation et correction de la catégorisation des actifs
+            // Assure que crypto → autres_actifs, immobilier → biens_immobiliers, etc.
+            $data = $assetCategorizationService->validateAndCorrect($data);
 
             // 🔍 LOG DEBUG - Voir ce que GPT retourne pour les besoins
             if (isset($data['besoins']) || isset($data['besoins_action'])) {
@@ -164,13 +191,33 @@ class ProcessAudioRecording implements ShouldQueue
                     unset($data['besoins_action']);
                 }
 
-                // Filtrer les valeurs vides et exclure les champs gérés séparément
+                // Séparer les données : champs client vs relations
                 $filteredData = [];
+                $relationalData = [];
                 $fillable = $client->getFillable();
 
+                // Champs relationnels à stocker séparément
+                $relationalFields = [
+                    'bae_prevoyance', 'bae_retraite', 'bae_epargne',
+                    'enfants', 'conjoint', 'client_revenus',
+                    'client_passifs', 'client_actifs_financiers',
+                    'client_biens_immobiliers', 'client_autres_epargnes'
+                ];
+
                 foreach ($data as $key => $value) {
-                    // Exclusions explicites
-                    if (in_array($key, ['questionnaire_risque', 'bae_prevoyance', 'bae_retraite', 'bae_epargne', 'sante_souhait', 'enfants', 'conjoint', 'client_revenus', 'client_passifs', 'client_actifs_financiers', 'client_biens_immobiliers', 'client_autres_epargnes'])) {
+                    // Exclusion questionnaire (traité autrement)
+                    if (in_array($key, ['questionnaire_risque', 'sante_souhait', 'besoins_action'])) {
+                        continue;
+                    }
+
+                    // Stocker les données relationnelles séparément
+                    if (in_array($key, $relationalFields)) {
+                        if (!empty($value) && (!is_array($value) || !empty(array_filter($value, fn($v) => !empty($v))))) {
+                            $relationalData[$key] = $value;
+                            Log::info("📦 [MODE REVIEW] Données relationnelles détectées: $key", [
+                                'count' => is_array($value) ? count($value) : 1
+                            ]);
+                        }
                         continue;
                     }
 
@@ -194,10 +241,44 @@ class ProcessAudioRecording implements ShouldQueue
                     $filteredData['civilite'] = $this->normalizeCivilite($filteredData['civilite']);
                 }
 
+                // 🔒 MODE REVIEW : Créer un PendingChange au lieu d'appliquer directement
+                if ($this->reviewMode) {
+                    Log::info("🔍 [MODE REVIEW] Création d'un PendingChange pour validation", [
+                        'client_fields' => array_keys($filteredData),
+                        'relational_fields' => array_keys($relationalData),
+                    ]);
+
+                    $pendingChange = $mergeService->createPendingChange(
+                        $client,
+                        $filteredData,
+                        $this->audioRecord->user_id,
+                        $this->audioRecord->id,
+                        'audio',
+                        $relationalData // Passer les données relationnelles
+                    );
+
+                    // Mettre à jour l'audio record avec le statut spécial
+                    $this->audioRecord->update([
+                        'status' => 'pending_review',
+                        'transcription' => $transcription,
+                        'client_id' => $client->id,
+                        'processed_at' => now(),
+                    ]);
+
+                    Log::info("📋 [MODE REVIEW] PendingChange #{$pendingChange->id} créé", [
+                        'changes_count' => $pendingChange->changes_count,
+                        'conflicts_count' => $pendingChange->conflicts_count,
+                    ]);
+
+                    // Sortir du job - les relations seront synchronisées après validation
+                    return;
+                }
+
+                // 🚀 MODE DIRECT : Appliquer directement (ancien comportement)
                 $client->fill($filteredData);
                 if ($client->isDirty()) {
                     $client->save();
-                    Log::info("✅ Client #{$client->id} mis à jour");
+                    Log::info("✅ Client #{$client->id} mis à jour (mode direct)");
                 }
             } else {
                 // Création ou recherche automatique
@@ -216,8 +297,47 @@ class ProcessAudioRecording implements ShouldQueue
                 unset($data['client_actifs_financiers']); // Exclu car géré séparément
                 unset($data['client_biens_immobiliers']); // Exclu car géré séparément
                 unset($data['client_autres_epargnes']); // Exclu car géré séparément
-                $client = $clientSyncService->findOrCreateFromAnalysis($data, $this->audioRecord->user_id);
-                Log::info("✅ Client #{$client->id} synchronisé (créé ou trouvé)");
+
+                // 🔒 En mode review, ne pas mettre à jour les clients existants directement
+                $result = $clientSyncService->findOrCreateFromAnalysis(
+                    $data,
+                    $this->audioRecord->user_id,
+                    !$this->reviewMode // updateExisting = false si reviewMode = true
+                );
+
+                $client = $result['client'];
+                $wasExisting = $result['was_existing'];
+                $cleanData = $result['clean_data'];
+
+                // 🔒 MODE REVIEW : Si un client EXISTANT a été trouvé, créer un PendingChange
+                if ($wasExisting && $this->reviewMode) {
+                    Log::info("🔍 [MODE REVIEW] Client existant trouvé par recherche automatique - Création PendingChange");
+
+                    $pendingChange = $mergeService->createPendingChange(
+                        $client,
+                        $cleanData,
+                        $this->audioRecord->user_id,
+                        $this->audioRecord->id,
+                        'audio'
+                    );
+
+                    $this->audioRecord->update([
+                        'status' => 'pending_review',
+                        'transcription' => $transcription,
+                        'client_id' => $client->id,
+                        'processed_at' => now(),
+                    ]);
+
+                    Log::info("📋 [MODE REVIEW] PendingChange #{$pendingChange->id} créé (recherche auto)", [
+                        'client_id' => $client->id,
+                        'changes_count' => $pendingChange->changes_count,
+                        'conflicts_count' => $pendingChange->conflicts_count,
+                    ]);
+
+                    return; // Sortir - validation manuelle requise
+                }
+
+                Log::info("✅ Client #{$client->id} synchronisé (" . ($wasExisting ? 'trouvé' : 'créé') . ")");
 
                 // Restaurer les enfants pour la synchronisation ultérieure
                 if ($enfantsData) {

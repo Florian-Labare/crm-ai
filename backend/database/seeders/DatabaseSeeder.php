@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,21 +12,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // 1. Créer l'utilisateur admin par défaut
         User::firstOrCreate(
-            ['email' => 'test@example.com'],
+            ['email' => 'admin@courtier.fr'],
             [
-                'name' => 'Test User',
-                'password' => 'password',
+                'name' => 'Admin',
+                'firstname' => 'Courtier',
+                'password' => bcrypt('password'),
                 'email_verified_at' => now(),
             ]
         );
 
-        // Créer le rôle MIA et les utilisateurs MIA
+        // 2. Appeler les seeders dans l'ordre
         $this->call([
-            RoleSeeder::class,
-            MiaUserSeeder::class,
+            RoleSeeder::class,        // Rôles et permissions
+            TeamSeeder::class,        // Équipe par défaut (ID=1)
+            MiaUserSeeder::class,     // Utilisateurs MIA
+            DocumentTemplateSeeder::class, // Templates de documents
         ]);
+
+        $this->command->info('Base de données initialisée avec succès !');
+        $this->command->info('Connexion: admin@courtier.fr / password');
     }
 }
