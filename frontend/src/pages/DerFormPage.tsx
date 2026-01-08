@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
+import { Calendar, User, Mail, MapPin, Clock } from "lucide-react";
 
 interface MIA {
   id: number;
@@ -69,41 +70,53 @@ const DerFormPage: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-12 px-4">
+      <div className="min-h-screen bg-[#F8F8F8] py-12 px-4">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-xl shadow-xl p-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              DER à envoyer
-            </h1>
-            <p className="text-gray-600 mb-8">
-              Document d'Entrée en Relation
-            </p>
+          <div className="vx-card mb-6">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white shadow-md shadow-purple-500/30">
+                <Calendar size={24} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-[#5E5873]">
+                  DER à envoyer
+                </h1>
+                <p className="text-[#6E6B7B] mt-1">
+                  Document d'Entrée en Relation
+                </p>
+              </div>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Chargé de clientèle */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
                   Chargé de clientèle
                 </label>
-                <select
-                  name="charge_clientele_id"
-                  value={formData.charge_clientele_id}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                >
-                  <option value="">Sélectionner un chargé de clientèle</option>
-                  {mias.map((mia) => (
-                    <option key={mia.id} value={mia.id}>
-                      {mia.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User size={18} className="text-[#B9B9C3]" />
+                  </div>
+                  <select
+                    name="charge_clientele_id"
+                    value={formData.charge_clientele_id}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all bg-white"
+                  >
+                    <option value="">Sélectionner un chargé de clientèle</option>
+                    {mias.map((mia) => (
+                      <option key={mia.id} value={mia.id}>
+                        {mia.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Civilité */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
                   Monsieur/Madame <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -111,7 +124,7 @@ const DerFormPage: React.FC = () => {
                   value={formData.civilite}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all bg-white"
                 >
                   <option value="">Sélectionner</option>
                   <option value="Monsieur">Monsieur</option>
@@ -121,7 +134,7 @@ const DerFormPage: React.FC = () => {
 
               {/* Nom */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
                   Nom <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -130,13 +143,14 @@ const DerFormPage: React.FC = () => {
                   value={formData.nom}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                  placeholder="Dupont"
                 />
               </div>
 
               {/* Prénom */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
                   Prénom <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -145,69 +159,93 @@ const DerFormPage: React.FC = () => {
                   value={formData.prenom}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                  placeholder="Jean"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
                   Adresse mail <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail size={18} className="text-[#B9B9C3]" />
+                  </div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                    placeholder="exemple@email.com"
+                  />
+                </div>
               </div>
 
               {/* Lieu du rdv */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
                   Lieu du rdv <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  name="lieu_rdv"
-                  value={formData.lieu_rdv}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin size={18} className="text-[#B9B9C3]" />
+                  </div>
+                  <input
+                    type="text"
+                    name="lieu_rdv"
+                    value={formData.lieu_rdv}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                    placeholder="10 rue de la République, Paris"
+                  />
+                </div>
               </div>
 
-              {/* Date du rdv */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Date du rdv <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="date_rdv"
-                  value={formData.date_rdv}
-                  onChange={handleChange}
-                  required
-                  min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
-              </div>
+              {/* Date et Heure du rdv */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-[#5E5873] mb-2">
+                    Date du rdv <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Calendar size={18} className="text-[#B9B9C3]" />
+                    </div>
+                    <input
+                      type="date"
+                      name="date_rdv"
+                      value={formData.date_rdv}
+                      onChange={handleChange}
+                      required
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all"
+                    />
+                  </div>
+                </div>
 
-              {/* Heure du rdv */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Heure du rdv <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="time"
-                  name="heure_rdv"
-                  value={formData.heure_rdv}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-[#5E5873] mb-2">
+                    Heure du rdv <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Clock size={18} className="text-[#B9B9C3]" />
+                    </div>
+                    <input
+                      type="time"
+                      name="heure_rdv"
+                      value={formData.heure_rdv}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Boutons */}
@@ -215,37 +253,18 @@ const DerFormPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/clients")}
-                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-all"
+                  className="flex-1 px-6 py-3 border border-[#D8D6DE] rounded-lg text-[#5E5873] font-semibold hover:bg-[#F3F2F7] transition-all"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+                  className="flex-1 bg-gradient-to-r from-[#7367F0] to-[#9055FD] hover:from-[#5E50EE] hover:to-[#7E3FF2] text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
                   {loading ? (
                     <>
-                      <svg
-                        className="animate-spin h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v8H4z"
-                        ></path>
-                      </svg>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>Envoi en cours...</span>
                     </>
                   ) : (

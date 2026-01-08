@@ -14,6 +14,10 @@ services:
       - ./backend:/var/www/html
       - ./backend/.env:/var/www/html/.env
 
+    # Charger aussi ces variables comme ENV du container (pour pyannote, etc.)
+    env_file:
+      - ./backend/.env
+
     ports:
       - "${APP_PORT:-8000}:80"
 
@@ -65,7 +69,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -97,6 +101,10 @@ services:
     volumes:
       - ./backend:/var/www/html
       - ./backend/.env:/var/www/html/.env
+
+    # Charger aussi ces variables comme ENV du container (pour pyannote, etc.)
+    env_file:
+      - ./backend/.env
 
     # Variables d'environnement identiques au backend
     environment:
@@ -133,10 +141,10 @@ services:
     container_name: mailhog
     restart: unless-stopped
     ports:
-      - "1025:1025"  # SMTP server
-      - "8025:8025"  # Web UI
+      - "1025:1025" # SMTP server
+      - "8025:8025" # Web UI
     logging:
-      driver: 'none'  # Désactive les logs pour réduire le bruit
+      driver: 'none' # Désactive les logs pour réduire le bruit
 
   # --- GOTENBERG (Conversion documents → PDF) ---
   gotenberg:
@@ -144,9 +152,9 @@ services:
     container_name: gotenberg
     restart: unless-stopped
     ports:
-      - "3001:3000"  # API HTTP pour conversion
+      - "3001:3000" # API HTTP pour conversion
     environment:
-      DISABLE_GOOGLE_CHROME: "1"  # On utilise seulement LibreOffice
+      DISABLE_GOOGLE_CHROME: "1" # On utilise seulement LibreOffice
       DEFAULT_WAIT_TIMEOUT: "30"
     command:
       - "gotenberg"
@@ -169,7 +177,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    command: [ "npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173" ]
     depends_on:
       - backend
 

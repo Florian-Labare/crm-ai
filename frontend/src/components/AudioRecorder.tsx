@@ -19,10 +19,10 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient, onUploadSucc
   const [error, setError] = useState<string | null>(null);
   const [recordingDuration, setRecordingDuration] = useState<number>(0);
 
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRecordIdRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Nettoyage du polling et du timer au démontage du composant
   useEffect(() => {
@@ -69,6 +69,18 @@ const AudioRecorder: React.FC<Props> = ({ clientId, onUpdateClient, onUploadSucc
           break;
         case 'processing':
           setProcessingStatus('🧠 Transcription et analyse IA en cours...');
+          break;
+        case 'pending_review':
+          // 🔍 Modifications en attente de validation
+          setProcessingStatus('');
+          stopPolling();
+          toast.info(
+            '🔍 Modifications détectées ! Vérifiez le badge de notification pour valider les changements.',
+            { autoClose: 8000 }
+          );
+          if (onUploadSuccess) {
+            onUploadSuccess({ client, pendingReview: true });
+          }
           break;
         case 'done':
           // ✅ Traitement terminé avec succès

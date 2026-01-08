@@ -54,16 +54,14 @@ class ClientBiensImmobiliersSyncService
             }
         }
 
-        // 2️⃣ Supprimer les biens qui ne sont plus dans le tableau
-        if (!empty($biensData)) {
-            $biensToDelete = $existingBiens->whereNotIn('id', $processedIds);
-            foreach ($biensToDelete as $bien) {
-                Log::info("🏠 [BIENS IMMOBILIERS] Suppression du bien #{$bien->id} (plus dans le tableau)");
-                $bien->delete();
-            }
+        // 2️⃣ IMPORTANT: On ne supprime PAS les biens existants qui ne sont pas mentionnés
+        // Les biens immobiliers s'accumulent au fil des conversations
+        $keptBiens = $existingBiens->whereNotIn('id', $processedIds)->count();
+        if ($keptBiens > 0) {
+            Log::info("🏠 [BIENS IMMOBILIERS] Conservation de {$keptBiens} bien(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [BIENS IMMOBILIERS] Synchronisation terminée - ' . count($processedIds) . ' bien(s)');
+        Log::info('✅ [BIENS IMMOBILIERS] Synchronisation terminée - ' . count($processedIds) . ' bien(s) traité(s), total: ' . $client->biensImmobiliers()->count());
     }
 
     /**

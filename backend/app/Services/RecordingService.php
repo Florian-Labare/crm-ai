@@ -135,6 +135,10 @@ class RecordingService
 
             Log::info("🎉 [RECORDING] Transcription finale : " . strlen($finalTranscription) . " caractères");
 
+            if (trim($finalTranscription) === '') {
+                throw new \Exception("Transcription vide après traitement des chunks");
+            }
+
             // Créer un AudioRecord avec la transcription pour traitement GPT
             $audioRecord = AudioRecord::create([
                 'team_id' => $session->team_id, // Added team_id
@@ -217,9 +221,22 @@ class RecordingService
             throw new \Exception("Clé API OpenAI non configurée");
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => "Bearer {$apiKey}",
-        ])
+        // ⏱️ Timeout dynamique basé sur la taille du fichier
+        // - Minimum 60 secondes
+        // - +30 secondes par MB de fichier audio
+        // - Maximum 10 minutes pour les très gros fichiers
+        $fileSizeMB = $fileSize / (1024 * 1024);
+        $timeoutSeconds = min(600, max(60, (int)(60 + ($fileSizeMB * 30))));
+
+        Log::info("⏱️ [RECORDING] Timeout Whisper configuré", [
+            'file_size_mb' => round($fileSizeMB, 2),
+            'timeout_seconds' => $timeoutSeconds
+        ]);
+
+        $response = Http::timeout($timeoutSeconds)
+            ->withHeaders([
+                'Authorization' => "Bearer {$apiKey}",
+            ])
             ->attach('file', file_get_contents($filePath), basename($filePath))
             ->post('https://api.openai.com/v1/audio/transcriptions', [
                 'model' => 'whisper-1',
@@ -261,9 +278,6 @@ class RecordingService
             return $outputPath;
         }
 
-        // Créer un fichier de concaténation temporaire
-        $outputPath = storage_path('app/temp/concatenated_' . $sessionId . '.wav');
-
         // Créer le dossier temp s'il n'existe pas
         $tempDir = storage_path('app/temp');
         if (!is_dir($tempDir)) {
@@ -275,30 +289,61 @@ class RecordingService
         $fileListContent = '';
 
         foreach ($chunks as $chunkPath) {
+            // Vérifier que le fichier existe avant de l'ajouter
+            if (!file_exists($chunkPath)) {
+                Log::warning('[RECORDING] Chunk introuvable lors de la concaténation', ['path' => $chunkPath]);
+                continue;
+            }
             // ffmpeg nécessite le format: file '/path/to/file.webm'
             $fileListContent .= "file '" . str_replace("'", "'\\''", $chunkPath) . "'\n";
         }
 
+        if (empty($fileListContent)) {
+            throw new \Exception('Aucun chunk valide trouvé pour la concaténation');
+        }
+
         file_put_contents($fileListPath, $fileListContent);
 
-        // Concaténer avec ffmpeg
+        Log::info('[RECORDING] Liste de fichiers pour concaténation', [
+            'file_list_path' => $fileListPath,
+            'content' => $fileListContent,
+            'num_chunks' => count($chunks)
+        ]);
+
+        // 🔧 SOLUTION : Utiliser .ogg pour conserver le codec Opus
+        // Le format WAV ne supporte pas le codec Opus, donc on utilise OGG qui le supporte
+        $outputPath = $tempDir . '/concatenated_' . $sessionId . '.ogg';
+
+        // Concaténer avec ffmpeg - utiliser OGG pour le codec Opus
         $command = sprintf(
-            'ffmpeg -f concat -safe 0 -i %s -c copy %s 2>&1',
+            'ffmpeg -y -f concat -safe 0 -i %s -c copy %s 2>&1',
             escapeshellarg($fileListPath),
             escapeshellarg($outputPath)
         );
+
+        Log::info('[RECORDING] Commande ffmpeg', ['command' => $command]);
 
         exec($command, $output, $returnCode);
 
         // Nettoyer le fichier de liste
         @unlink($fileListPath);
 
-        if ($returnCode !== 0 || !file_exists($outputPath)) {
-            Log::error('[RECORDING] Échec de la concaténation', [
+        if ($returnCode !== 0) {
+            Log::error('[RECORDING] Échec de la concaténation ffmpeg', [
                 'command' => $command,
+                'return_code' => $returnCode,
                 'output' => implode("\n", $output)
             ]);
-            throw new \Exception('Échec de la concaténation des chunks');
+            throw new \Exception('Échec de la concaténation des chunks (ffmpeg error code: ' . $returnCode . ')');
+        }
+
+        if (!file_exists($outputPath) || filesize($outputPath) < 1024) {
+            Log::error('[RECORDING] Fichier de sortie invalide', [
+                'output_path' => $outputPath,
+                'exists' => file_exists($outputPath),
+                'size' => file_exists($outputPath) ? filesize($outputPath) : 0
+            ]);
+            throw new \Exception('Échec de la concaténation des chunks (fichier de sortie invalide)');
         }
 
         Log::info('✅ [RECORDING] Chunks concaténés', [

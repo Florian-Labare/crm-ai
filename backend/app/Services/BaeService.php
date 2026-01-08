@@ -42,7 +42,63 @@ class BaeService
             $this->syncBaeEpargne($client, $data['bae_epargne']);
         }
 
+        // 4️⃣ Créer les entrées BAE vides basées sur les besoins du client
+        $this->ensureBaeForBesoins($client, $data['besoins'] ?? $client->besoins ?? []);
+
         Log::info("✅ [BAE] Synchronisation terminée pour le client #{$client->id}");
+    }
+
+    /**
+     * Crée les entrées BAE vides pour les besoins détectés
+     * Permet d'afficher les sections même si aucune donnée n'est renseignée
+     *
+     * @param  array  $besoins  Liste des besoins du client
+     */
+    public function ensureBaeForBesoins(Client $client, array $besoins): void
+    {
+        if (empty($besoins)) {
+            return;
+        }
+
+        Log::info("📋 [BAE] Vérification des entrées BAE pour les besoins", ['besoins' => $besoins]);
+
+        foreach ($besoins as $besoin) {
+            $besoinNormalized = $this->normalizeBesoinName($besoin);
+
+            switch ($besoinNormalized) {
+                case 'prevoyance':
+                    if (!$client->baePrevoyance()->exists()) {
+                        $client->baePrevoyance()->create([]);
+                        Log::info("✅ [BAE PRÉVOYANCE] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+
+                case 'retraite':
+                    if (!$client->baeRetraite()->exists()) {
+                        $client->baeRetraite()->create([]);
+                        Log::info("✅ [BAE RETRAITE] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+
+                case 'epargne':
+                case 'placement':
+                case 'investissement':
+                    if (!$client->baeEpargne()->exists()) {
+                        $client->baeEpargne()->create([]);
+                        Log::info("✅ [BAE ÉPARGNE] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+
+                case 'sante':
+                case 'mutuelle':
+                case 'complementaire':
+                    if (!$client->santeSouhait()->exists()) {
+                        $client->santeSouhait()->create([]);
+                        Log::info("✅ [SANTÉ SOUHAIT] Entrée vide créée pour le besoin détecté");
+                    }
+                    break;
+            }
+        }
     }
 
     /**
@@ -101,6 +157,8 @@ class BaeService
      */
     private function syncBaePrevoyance(Client $client, array $prevoyanceData): void
     {
+        $prevoyanceData = $this->normalizeDateFields($prevoyanceData, ['date_effet']);
+
         // Filtrer les valeurs null/vides pour ne pas écraser les données existantes
         $prevoyanceData = $this->filterEmptyValues($prevoyanceData);
 
@@ -167,6 +225,8 @@ class BaeService
      */
     private function syncBaeEpargne(Client $client, array $epargneData): void
     {
+        $epargneData = $this->normalizeDateFields($epargneData, ['donation_date']);
+
         // Filtrer les valeurs null/vides pour ne pas écraser les données existantes
         $epargneData = $this->filterEmptyValues($epargneData);
 
@@ -246,5 +306,107 @@ class BaeService
 
             return true;
         });
+    }
+
+    /**
+     * Normalise les champs date attendus vers le format ISO.
+     */
+    private function normalizeDateFields(array $data, array $fields): array
+    {
+        foreach ($fields as $field) {
+            if (isset($data[$field]) && $data[$field] !== '') {
+                $data[$field] = $this->normalizeDateToISO((string) $data[$field]);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Normalise une date vers le format ISO (YYYY-MM-DD).
+     */
+    private function normalizeDateToISO(string $date): ?string
+    {
+        try {
+            $date = trim($date);
+            if ($date === '') {
+                return null;
+            }
+
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                return $date;
+            }
+
+            if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $date, $matches)) {
+                return "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+            }
+
+            if (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $date, $matches)) {
+                return "{$matches[3]}-{$matches[2]}-{$matches[1]}";
+            }
+
+            $normalizedDate = $this->normalizeFrenchDateString($date);
+            $carbonDate = \Carbon\Carbon::parse($normalizedDate);
+
+            return $carbonDate->format('Y-m-d');
+
+        } catch (\Throwable $e) {
+            Log::warning('Impossible de normaliser la date', ['date' => $date, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
+     * Normalise une date avec mois français vers une chaîne parsable par Carbon.
+     */
+    private function normalizeFrenchDateString(string $date): string
+    {
+        $normalized = mb_strtolower($date, 'UTF-8');
+        $normalized = preg_replace('/\b1er\b/u', '1', $normalized);
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+
+        // Map des mois français (avec et sans accents) vers anglais
+        $monthMap = [
+            // Avec accents
+            'janvier' => 'january',
+            'février' => 'february',
+            'fevrier' => 'february',
+            'mars' => 'march',
+            'avril' => 'april',
+            'mai' => 'may',
+            'juin' => 'june',
+            'juillet' => 'july',
+            'août' => 'august',
+            'aout' => 'august',
+            'septembre' => 'september',
+            'octobre' => 'october',
+            'novembre' => 'november',
+            'décembre' => 'december',
+            'decembre' => 'december',
+        ];
+
+        // Remplacer les mois français par les mois anglais
+        foreach ($monthMap as $fr => $en) {
+            // Utiliser une regex Unicode pour matcher les mois avec accents
+            $pattern = '/\b' . preg_quote($fr, '/') . '\b/ui';
+            $normalized = preg_replace($pattern, $en, $normalized);
+        }
+
+        // Si c'est un format "DD mois YYYY", le convertir en "DD month YYYY"
+        if (preg_match('/^(\d{1,2})\s+(\w+)\s+(\d{4})$/', $normalized, $matches)) {
+            $day = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $month = $matches[2];
+            $year = $matches[3];
+
+            // Vérifier si c'est un mois anglais valide, sinon essayer de parser directement
+            $englishMonths = ['january', 'february', 'march', 'april', 'may', 'june',
+                             'july', 'august', 'september', 'october', 'november', 'december'];
+
+            if (in_array(strtolower($month), $englishMonths)) {
+                return "{$day} {$month} {$year}";
+            }
+        }
+
+        return $normalized;
     }
 }

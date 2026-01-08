@@ -54,16 +54,14 @@ class ClientAutresEpargnesSyncService
             }
         }
 
-        // 2️⃣ Supprimer les épargnes qui ne sont plus dans le tableau
-        if (!empty($epargnesData)) {
-            $epargnesToDelete = $existingEpargnes->whereNotIn('id', $processedIds);
-            foreach ($epargnesToDelete as $epargne) {
-                Log::info("💎 [AUTRES ÉPARGNES] Suppression de l'épargne #{$epargne->id} (plus dans le tableau)");
-                $epargne->delete();
-            }
+        // 2️⃣ IMPORTANT: On ne supprime PAS les épargnes existantes qui ne sont pas mentionnées
+        // Les autres épargnes s'accumulent au fil des conversations
+        $keptEpargnes = $existingEpargnes->whereNotIn('id', $processedIds)->count();
+        if ($keptEpargnes > 0) {
+            Log::info("💎 [AUTRES ÉPARGNES] Conservation de {$keptEpargnes} épargne(s) existante(s) non mentionnée(s) dans cette extraction");
         }
 
-        Log::info('✅ [AUTRES ÉPARGNES] Synchronisation terminée - ' . count($processedIds) . ' épargne(s)');
+        Log::info('✅ [AUTRES ÉPARGNES] Synchronisation terminée - ' . count($processedIds) . ' épargne(s) traitée(s), total: ' . $client->autresEpargnes()->count());
     }
 
     /**

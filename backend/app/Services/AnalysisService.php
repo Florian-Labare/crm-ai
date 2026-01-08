@@ -1388,6 +1388,9 @@ class AnalysisService
         try {
             // Nettoyer la date (supprimer espaces)
             $date = trim($date);
+            if ($date === '') {
+                return null;
+            }
 
             // Si déjà au format ISO (YYYY-MM-DD), retourner tel quel
             if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
@@ -1412,8 +1415,9 @@ class AnalysisService
                 return "$year-$month-$day";
             }
 
-            // Tenter de parser avec Carbon (pour d'autres formats)
-            $carbonDate = \Carbon\Carbon::parse($date);
+            // Tenter de parser avec Carbon (pour d'autres formats et mois FR)
+            $normalizedDate = $this->normalizeFrenchDateString($date);
+            $carbonDate = \Carbon\Carbon::parse($normalizedDate);
 
             return $carbonDate->format('Y-m-d');
 
@@ -1422,6 +1426,43 @@ class AnalysisService
 
             return null;
         }
+    }
+
+    /**
+     * Normalise une date avec mois français vers une chaîne parsable par Carbon.
+     */
+    private function normalizeFrenchDateString(string $date): string
+    {
+        $normalized = mb_strtolower($date, 'UTF-8');
+        $normalized = preg_replace('/\b1er\b/u', '1', $normalized);
+
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+        if ($ascii !== false) {
+            $normalized = $ascii;
+        }
+
+        $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+
+        $monthMap = [
+            'janvier' => 'january',
+            'fevrier' => 'february',
+            'mars' => 'march',
+            'avril' => 'april',
+            'mai' => 'may',
+            'juin' => 'june',
+            'juillet' => 'july',
+            'aout' => 'august',
+            'septembre' => 'september',
+            'octobre' => 'october',
+            'novembre' => 'november',
+            'decembre' => 'december',
+        ];
+
+        foreach ($monthMap as $fr => $en) {
+            $normalized = preg_replace('/\b' . $fr . '\b/', $en, $normalized);
+        }
+
+        return $normalized;
     }
 
     /**
