@@ -41,11 +41,6 @@ class DirectTemplateMapper
      * Colonnes qui doivent être formatées comme des dates
      */
     private const DATE_COLUMNS = [
-<<<<<<< Updated upstream
-        'date_naissance', 'date_situation_matrimoniale', 'date_evenement_professionnel',
-        'date_evenement_retraite', 'date_effet', 'donation_date', 'der_date_rdv',
-        'date_ouverture_souscription', 'created_at', 'updated_at',
-=======
         'date_naissance',
         'date_situation_matrimoniale',
         'date_evenement_professionnel',
@@ -53,26 +48,15 @@ class DirectTemplateMapper
         'date_effet',
         'donation_date',
         'der_date_rdv',
+        'date_ouverture_souscription',
         'created_at',
         'updated_at',
->>>>>>> Stashed changes
     ];
 
     /**
      * Colonnes qui doivent être formatées comme des montants
      */
     private const CURRENCY_COLUMNS = [
-<<<<<<< Updated upstream
-        'revenus_annuels', 'revenus_annuels_foyer', 'impot_revenu', 'impot_paye_n_1',
-        'cotisations_annuelles', 'montant_epargne_disponible', 'donation_montant',
-        'capacite_epargne_estimee', 'actifs_financiers_total', 'actifs_immo_total',
-        'actifs_autres_total', 'passifs_total_emprunts', 'charges_totales',
-        'cotisations', 'revenu_a_garantir', 'montant_annuel_charges_professionnelles',
-        'montant_charges_professionnelles_a_garantir', 'capital_deces_souhaite',
-        'montant_garanti', 'garanties_obseques', 'rente_enfants', 'rente_conjoint',
-        'budget_mensuel_maximum', 'chargespro', 'valeur_actuelle_estimee',
-        'valeur_acquisition', 'valeur_actuelle',
-=======
         'revenus_annuels',
         'revenus_annuels_foyer',
         'impot_revenu',
@@ -97,7 +81,9 @@ class DirectTemplateMapper
         'rente_conjoint',
         'budget_mensuel_maximum',
         'chargespro',
->>>>>>> Stashed changes
+        'valeur_actuelle_estimee',
+        'valeur_acquisition',
+        'valeur_actuelle',
     ];
 
     /**
