@@ -659,6 +659,153 @@ class DirectTemplateMapper
     }
 
     /**
+     * Mappe les variables au format legacy (ancien format sans préfixe de table)
+     * Ex: nom, prenom, datenaissance, nomconjoint, etc.
+     */
+    public function mapLegacyVariables(Client $client): array
+    {
+        // Charger toutes les relations
+        $client->load([
+            'conjoint',
+            'enfants',
+            'santeSouhait',
+            'baePrevoyance',
+            'baeRetraite',
+            'baeEpargne',
+        ]);
+
+        $variables = [];
+
+        // === INFORMATIONS PRINCIPALES DU CLIENT ===
+        $variables['nom'] = $client->nom ?? '';
+        $variables['nomjeunefille'] = $client->nom_jeune_fille ?? '';
+        $variables['prenom'] = $client->prenom ?? '';
+        $variables['datenaissance'] = $this->formatDateSafe($client->date_naissance);
+        $variables['lieunaissance'] = $client->lieu_naissance ?? '';
+        $variables['nationalite'] = $client->nationalite ?? '';
+        $variables['situationmatrimoniale'] = $client->situation_matrimoniale ?? '';
+        $variables['Date'] = now()->format('d/m/Y');
+        $variables['Datedocgener'] = now()->format('d/m/Y');
+        $variables['current_date'] = now()->format('d/m/Y');
+
+        // === SITUATION PROFESSIONNELLE ===
+        $variables['situationactuelle'] = $client->situation_actuelle ?? '';
+        $variables['professionn'] = $client->profession ?? '';
+        $variables['chefentreprisee'] = $client->chef_entreprise ? 'Oui' : 'Non';
+        $variables['siretraitedateeven'] = $this->formatDateSafe($client->date_evenement_professionnel);
+
+        // === COORDONNÉES ===
+        $variables['adresse'] = $client->adresse ?? '';
+        $variables['codepostal'] = $client->code_postal ?? '';
+        $variables['ville'] = $client->ville ?? '';
+        $variables['numerotel'] = $client->telephone ?? '';
+        $variables['email'] = $client->email ?? '';
+
+        // === ENFANTS ===
+        for ($i = 1; $i <= 5; $i++) {
+            $enfant = $client->enfants->get($i - 1);
+
+            if ($enfant) {
+                $variables["nomprenomenfant{$i}"] = trim(($enfant->prenom ?? '') . ' ' . ($enfant->nom ?? ''));
+                $variables['datenaissanceenfant' . ($i == 1 ? '11' : $i)] = $this->formatDateSafe($enfant->date_naissance);
+                $variables["fiscalcharge{$i}"] = $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
+            } else {
+                $variables["nomprenomenfant{$i}"] = '';
+                $variables['datenaissanceenfant' . ($i == 1 ? '11' : $i)] = '';
+                $variables["fiscalcharge{$i}"] = '';
+            }
+        }
+
+        // === CONJOINT ===
+        $conjoint = $client->conjoint;
+        if ($conjoint) {
+            $variables['nomconjoint'] = $conjoint->nom ?? '';
+            $variables['nomjeunefilleconjoint'] = $conjoint->nom_jeune_fille ?? '';
+            $variables['prenomconjoint'] = $conjoint->prenom ?? '';
+            $variables['datenaissanceconjoint'] = $this->formatDateSafe($conjoint->date_naissance);
+            $variables['lieunaissanceconjoint'] = $conjoint->lieu_naissance ?? '';
+            $variables['nationaliteconjoint'] = $conjoint->nationalite ?? '';
+            $variables['professionconjointnn'] = $conjoint->profession ?? '';
+            $variables['chefentrepriseconjoint'] = $conjoint->chef_entreprise ? 'Oui' : 'Non';
+            $variables['adresseconjoint'] = $conjoint->adresse ?? '';
+            $variables['codepostalconjoint'] = $conjoint->code_postal ?? '';
+            $variables['villeconjoint'] = $conjoint->ville ?? '';
+            $variables['actuelleconjointsituation'] = $conjoint->situation_actuelle_statut ?? '';
+            $variables['siretraiteconjoint'] = '';
+        } else {
+            $variables['nomconjoint'] = '';
+            $variables['nomjeunefilleconjoint'] = '';
+            $variables['prenomconjoint'] = '';
+            $variables['datenaissanceconjoint'] = '';
+            $variables['lieunaissanceconjoint'] = '';
+            $variables['nationaliteconjoint'] = '';
+            $variables['professionconjointnn'] = '';
+            $variables['chefentrepriseconjoint'] = '';
+            $variables['adresseconjoint'] = '';
+            $variables['codepostalconjoint'] = '';
+            $variables['villeconjoint'] = '';
+            $variables['actuelleconjointsituation'] = '';
+            $variables['siretraiteconjoint'] = '';
+        }
+
+        // === BAE RETRAITE ===
+        $retraite = $client->baeRetraite;
+        if ($retraite) {
+            $variables['ageretraitedepart'] = $retraite->age_depart_retraite ?? '';
+            $variables['ageretraitedepartconjoint'] = $retraite->age_depart_retraite_conjoint ?? '';
+            $variables['siretraiteconjoint'] = $retraite->age_depart_retraite_conjoint ? 'Oui' : 'Non';
+            $variables['bilanretraitee'] = $retraite->bilan_retraite_disponible ? 'Oui' : 'Non';
+            $variables['contratenplacereraite'] = $retraite->contrat_en_place ?? '';
+            $variables['complementaireretrairte'] = $retraite->complementaire_retraite_mise_en_place ? 'Oui' : 'Non';
+            $variables['revenuannuelfiscal'] = $retraite->revenus_annuels ?? '';
+            $variables['impotrevenunbpart'] = $retraite->nombre_parts_fiscales ?? '';
+            $variables['impotrevenunmoins1'] = $retraite->impot_paye_n_1 ?? '';
+            $variables['impotrevenutmi'] = $retraite->tmi ?? '';
+        }
+
+        // === BAE ÉPARGNE ===
+        $epargne = $client->baeEpargne;
+        if ($epargne) {
+            $variables['capaciteepargeestimeee'] = $epargne->capacite_epargne_estimee ?? '';
+            $variables['totalpatrimoinefinancier'] = $epargne->actifs_financiers_total ?? '';
+            $variables['totalpatrimoineimmo'] = $epargne->actifs_immo_total ?? '';
+            $variables['totalcharges'] = $epargne->charges_totales ?? '';
+            $variables['donationdate'] = $this->formatDateSafe($epargne->donation_date);
+            $variables['donationmontant'] = $epargne->donation_montant ?? '';
+            $variables['donationbeneficiaire'] = $epargne->donation_beneficiaires ?? '';
+            $variables['donationforme'] = $epargne->donation_forme ?? '';
+        }
+
+        // Parents
+        $variables['parents'] = trim(($client->prenom ?? '') . ' ' . ($client->nom ?? ''));
+        if ($conjoint) {
+            $variables['parents'] .= ' et ' . trim(($conjoint->prenom ?? '') . ' ' . ($conjoint->nom ?? ''));
+        }
+
+        return $variables;
+    }
+
+    /**
+     * Formate une date de façon sécurisée
+     */
+    private function formatDateSafe(?string $date): string
+    {
+        if (empty($date)) {
+            return '';
+        }
+
+        if (preg_match('/[Xx?]+/', $date)) {
+            return $date;
+        }
+
+        try {
+            return Carbon::parse($date)->format('d/m/Y');
+        } catch (\Exception $e) {
+            return $date;
+        }
+    }
+
+    /**
      * Retourne les statistiques de mapping
      */
     public function getMappingStats(Client $client, array $variables): array

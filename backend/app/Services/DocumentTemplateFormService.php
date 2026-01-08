@@ -45,7 +45,15 @@ class DocumentTemplateFormService
         }
 
         $row = DB::table($tableName)->where('client_id', $client->id)->first();
-        $defaults = $this->mapper->mapVariables($client, $variables);
+
+        // Mapper avec les DEUX formats (ancien et nouveau) pour compatibilité totale
+        // L'ordre est important : legacy d'abord, puis le nouveau format pour les variables reconnues
+        $legacyDefaults = $this->mapper->mapLegacyVariables($client);
+        $newDefaults = $this->mapper->mapVariables($client, $variables);
+
+        // Ne garder que les valeurs non-vides du nouveau mapper pour ne pas écraser les valeurs legacy
+        $newDefaultsFiltered = array_filter($newDefaults, fn($v) => $v !== '' && $v !== null);
+        $defaults = array_merge($legacyDefaults, $newDefaultsFiltered);
 
         $fields = [];
         foreach ($variables as $variable) {
