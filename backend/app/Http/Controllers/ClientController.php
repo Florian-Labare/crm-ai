@@ -702,4 +702,187 @@ class ClientController extends Controller
 
         return response()->json(null, 204);
     }
+
+    // ===== CONJOINT =====
+
+    public function storeConjoint(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        // Convertir les chaînes vides en null pour les dates
+        $data = $request->all();
+        foreach (['date_naissance', 'date_evenement_professionnel'] as $dateField) {
+            if (isset($data[$dateField]) && $data[$dateField] === '') {
+                $data[$dateField] = null;
+            }
+        }
+        $request->merge($data);
+
+        $validated = $request->validate([
+            'nom' => 'nullable|string|max:255',
+            'nom_jeune_fille' => 'nullable|string|max:255',
+            'prenom' => 'nullable|string|max:255',
+            'date_naissance' => 'nullable|date',
+            'lieu_naissance' => 'nullable|string|max:255',
+            'nationalite' => 'nullable|string|max:255',
+            'profession' => 'nullable|string|max:255',
+            'situation_professionnelle' => 'nullable|string|max:255',
+            'situation_chomage' => 'nullable|string|max:255',
+            'statut' => 'nullable|string|max:255',
+            'chef_entreprise' => 'nullable|boolean',
+            'travailleur_independant' => 'nullable|boolean',
+            'situation_actuelle_statut' => 'nullable|string|max:255',
+            'niveau_activite_sportive' => 'nullable|string|max:255',
+            'details_activites_sportives' => 'nullable|string',
+            'date_evenement_professionnel' => 'nullable|date',
+            'risques_professionnels' => 'nullable|boolean',
+            'details_risques_professionnels' => 'nullable|string',
+            'telephone' => 'nullable|string|max:50',
+            'adresse' => 'nullable|string|max:500',
+            'code_postal' => 'nullable|string|max:20',
+            'ville' => 'nullable|string|max:255',
+            'fumeur' => 'nullable|boolean',
+            'km_parcourus_annuels' => 'nullable|integer|min:0',
+        ]);
+
+        $validated['client_id'] = $client->id;
+
+        $conjoint = \App\Models\Conjoint::create($validated);
+
+        return response()->json($conjoint, 201);
+    }
+
+    public function updateConjoint(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        // Convertir les chaînes vides en null pour les dates
+        $data = $request->all();
+        foreach (['date_naissance', 'date_evenement_professionnel'] as $dateField) {
+            if (isset($data[$dateField]) && $data[$dateField] === '') {
+                $data[$dateField] = null;
+            }
+        }
+        $request->merge($data);
+
+        $validated = $request->validate([
+            'nom' => 'nullable|string|max:255',
+            'nom_jeune_fille' => 'nullable|string|max:255',
+            'prenom' => 'nullable|string|max:255',
+            'date_naissance' => 'nullable|date',
+            'lieu_naissance' => 'nullable|string|max:255',
+            'nationalite' => 'nullable|string|max:255',
+            'profession' => 'nullable|string|max:255',
+            'situation_professionnelle' => 'nullable|string|max:255',
+            'situation_chomage' => 'nullable|string|max:255',
+            'statut' => 'nullable|string|max:255',
+            'chef_entreprise' => 'nullable|boolean',
+            'travailleur_independant' => 'nullable|boolean',
+            'situation_actuelle_statut' => 'nullable|string|max:255',
+            'niveau_activite_sportive' => 'nullable|string|max:255',
+            'details_activites_sportives' => 'nullable|string',
+            'date_evenement_professionnel' => 'nullable|date',
+            'risques_professionnels' => 'nullable|boolean',
+            'details_risques_professionnels' => 'nullable|string',
+            'telephone' => 'nullable|string|max:50',
+            'adresse' => 'nullable|string|max:500',
+            'code_postal' => 'nullable|string|max:20',
+            'ville' => 'nullable|string|max:255',
+            'fumeur' => 'nullable|boolean',
+            'km_parcourus_annuels' => 'nullable|integer|min:0',
+        ]);
+
+        $conjoint = $client->conjoint;
+
+        if ($conjoint) {
+            $conjoint->update($validated);
+        } else {
+            $validated['client_id'] = $client->id;
+            $conjoint = \App\Models\Conjoint::create($validated);
+        }
+
+        return response()->json($conjoint);
+    }
+
+    public function deleteConjoint(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        if ($client->conjoint) {
+            $client->conjoint->delete();
+        }
+
+        return response()->json(null, 204);
+    }
+
+    // ===== ENFANTS =====
+
+    public function storeEnfant(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        // Convertir les chaînes vides en null pour les dates
+        $data = $request->all();
+        if (isset($data['date_naissance']) && $data['date_naissance'] === '') {
+            $data['date_naissance'] = null;
+        }
+        $request->merge($data);
+
+        $validated = $request->validate([
+            'nom' => 'nullable|string|max:255',
+            'prenom' => 'nullable|string|max:255',
+            'date_naissance' => 'nullable|date',
+            'fiscalement_a_charge' => 'nullable|boolean',
+            'garde_alternee' => 'nullable|boolean',
+        ]);
+
+        $validated['client_id'] = $client->id;
+
+        $enfant = \App\Models\Enfant::create($validated);
+
+        return response()->json($enfant, 201);
+    }
+
+    public function updateEnfant(Request $request, Client $client, \App\Models\Enfant $enfant): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        // Vérifier que l'enfant appartient bien au client
+        if ($enfant->client_id !== $client->id) {
+            return response()->json(['error' => 'Enfant non trouvé'], 404);
+        }
+
+        // Convertir les chaînes vides en null pour les dates
+        $data = $request->all();
+        if (isset($data['date_naissance']) && $data['date_naissance'] === '') {
+            $data['date_naissance'] = null;
+        }
+        $request->merge($data);
+
+        $validated = $request->validate([
+            'nom' => 'nullable|string|max:255',
+            'prenom' => 'nullable|string|max:255',
+            'date_naissance' => 'nullable|date',
+            'fiscalement_a_charge' => 'nullable|boolean',
+            'garde_alternee' => 'nullable|boolean',
+        ]);
+
+        $enfant->update($validated);
+
+        return response()->json($enfant);
+    }
+
+    public function deleteEnfant(Client $client, \App\Models\Enfant $enfant): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        // Vérifier que l'enfant appartient bien au client
+        if ($enfant->client_id !== $client->id) {
+            return response()->json(['error' => 'Enfant non trouvé'], 404);
+        }
+
+        $enfant->delete();
+
+        return response()->json(null, 204);
+    }
 }

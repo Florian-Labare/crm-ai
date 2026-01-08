@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Home,
   CreditCard,
@@ -6,6 +6,7 @@ import {
   PieChart,
   Layers,
   LineChart,
+  Coins,
 } from 'lucide-react';
 
 interface PatrimoineSectionProps {
@@ -13,6 +14,35 @@ interface PatrimoineSectionProps {
   formatDate: (date?: string) => string;
   formatCurrency: (amount?: number) => string;
 }
+
+// Helper pour parser les détails BAE (format: "nature: montant" ou juste "nature")
+const parseBaeDetails = (details: string[] | null | undefined): { nature: string; montant: number | null }[] => {
+  if (!details || !Array.isArray(details)) return [];
+
+  return details.map(item => {
+    if (typeof item !== 'string') return { nature: String(item), montant: null };
+
+    // Format "nature: montant" ou "nature : montant"
+    const match = item.match(/^(.+?)\s*:\s*(\d+(?:[.,]\d+)?)\s*€?$/);
+    if (match) {
+      return {
+        nature: match[1].trim(),
+        montant: parseFloat(match[2].replace(',', '.')),
+      };
+    }
+
+    // Format avec montant à la fin sans séparateur
+    const matchEnd = item.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*€?$/);
+    if (matchEnd) {
+      return {
+        nature: matchEnd[1].trim(),
+        montant: parseFloat(matchEnd[2].replace(',', '.')),
+      };
+    }
+
+    return { nature: item.trim(), montant: null };
+  }).filter(item => item.nature);
+};
 
 // Stat Card Component - Design avec bordure gauche colorée
 const StatCard: React.FC<{
@@ -191,40 +221,111 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
   formatDate,
   formatCurrency,
 }) => {
-  // Calculs des totaux
-  const totalActifsFinanciers = (client.actifs_financiers || []).reduce(
+  // Parser les détails BAE
+  const baeActifsFinanciers = useMemo(() =>
+    parseBaeDetails(client.bae_epargne?.actifs_financiers_details),
+    [client.bae_epargne?.actifs_financiers_details]
+  );
+
+  const baeActifsImmo = useMemo(() =>
+    parseBaeDetails(client.bae_epargne?.actifs_immo_details),
+    [client.bae_epargne?.actifs_immo_details]
+  );
+
+  const baeAutresActifs = useMemo(() =>
+    parseBaeDetails(client.bae_epargne?.actifs_autres_details),
+    [client.bae_epargne?.actifs_autres_details]
+  );
+
+  const baePassifs = useMemo(() =>
+    parseBaeDetails(client.bae_epargne?.passifs_details),
+    [client.bae_epargne?.passifs_details]
+  );
+
+  // Calculs des totaux depuis les tables principales
+  const totalActifsFinanciersTable = (client.actifs_financiers || []).reduce(
     (sum: number, a: any) => sum + (Number(a.valeur_actuelle) || 0),
     0
   );
-  const totalActifsImmo = (client.biens_immobiliers || []).reduce(
+
+  // Totaux depuis BAE
+  const totalActifsFinanciersBae = baeActifsFinanciers.reduce(
+    (sum, item) => sum + (item.montant || 0),
+    0
+  );
+
+  // Utiliser le total BAE si disponible, sinon le total table
+  const totalActifsFinanciers = client.bae_epargne?.actifs_financiers_total
+    ? Number(client.bae_epargne.actifs_financiers_total)
+    : (totalActifsFinanciersTable + totalActifsFinanciersBae);
+
+  const totalActifsImmoTable = (client.biens_immobiliers || []).reduce(
     (sum: number, b: any) => sum + (Number(b.valeur_actuelle_estimee) || 0),
     0
   );
-  const totalAutresActifs = (client.autres_epargnes || []).reduce(
+  const totalActifsImmoBae = baeActifsImmo.reduce(
+    (sum, item) => sum + (item.montant || 0),
+    0
+  );
+  const totalActifsImmo = client.bae_epargne?.actifs_immo_total
+    ? Number(client.bae_epargne.actifs_immo_total)
+    : (totalActifsImmoTable + totalActifsImmoBae);
+
+  const totalAutresActifsTable = (client.autres_epargnes || []).reduce(
     (sum: number, e: any) => sum + (Number(e.valeur) || 0),
     0
   );
-  const totalPassifs = (client.passifs || []).reduce(
+  const totalAutresActifsBae = baeAutresActifs.reduce(
+    (sum, item) => sum + (item.montant || 0),
+    0
+  );
+  const totalAutresActifs = client.bae_epargne?.actifs_autres_total
+    ? Number(client.bae_epargne.actifs_autres_total)
+    : (totalAutresActifsTable + totalAutresActifsBae);
+
+  const totalPassifsTable = (client.passifs || []).reduce(
     (sum: number, p: any) => sum + (Number(p.capital_restant_du) || 0),
     0
   );
+  const totalPassifsBae = baePassifs.reduce(
+    (sum, item) => sum + (item.montant || 0),
+    0
+  );
+  const totalPassifs = client.bae_epargne?.passifs_total_emprunts
+    ? Number(client.bae_epargne.passifs_total_emprunts)
+    : (totalPassifsTable + totalPassifsBae);
+
   const totalMensualites = (client.passifs || []).reduce(
     (sum: number, p: any) => sum + (Number(p.montant_remboursement) || 0),
     0
   );
+
   const patrimoineNet = totalActifsFinanciers + totalActifsImmo + totalAutresActifs - totalPassifs;
+
+  // Compteurs d'éléments
+  const countActifsFinanciers = (client.actifs_financiers?.length || 0) + baeActifsFinanciers.length;
+  const countBiensImmo = (client.biens_immobiliers?.length || 0) + baeActifsImmo.length;
+  const countAutresActifs = (client.autres_epargnes?.length || 0) + baeAutresActifs.length;
+  const countPassifs = (client.passifs?.length || 0) + baePassifs.length;
 
   // Vérifie si la section doit être affichée
   const hasContent =
-    client.actifs_financiers?.length > 0 ||
-    client.biens_immobiliers?.length > 0 ||
-    client.autres_epargnes?.length > 0 ||
-    client.passifs?.length > 0 ||
+    countActifsFinanciers > 0 ||
+    countBiensImmo > 0 ||
+    countAutresActifs > 0 ||
+    countPassifs > 0 ||
     client.bae_epargne;
 
   if (!hasContent) {
     return null;
   }
+
+  // Détecter si c'est un actif crypto/bitcoin
+  const isCrypto = (nature: string): boolean => {
+    const lower = nature.toLowerCase();
+    return lower.includes('crypto') || lower.includes('bitcoin') || lower.includes('btc') ||
+           lower.includes('ethereum') || lower.includes('eth') || lower.includes('nft');
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -295,11 +396,11 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
       {/* Contenu : sous-sections avec design cards */}
       <div className="p-6 bg-[#F8F8F8] space-y-5">
         {/* Sous-section : Actifs Financiers */}
-        {client.actifs_financiers && client.actifs_financiers.length > 0 && (
+        {countActifsFinanciers > 0 && (
           <CollapsibleSection
             title="Actifs Financiers"
             icon={<LineChart size={22} />}
-            count={client.actifs_financiers.length}
+            count={countActifsFinanciers}
             color="info"
           >
             <DataTable
@@ -310,17 +411,38 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Détenteur', align: 'left' },
                 { label: 'Ouvert le', align: 'left' },
               ]}
-              rows={client.actifs_financiers.map((actif: any) => [
-                <strong className="text-[#5E5873]">{actif.nature || '-'}</strong>,
-                actif.etablissement || <span className="text-[#B9B9C3]">-</span>,
-                <span className="text-[#28C76F] font-semibold">
-                  {actif.valeur_actuelle ? formatCurrency(actif.valeur_actuelle) : '-'}
-                </span>,
-                actif.detenteur || <span className="text-[#B9B9C3]">-</span>,
-                actif.date_ouverture_souscription
-                  ? formatDate(actif.date_ouverture_souscription)
-                  : <span className="text-[#B9B9C3]">-</span>,
-              ])}
+              rows={[
+                // Données de la table actifs_financiers
+                ...(client.actifs_financiers || []).map((actif: any) => [
+                  <strong className="text-[#5E5873]">{actif.nature || '-'}</strong>,
+                  actif.etablissement || <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#28C76F] font-semibold">
+                    {actif.valeur_actuelle ? formatCurrency(actif.valeur_actuelle) : '-'}
+                  </span>,
+                  actif.detenteur || <span className="text-[#B9B9C3]">-</span>,
+                  actif.date_ouverture_souscription
+                    ? formatDate(actif.date_ouverture_souscription)
+                    : <span className="text-[#B9B9C3]">-</span>,
+                ]),
+                // Données de bae_epargne.actifs_financiers_details
+                ...baeActifsFinanciers.map((item) => [
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#5E5873]">{item.nature}</strong>
+                    {isCrypto(item.nature) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[#F7931A]/15 text-[#F7931A]">
+                        <Coins size={12} />
+                        Crypto
+                      </span>
+                    )}
+                  </div>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#28C76F] font-semibold">
+                    {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
+                  </span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                ]),
+              ]}
               footer={[
                 <strong className="text-[#5E5873]">Total :</strong>,
                 '',
@@ -334,11 +456,11 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
         )}
 
         {/* Sous-section : Biens Immobiliers */}
-        {client.biens_immobiliers && client.biens_immobiliers.length > 0 && (
+        {countBiensImmo > 0 && (
           <CollapsibleSection
             title="Biens Immobiliers & Pro"
             icon={<Home size={22} />}
-            count={client.biens_immobiliers.length}
+            count={countBiensImmo}
             color="warning"
           >
             <DataTable
@@ -349,15 +471,28 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Forme propriété', align: 'left' },
                 { label: 'Acquisition', align: 'center' },
               ]}
-              rows={client.biens_immobiliers.map((bien: any) => [
-                <strong className="text-[#5E5873]">{bien.designation || '-'}</strong>,
-                bien.detenteur || <span className="text-[#B9B9C3]">-</span>,
-                <span className="text-[#28C76F] font-semibold">
-                  {bien.valeur_actuelle_estimee ? formatCurrency(bien.valeur_actuelle_estimee) : '-'}
-                </span>,
-                bien.forme_propriete || <span className="text-[#B9B9C3]">-</span>,
-                bien.annee_acquisition || <span className="text-[#B9B9C3]">-</span>,
-              ])}
+              rows={[
+                // Données de la table biens_immobiliers
+                ...(client.biens_immobiliers || []).map((bien: any) => [
+                  <strong className="text-[#5E5873]">{bien.designation || '-'}</strong>,
+                  bien.detenteur || <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#28C76F] font-semibold">
+                    {bien.valeur_actuelle_estimee ? formatCurrency(bien.valeur_actuelle_estimee) : '-'}
+                  </span>,
+                  bien.forme_propriete || <span className="text-[#B9B9C3]">-</span>,
+                  bien.annee_acquisition || <span className="text-[#B9B9C3]">-</span>,
+                ]),
+                // Données de bae_epargne.actifs_immo_details
+                ...baeActifsImmo.map((item) => [
+                  <strong className="text-[#5E5873]">{item.nature}</strong>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#28C76F] font-semibold">
+                    {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
+                  </span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                ]),
+              ]}
               footer={[
                 <strong className="text-[#5E5873]">Total immo :</strong>,
                 '',
@@ -371,11 +506,11 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
         )}
 
         {/* Sous-section : Passifs & Emprunts */}
-        {client.passifs && client.passifs.length > 0 && (
+        {countPassifs > 0 && (
           <CollapsibleSection
             title="Passifs & Emprunts"
             icon={<CreditCard size={22} />}
-            count={client.passifs.length}
+            count={countPassifs}
             color="danger"
           >
             <DataTable
@@ -386,24 +521,44 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Capital restant dû', align: 'right' },
                 { label: 'Durée restante', align: 'left' },
               ]}
-              rows={client.passifs.map((passif: any) => [
-                <div className="flex items-center gap-2">
-                  <strong className="text-[#5E5873]">{passif.nature || '-'}</strong>
-                  {passif.nature?.toLowerCase().includes('immobilier') && (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase bg-[rgba(255,159,67,0.12)] text-[#FF9F43]">
-                      immo
-                    </span>
-                  )}
-                </div>,
-                passif.preteur || <span className="text-[#B9B9C3]">-</span>,
-                <span className="text-[#EA5455] font-semibold">
-                  {passif.montant_remboursement ? formatCurrency(passif.montant_remboursement) : '-'}
-                </span>,
-                <span className="text-[#EA5455] font-semibold">
-                  {passif.capital_restant_du ? formatCurrency(passif.capital_restant_du) : '-'}
-                </span>,
-                passif.duree_restante ? `${passif.duree_restante} mois` : <span className="text-[#B9B9C3]">-</span>,
-              ])}
+              rows={[
+                // Données de la table passifs
+                ...(client.passifs || []).map((passif: any) => [
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#5E5873]">{passif.nature || '-'}</strong>
+                    {passif.nature?.toLowerCase().includes('immobilier') && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase bg-[rgba(255,159,67,0.12)] text-[#FF9F43]">
+                        immo
+                      </span>
+                    )}
+                  </div>,
+                  passif.preteur || <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#EA5455] font-semibold">
+                    {passif.montant_remboursement ? formatCurrency(passif.montant_remboursement) : '-'}
+                  </span>,
+                  <span className="text-[#EA5455] font-semibold">
+                    {passif.capital_restant_du ? formatCurrency(passif.capital_restant_du) : '-'}
+                  </span>,
+                  passif.duree_restante ? `${passif.duree_restante} mois` : <span className="text-[#B9B9C3]">-</span>,
+                ]),
+                // Données de bae_epargne.passifs_details
+                ...baePassifs.map((item) => [
+                  <div className="flex items-center gap-2">
+                    <strong className="text-[#5E5873]">{item.nature}</strong>
+                    {item.nature.toLowerCase().includes('immobilier') && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold uppercase bg-[rgba(255,159,67,0.12)] text-[#FF9F43]">
+                        immo
+                      </span>
+                    )}
+                  </div>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#EA5455] font-semibold">
+                    {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
+                  </span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                ]),
+              ]}
               footer={[
                 <strong className="text-[#5E5873]">Total des emprunts :</strong>,
                 '',

@@ -26,7 +26,8 @@ class DocumentGeneratorService
         Client $client,
         DocumentTemplate $template,
         int $userId,
-        string $format = 'docx'
+        string $format = 'docx',
+        array $overrides = []
     ): GeneratedDocument {
         // Charger le template depuis le storage
         // Utiliser storage_path directement car les templates sont dans storage/app/templates/
@@ -63,6 +64,18 @@ class DocumentGeneratorService
             'new_count' => count($newVariables),
             'total_count' => count($variables),
             'client_id' => $client->id,
+        ]);
+
+        // Appliquer les valeurs saisies par l'utilisateur si disponibles
+        if (!empty($overrides)) {
+            $variables = array_merge($variables, $overrides);
+        }
+
+        Log::info('Document generation - Overrides applied', [
+            'template' => $template->name,
+            'client_id' => $client->id,
+            'overrides_count' => count($overrides),
+            'override_keys' => array_keys($overrides),
         ]);
 
         // Remplacer toutes les variables dans le template

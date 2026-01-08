@@ -66,6 +66,13 @@ interface PendingChangeItem {
   created_at: string;
 }
 
+interface DocumentFormField {
+  variable: string;
+  column: string;
+  label: string;
+  value: string | number | null;
+}
+
 const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -78,6 +85,14 @@ const ClientDetailPage: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<'docx' | 'pdf'>('docx');
   const [generatingDocument, setGeneratingDocument] = useState(false);
+  const [showDocumentFormModal, setShowDocumentFormModal] = useState(false);
+  const [formTemplateId, setFormTemplateId] = useState<number | null>(null);
+  const [formFields, setFormFields] = useState<DocumentFormField[]>([]);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [formLoading, setFormLoading] = useState(false);
+  const [formSaving, setFormSaving] = useState(false);
+  const [formFormat, setFormFormat] = useState<'docx' | 'pdf'>('docx');
+  const [formError, setFormError] = useState<string | null>(null);
   const [pendingChanges, setPendingChanges] = useState<PendingChangeItem[]>([]);
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
 
@@ -116,6 +131,12 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (showDocumentFormModal && formTemplateId) {
+      loadDocumentForm(formTemplateId);
+    }
+  }, [showDocumentFormModal, formTemplateId]);
+
   const fetchDocuments = async () => {
     try {
       const res = await api.get(`/clients/${id}/documents`);
@@ -136,28 +157,85 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
-  const handleGenerateDocument = async () => {
-    if (!selectedTemplateId) {
-      toast.error("Veuillez sélectionner un template");
-      return;
-    }
-
+  const generateDocument = async (templateId: number, format: 'docx' | 'pdf') => {
     setGeneratingDocument(true);
     try {
       await api.post(`/clients/${id}/documents/generate`, {
-        template_id: selectedTemplateId,
-        format: selectedFormat,
+        template_id: templateId,
+        format,
       });
-      toast.success(`Document ${selectedFormat.toUpperCase()} généré avec succès`);
-      setShowGenerateModal(false);
-      setSelectedTemplateId(null);
-      setSelectedFormat('docx');
+      toast.success(`Document ${format.toUpperCase()} généré avec succès`);
       fetchDocuments();
     } catch (err: any) {
       console.error("Erreur lors de la génération du document :", err);
       toast.error(err.response?.data?.message || "Erreur lors de la génération du document");
     } finally {
       setGeneratingDocument(false);
+    }
+  };
+
+  const loadDocumentForm = async (templateId: number) => {
+    try {
+      setFormLoading(true);
+      setFormError(null);
+      const res = await api.get(`/clients/${id}/document-templates/${templateId}/form`);
+      const fields: DocumentFormField[] = res.data?.data?.fields || [];
+      setFormFields(fields);
+
+      const values: Record<string, string> = {};
+      fields.forEach((field) => {
+        const value = field.value === null || field.value === undefined ? '' : String(field.value);
+        values[field.variable] = value;
+      });
+      setFormValues(values);
+    } catch (err: any) {
+      console.error("Erreur lors du chargement du formulaire :", err);
+      setFormError(err.response?.data?.message || "Erreur lors du chargement du formulaire");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleOpenDocumentForm = () => {
+    if (!selectedTemplateId) {
+      toast.error("Veuillez sélectionner un template");
+      return;
+    }
+
+    setFormTemplateId(selectedTemplateId);
+    setFormFormat(selectedFormat);
+    setShowGenerateModal(false);
+    setShowDocumentFormModal(true);
+    setSelectedTemplateId(null);
+    setSelectedFormat('docx');
+  };
+
+  const handleSaveForm = async (generateAfterSave: boolean) => {
+    if (!formTemplateId) {
+      return;
+    }
+
+    try {
+      setFormSaving(true);
+      setFormError(null);
+      await api.post(`/clients/${id}/document-templates/${formTemplateId}/form`, {
+        values: formValues,
+      });
+
+      toast.success("Formulaire enregistré");
+
+      if (generateAfterSave) {
+        await generateDocument(formTemplateId, formFormat);
+        setShowDocumentFormModal(false);
+        setFormTemplateId(null);
+        setFormFields([]);
+        setFormValues({});
+      }
+    } catch (err: any) {
+      console.error("Erreur lors de l'enregistrement du formulaire :", err);
+      setFormError(err.response?.data?.message || "Erreur lors de l'enregistrement du formulaire");
+    } finally {
+      setFormSaving(false);
     }
   };
 
@@ -354,6 +432,8 @@ const ClientDetailPage: React.FC = () => {
       currency: "EUR",
     }).format(amount);
   };
+
+  const selectedFormTemplate = templates.find((template: any) => template.id === formTemplateId);
 
   return (
     <>
@@ -575,14 +655,129 @@ const ClientDetailPage: React.FC = () => {
                   Annuler
                 </button>
                 <button
-                  onClick={handleGenerateDocument}
+                  onClick={handleOpenDocumentForm}
                   disabled={!selectedTemplateId || generatingDocument}
                   className={`px-6 py-2 rounded-lg text-white transition-all ${!selectedTemplateId || generatingDocument
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-700'
                     }`}
                 >
-                  {generatingDocument ? 'Génération...' : 'Générer le document'}
+                  {generatingDocument ? 'Génération...' : 'Continuer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDocumentFormModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-all duration-300"
+            onClick={() => {
+              setShowDocumentFormModal(false);
+              setFormTemplateId(null);
+              setFormFields([]);
+              setFormValues({});
+              setFormError(null);
+            }}
+          />
+
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-y-auto transform transition-all duration-300 animate-slideIn">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {selectedFormTemplate?.name || 'Formulaire du document'}
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Renseignez les champs liés aux variables du template.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDocumentFormModal(false);
+                    setFormTemplateId(null);
+                    setFormFields([]);
+                    setFormValues({});
+                    setFormError(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {formError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+                  {formError}
+                </div>
+              )}
+
+              {formLoading ? (
+                <div className="py-12 text-center text-gray-500">Chargement du formulaire...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {formFields.map((field) => {
+                    const value = formValues[field.variable] ?? '';
+                    const useTextarea = value.length > 120 || field.label.length > 50;
+
+                    return (
+                      <div key={field.variable} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          {field.label}
+                        </label>
+                        {useTextarea ? (
+                          <textarea
+                            value={value}
+                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.variable]: e.target.value }))}
+                            className="w-full min-h-[96px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+                            placeholder="Saisir une réponse"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.variable]: e.target.value }))}
+                            className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+                            placeholder="Saisir une réponse"
+                          />
+                        )}
+                        <p className="text-xs text-gray-400 mt-2">{field.variable}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDocumentFormModal(false);
+                    setFormTemplateId(null);
+                    setFormFields([]);
+                    setFormValues({});
+                    setFormError(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => handleSaveForm(false)}
+                  disabled={formSaving || formLoading}
+                  className="px-4 py-2 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                >
+                  Enregistrer
+                </button>
+                <button
+                  onClick={() => handleSaveForm(true)}
+                  disabled={formSaving || formLoading || generatingDocument}
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {formSaving || generatingDocument ? 'Traitement...' : 'Enregistrer et générer'}
                 </button>
               </div>
             </div>

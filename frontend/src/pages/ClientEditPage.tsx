@@ -36,14 +36,25 @@ export default function ClientEditPage() {
     adresse: "",
     code_postal: "",
     ville: "",
+    residence_fiscale: "",
     situation_matrimoniale: "",
+    date_situation_matrimoniale: "",
+    situation_actuelle: "",
     profession: "",
+    date_evenement_professionnel: "",
+    risques_professionnels: false,
+    details_risques_professionnels: "",
     revenus_annuels: "",
     nombre_enfants: "",
     chef_entreprise: false,
     statut: "",
     travailleur_independant: false,
     mandataire_social: false,
+    // Santé / Mode de vie
+    fumeur: false,
+    activites_sportives: false,
+    details_activites_sportives: "",
+    niveau_activites_sportives: "",
   });
 
   const [besoins, setBesoins] = useState<string[]>([]);
@@ -91,6 +102,13 @@ export default function ClientEditPage() {
         }
       }
 
+      // Formater les dates
+      const formatDateField = (dateValue: string | null | undefined) => {
+        if (!dateValue) return "";
+        if (dateValue.includes("T")) return dateValue.split("T")[0];
+        return dateValue;
+      };
+
       setForm({
         civilite: client.civilite || "",
         nom: client.nom || "",
@@ -104,14 +122,25 @@ export default function ClientEditPage() {
         adresse: client.adresse || "",
         code_postal: client.code_postal || "",
         ville: client.ville || "",
+        residence_fiscale: client.residence_fiscale || "",
         situation_matrimoniale: client.situation_matrimoniale || "",
+        date_situation_matrimoniale: formatDateField(client.date_situation_matrimoniale),
+        situation_actuelle: client.situation_actuelle || "",
         profession: client.profession || "",
+        date_evenement_professionnel: formatDateField(client.date_evenement_professionnel),
+        risques_professionnels: Boolean(client.risques_professionnels),
+        details_risques_professionnels: client.details_risques_professionnels || "",
         revenus_annuels: client.revenus_annuels || "",
         nombre_enfants: client.nombre_enfants ?? "",
         chef_entreprise: Boolean(client.chef_entreprise),
         statut: client.statut || "",
         travailleur_independant: Boolean(client.travailleur_independant),
         mandataire_social: Boolean(client.mandataire_social),
+        // Santé / Mode de vie
+        fumeur: Boolean(client.fumeur),
+        activites_sportives: Boolean(client.activites_sportives),
+        details_activites_sportives: client.details_activites_sportives || "",
+        niveau_activites_sportives: client.niveau_activites_sportives || "",
       });
 
       setBesoins(client.besoins || []);
@@ -411,6 +440,69 @@ export default function ClientEditPage() {
     }
   };
 
+  // ===== CRUD CONJOINT =====
+  const handleSaveConjoint = async (data: any) => {
+    try {
+      if (conjoint) {
+        const res = await api.put(`/clients/${id}/conjoint`, data);
+        setConjoint(res.data);
+        toast.success("✅ Conjoint mis à jour");
+      } else {
+        const res = await api.post(`/clients/${id}/conjoint`, data);
+        setConjoint(res.data);
+        toast.success("✅ Conjoint ajouté");
+      }
+      setShowModal(null);
+    } catch (err) {
+      toast.error("❌ Erreur lors de l'enregistrement");
+    }
+  };
+
+  const handleDeleteConjoint = async () => {
+    if (!confirm("Supprimer le conjoint ?")) return;
+    try {
+      await api.delete(`/clients/${id}/conjoint`);
+      setConjoint(null);
+      toast.success("✅ Conjoint supprimé");
+    } catch (err) {
+      toast.error("❌ Erreur lors de la suppression");
+    }
+  };
+
+  // ===== CRUD ENFANTS =====
+  const handleAddEnfant = async (data: any) => {
+    try {
+      const res = await api.post(`/clients/${id}/enfants`, data);
+      setEnfants([...enfants, res.data]);
+      setShowModal(null);
+      toast.success("✅ Enfant ajouté");
+    } catch (err) {
+      toast.error("❌ Erreur lors de l'ajout");
+    }
+  };
+
+  const handleUpdateEnfant = async (enfantId: number, data: any) => {
+    try {
+      const res = await api.put(`/clients/${id}/enfants/${enfantId}`, data);
+      setEnfants(enfants.map(e => e.id === enfantId ? res.data : e));
+      setShowModal(null);
+      toast.success("✅ Enfant modifié");
+    } catch (err) {
+      toast.error("❌ Erreur lors de la modification");
+    }
+  };
+
+  const handleDeleteEnfant = async (enfantId: number) => {
+    if (!confirm("Supprimer cet enfant ?")) return;
+    try {
+      await api.delete(`/clients/${id}/enfants/${enfantId}`);
+      setEnfants(enfants.filter(e => e.id !== enfantId));
+      toast.success("✅ Enfant supprimé");
+    } catch (err) {
+      toast.error("❌ Erreur lors de la suppression");
+    }
+  };
+
   const handleAddBesoin = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedBesoin = newBesoin.trim();
@@ -676,6 +768,24 @@ export default function ClientEditPage() {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-[#5E5873] mb-1">Nationalité</label>
+                      <input
+                        value={form.nationalite}
+                        onChange={(e) => setForm({ ...form, nationalite: e.target.value })}
+                        className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                        placeholder="Ex: Française"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#5E5873] mb-1">Résidence fiscale</label>
+                      <input
+                        value={form.residence_fiscale}
+                        onChange={(e) => setForm({ ...form, residence_fiscale: e.target.value })}
+                        className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                        placeholder="Ex: France"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-[#5E5873] mb-1">Situation matrimoniale</label>
                       <select
                         value={form.situation_matrimoniale}
@@ -689,6 +799,15 @@ export default function ClientEditPage() {
                         <option value="Veuf(ve)">Veuf(ve)</option>
                         <option value="Pacsé(e)">Pacsé(e)</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#5E5873] mb-1">Date situation matrimoniale</label>
+                      <input
+                        type="date"
+                        value={form.date_situation_matrimoniale}
+                        onChange={(e) => setForm({ ...form, date_situation_matrimoniale: e.target.value })}
+                        className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#5E5873] mb-1">Nombre d'enfants</label>
@@ -716,6 +835,46 @@ export default function ClientEditPage() {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-[#5E5873] mb-1">Situation actuelle</label>
+                      <select
+                        value={form.situation_actuelle}
+                        onChange={(e) => setForm({ ...form, situation_actuelle: e.target.value })}
+                        className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="Actif">Actif</option>
+                        <option value="Retraité">Retraité</option>
+                        <option value="Sans emploi">Sans emploi</option>
+                        <option value="Étudiant">Étudiant</option>
+                        <option value="Invalidité">Invalidité</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#5E5873] mb-1">Statut</label>
+                      <select
+                        value={form.statut}
+                        onChange={(e) => setForm({ ...form, statut: e.target.value })}
+                        className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="Salarié">Salarié</option>
+                        <option value="TNS">TNS</option>
+                        <option value="Fonctionnaire">Fonctionnaire</option>
+                        <option value="Profession libérale">Profession libérale</option>
+                        <option value="Dirigeant">Dirigeant</option>
+                        <option value="Autre">Autre</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#5E5873] mb-1">Date évènement professionnel</label>
+                      <input
+                        type="date"
+                        value={form.date_evenement_professionnel}
+                        onChange={(e) => setForm({ ...form, date_evenement_professionnel: e.target.value })}
+                        className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-[#5E5873] mb-1">Revenus annuels (€)</label>
                       <input
                         type="number"
@@ -725,6 +884,117 @@ export default function ClientEditPage() {
                         className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
                       />
                     </div>
+                    <div className="md:col-span-2">
+                      <div className="flex flex-wrap gap-6 mt-2">
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.chef_entreprise}
+                            onChange={(e) => setForm({ ...form, chef_entreprise: e.target.checked })}
+                            className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                          />
+                          <span className="ml-2 text-sm text-[#5E5873]">Chef d'entreprise</span>
+                        </label>
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.travailleur_independant}
+                            onChange={(e) => setForm({ ...form, travailleur_independant: e.target.checked })}
+                            className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                          />
+                          <span className="ml-2 text-sm text-[#5E5873]">Travailleur indépendant</span>
+                        </label>
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.mandataire_social}
+                            onChange={(e) => setForm({ ...form, mandataire_social: e.target.checked })}
+                            className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                          />
+                          <span className="ml-2 text-sm text-[#5E5873]">Mandataire social</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 border-t border-[#EBE9F1] pt-4 mt-2">
+                      <label className="inline-flex items-center cursor-pointer mb-3">
+                        <input
+                          type="checkbox"
+                          checked={form.risques_professionnels}
+                          onChange={(e) => setForm({ ...form, risques_professionnels: e.target.checked })}
+                          className="w-4 h-4 text-[#FF9F43] border-[#D8D6DE] rounded focus:ring-[#FF9F43]"
+                        />
+                        <span className="ml-2 text-sm text-[#5E5873] font-medium">Risques professionnels</span>
+                      </label>
+                      {form.risques_professionnels && (
+                        <div className="mt-2">
+                          <label className="block text-sm font-medium text-[#5E5873] mb-1">Détails des risques professionnels</label>
+                          <textarea
+                            value={form.details_risques_professionnels}
+                            onChange={(e) => setForm({ ...form, details_risques_professionnels: e.target.value })}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                            placeholder="Décrivez les risques professionnels..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Santé / Mode de vie */}
+                <div className="border-l-4 border-[#EA5455] pl-4">
+                  <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">Santé / Mode de vie</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <div className="flex flex-wrap gap-6">
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.fumeur}
+                            onChange={(e) => setForm({ ...form, fumeur: e.target.checked })}
+                            className="w-4 h-4 text-[#EA5455] border-[#D8D6DE] rounded focus:ring-[#EA5455]"
+                          />
+                          <span className="ml-2 text-sm text-[#5E5873]">Fumeur</span>
+                        </label>
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={form.activites_sportives}
+                            onChange={(e) => setForm({ ...form, activites_sportives: e.target.checked })}
+                            className="w-4 h-4 text-[#28C76F] border-[#D8D6DE] rounded focus:ring-[#28C76F]"
+                          />
+                          <span className="ml-2 text-sm text-[#5E5873]">Activités sportives</span>
+                        </label>
+                      </div>
+                    </div>
+                    {form.activites_sportives && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-[#5E5873] mb-1">Niveau des activités</label>
+                          <select
+                            value={form.niveau_activites_sportives}
+                            onChange={(e) => setForm({ ...form, niveau_activites_sportives: e.target.value })}
+                            className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                          >
+                            <option value="">Sélectionner...</option>
+                            <option value="Occasionnel">Occasionnel</option>
+                            <option value="Régulier">Régulier</option>
+                            <option value="Intensif">Intensif</option>
+                            <option value="Compétition">Compétition</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-[#5E5873] mb-1">Détails des activités sportives</label>
+                          <textarea
+                            value={form.details_activites_sportives}
+                            onChange={(e) => setForm({ ...form, details_activites_sportives: e.target.value })}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                            placeholder="Ex: Football 2x/semaine, natation..."
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -791,32 +1061,43 @@ export default function ClientEditPage() {
               {!conjoint ? (
                 <p className="text-[#B9B9C3] text-sm italic">Aucun conjoint enregistré</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg border border-[#EBE9F1]">
-                  <div>
-                    <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Nom complet</span>
-                    <p className="text-[#5E5873] font-medium mt-1">
-                      {conjoint.prenom || conjoint.nom ? `${conjoint.prenom || ''} ${conjoint.nom?.toUpperCase() || ''}`.trim() : 'Non renseigné'}
-                    </p>
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg border border-[#EBE9F1]">
+                    <div>
+                      <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Nom complet</span>
+                      <p className="text-[#5E5873] font-medium mt-1">
+                        {conjoint.prenom || conjoint.nom ? `${conjoint.prenom || ''} ${conjoint.nom?.toUpperCase() || ''}`.trim() : 'Non renseigné'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Nom de jeune fille</span>
+                      <p className="text-[#5E5873] font-medium mt-1">{conjoint.nom_jeune_fille || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Date de naissance</span>
+                      <p className="text-[#5E5873] font-medium mt-1">{conjoint.date_naissance || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Profession</span>
+                      <p className="text-[#5E5873] font-medium mt-1">{conjoint.profession || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Téléphone</span>
+                      <p className="text-[#5E5873] font-medium mt-1">{conjoint.telephone || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Adresse</span>
+                      <p className="text-[#5E5873] font-medium mt-1">{conjoint.adresse || 'Non renseigné'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Nom de jeune fille</span>
-                    <p className="text-[#5E5873] font-medium mt-1">{conjoint.nom_jeune_fille || 'Non renseigné'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Date de naissance</span>
-                    <p className="text-[#5E5873] font-medium mt-1">{conjoint.date_naissance || 'Non renseigné'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Profession</span>
-                    <p className="text-[#5E5873] font-medium mt-1">{conjoint.profession || 'Non renseigné'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Téléphone</span>
-                    <p className="text-[#5E5873] font-medium mt-1">{conjoint.telephone || 'Non renseigné'}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-[#B9B9C3] uppercase font-semibold">Adresse</span>
-                    <p className="text-[#5E5873] font-medium mt-1">{conjoint.adresse || 'Non renseigné'}</p>
+                  <div className="mt-3 text-right">
+                    <button
+                      type="button"
+                      onClick={handleDeleteConjoint}
+                      className="text-[#EA5455] hover:text-[#E63C3D] font-medium text-sm"
+                    >
+                      Supprimer le conjoint
+                    </button>
                   </div>
                 </div>
               )}
@@ -871,17 +1152,7 @@ export default function ClientEditPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={async () => {
-                                if (confirm('Êtes-vous sûr de vouloir supprimer cet enfant ?')) {
-                                  try {
-                                    await api.delete(`/clients/${id}/enfants/${enfant.id}`);
-                                    setEnfants(enfants.filter(e => e.id !== enfant.id));
-                                    toast.success('Enfant supprimé');
-                                  } catch (err) {
-                                    toast.error('Erreur lors de la suppression');
-                                  }
-                                }
-                              }}
+                              onClick={() => handleDeleteEnfant(enfant.id)}
                               className="text-[#EA5455] hover:text-[#E63C3D] font-medium"
                             >
                               Supprimer
@@ -1441,6 +1712,10 @@ export default function ClientEditPage() {
               handleSaveBaeRetraite(data);
             } else if (showModal.type === 'bae_epargne') {
               handleSaveBaeEpargne(data);
+            } else if (showModal.type === 'conjoint') {
+              handleSaveConjoint(data);
+            } else if (showModal.type === 'enfant') {
+              showModal.data ? handleUpdateEnfant(showModal.data.id, data) : handleAddEnfant(data);
             }
           }}
         />
@@ -2137,6 +2412,199 @@ function Modal({ type, data, onClose, onSubmit }: ModalProps) {
           </>
         );
 
+      case 'conjoint':
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Nom</label>
+              <input
+                value={formData.nom || ''}
+                onChange={(e) => setFormData({...formData, nom: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Nom de jeune fille</label>
+              <input
+                value={formData.nom_jeune_fille || ''}
+                onChange={(e) => setFormData({...formData, nom_jeune_fille: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Prénom</label>
+              <input
+                value={formData.prenom || ''}
+                onChange={(e) => setFormData({...formData, prenom: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Date de naissance</label>
+              <input
+                type="date"
+                value={formData.date_naissance || ''}
+                onChange={(e) => setFormData({...formData, date_naissance: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Lieu de naissance</label>
+              <input
+                value={formData.lieu_naissance || ''}
+                onChange={(e) => setFormData({...formData, lieu_naissance: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Nationalité</label>
+              <input
+                value={formData.nationalite || ''}
+                onChange={(e) => setFormData({...formData, nationalite: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Profession</label>
+              <input
+                value={formData.profession || ''}
+                onChange={(e) => setFormData({...formData, profession: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Statut</label>
+              <select
+                value={formData.statut || ''}
+                onChange={(e) => setFormData({...formData, statut: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="Salarié">Salarié</option>
+                <option value="TNS">TNS</option>
+                <option value="Fonctionnaire">Fonctionnaire</option>
+                <option value="Profession libérale">Profession libérale</option>
+                <option value="Dirigeant">Dirigeant</option>
+                <option value="Retraité">Retraité</option>
+                <option value="Sans emploi">Sans emploi</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Téléphone</label>
+              <input
+                type="tel"
+                value={formData.telephone || ''}
+                onChange={(e) => setFormData({...formData, telephone: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Adresse</label>
+              <input
+                value={formData.adresse || ''}
+                onChange={(e) => setFormData({...formData, adresse: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Code postal</label>
+              <input
+                value={formData.code_postal || ''}
+                onChange={(e) => setFormData({...formData, code_postal: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Ville</label>
+              <input
+                value={formData.ville || ''}
+                onChange={(e) => setFormData({...formData, ville: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div className="md:col-span-2 flex flex-wrap gap-6">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.fumeur || false}
+                  onChange={(e) => setFormData({...formData, fumeur: e.target.checked})}
+                  className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                />
+                <span className="ml-2 text-sm text-[#5E5873]">Fumeur</span>
+              </label>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.chef_entreprise || false}
+                  onChange={(e) => setFormData({...formData, chef_entreprise: e.target.checked})}
+                  className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                />
+                <span className="ml-2 text-sm text-[#5E5873]">Chef d'entreprise</span>
+              </label>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.travailleur_independant || false}
+                  onChange={(e) => setFormData({...formData, travailleur_independant: e.target.checked})}
+                  className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                />
+                <span className="ml-2 text-sm text-[#5E5873]">Travailleur indépendant</span>
+              </label>
+            </div>
+          </>
+        );
+
+      case 'enfant':
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Prénom</label>
+              <input
+                value={formData.prenom || ''}
+                onChange={(e) => setFormData({...formData, prenom: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Nom</label>
+              <input
+                value={formData.nom || ''}
+                onChange={(e) => setFormData({...formData, nom: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Date de naissance</label>
+              <input
+                type="date"
+                value={formData.date_naissance || ''}
+                onChange={(e) => setFormData({...formData, date_naissance: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+            <div className="md:col-span-2 flex flex-wrap gap-6">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.fiscalement_a_charge || false}
+                  onChange={(e) => setFormData({...formData, fiscalement_a_charge: e.target.checked})}
+                  className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                />
+                <span className="ml-2 text-sm text-[#5E5873]">Fiscalement à charge</span>
+              </label>
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.garde_alternee || false}
+                  onChange={(e) => setFormData({...formData, garde_alternee: e.target.checked})}
+                  className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                />
+                <span className="ml-2 text-sm text-[#5E5873]">Garde alternée</span>
+              </label>
+            </div>
+          </>
+        );
+
       case 'bae_epargne':
         return (
           <>
@@ -2269,6 +2737,8 @@ function Modal({ type, data, onClose, onSubmit }: ModalProps) {
               type === 'prevoyance' ? 'BAE Prévoyance' :
               type === 'retraite' ? 'BAE Retraite' :
               type === 'bae_epargne' ? 'BAE Épargne' :
+              type === 'conjoint' ? 'le conjoint' :
+              type === 'enfant' ? 'un enfant' :
               'un élément'
             }
           </h3>

@@ -133,6 +133,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/document-templates', [DocumentController::class, 'listTemplates']);
     Route::get('/clients/{clientId}/documents', [DocumentController::class, 'listClientDocuments']);
     Route::post('/clients/{clientId}/documents/generate', [DocumentController::class, 'generateDocument']);
+    Route::get('/clients/{clientId}/document-templates/{templateId}/form', [DocumentController::class, 'showForm']);
+    Route::post('/clients/{clientId}/document-templates/{templateId}/form', [DocumentController::class, 'saveForm']);
     Route::get('/documents/{documentId}/download', [DocumentController::class, 'downloadDocument']);
     Route::post('/documents/{documentId}/send-email', [DocumentController::class, 'sendDocumentByEmail']);
     Route::delete('/documents/{documentId}', [DocumentController::class, 'deleteDocument']);
