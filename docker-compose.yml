@@ -136,15 +136,6 @@ services:
         condition: service_healthy
 
   # --- MAILHOG (Serveur SMTP pour tests emails) ---
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: mailhog
-    restart: unless-stopped
-    ports:
-      - "1025:1025"  # SMTP server
-      - "8025:8025"  # Web UI
-    logging:
-      driver: 'none'  # Désactive les logs pour réduire le bruit
 
   # --- GOTENBERG (Conversion documents → PDF) ---
   gotenberg:

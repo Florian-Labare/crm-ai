@@ -33,7 +33,7 @@ class DocumentGeneratorService
         // Utiliser storage_path directement car les templates sont dans storage/app/templates/
         $templatePath = storage_path('app/' . $template->file_path);
 
-        if (! file_exists($templatePath)) {
+        if (!file_exists($templatePath)) {
             throw new \Exception("Template file not found: {$templatePath}");
         }
 
@@ -51,13 +51,21 @@ class DocumentGeneratorService
         // Mapper avec les DEUX formats (ancien et nouveau) pour compatibilité totale
         $variables = [];
 
-        // 1. Ancien format (nom, codepostal, etc.) - pour les anciens templates
-        $legacyVariables = $this->mapClientDataToVariables($client);
-        $variables = array_merge($variables, $legacyVariables);
-
-        // 2. Nouveau format (clients.nom, clients.code_postal, etc.) - pour les nouveaux templates
+        // 1. Nouveau format (clients.nom, clients.code_postal, etc.) - pour les nouveaux templates
+        // On commence par le nouveau format
         $newVariables = $this->mapper->mapVariables($client, $templateVariables);
         $variables = array_merge($variables, $newVariables);
+
+        // 2. Ancien format (nom, codepostal, etc.) - pour les anciens templates
+        // On merge en dernier pour que les valeurs legacy écrasent les valeurs vides du nouveau format
+        $legacyVariables = $this->mapClientDataToVariables($client);
+        // Merger uniquement les clés non vides pour ne pas écraser les valeurs du nouveau format
+        foreach ($legacyVariables as $key => $value) {
+            // Garder les valeurs legacy si la nouvelle valeur est vide OU si la clé n'existe pas encore
+            if (!isset($variables[$key]) || $variables[$key] === '') {
+                $variables[$key] = $value;
+            }
+        }
 
         Log::info('Document generation - Variables mapped (hybrid)', [
             'legacy_count' => count($legacyVariables),
@@ -159,13 +167,13 @@ class DocumentGeneratorService
             $enfant = $client->enfants->get($i - 1);
 
             if ($enfant) {
-                $variables["nomprenomenfant{$i}"] = $enfant->prenom.' '.$enfant->nom;
-                $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = $this->safeFormatDate($enfant->date_naissance);
+                $variables["nomprenomenfant{$i}"] = $enfant->prenom . ' ' . $enfant->nom;
+                $variables['datenaissanceenfant' . ($i == 1 ? '11' : $i)] = $this->safeFormatDate($enfant->date_naissance);
                 // Variable fiscalcharge pour le template (fiscalcharge1, fiscalcharge2, fiscalcharge3)
                 $variables["fiscalcharge{$i}"] = $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
             } else {
                 $variables["nomprenomenfant{$i}"] = '';
-                $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = '';
+                $variables['datenaissanceenfant' . ($i == 1 ? '11' : $i)] = '';
                 $variables["fiscalcharge{$i}"] = '';
             }
         }
@@ -234,9 +242,9 @@ class DocumentGeneratorService
         }
 
         // Ajouter les champs parent pour enfants
-        $variables['parents'] = $client->prenom.' '.$client->nom;
+        $variables['parents'] = $client->prenom . ' ' . $client->nom;
         if ($conjoint) {
-            $variables['parents'] .= ' et '.$conjoint->prenom.' '.$conjoint->nom;
+            $variables['parents'] .= ' et ' . $conjoint->prenom . ' ' . $conjoint->nom;
         }
 
         return $variables;
@@ -248,7 +256,7 @@ class DocumentGeneratorService
     private function generateFileName(Client $client, DocumentTemplate $template, string $format): string
     {
         $timestamp = now()->format('Ymd_His');
-        $clientName = Str::slug($client->nom.'_'.$client->prenom, '_');
+        $clientName = Str::slug($client->nom . '_' . $client->prenom, '_');
         $templateSlug = Str::slug($template->name, '_');
 
         return "{$clientName}_{$templateSlug}_{$timestamp}.{$format}";
@@ -306,7 +314,7 @@ class DocumentGeneratorService
                 $parts[] = $this->normalizeTemplateValue($item);
             }
 
-            return implode("\n", array_filter($parts, static fn ($p) => $p !== ''));
+            return implode("\n", array_filter($parts, static fn($p) => $p !== ''));
         }
 
         return json_encode($value, JSON_UNESCAPED_UNICODE) ?: (string) $value;
@@ -373,7 +381,7 @@ class DocumentGeneratorService
 
             // Vérifier le statut de la réponse
             if ($response->getStatusCode() !== 200) {
-                throw new \Exception('Gotenberg conversion failed with status: '.$response->getStatusCode());
+                throw new \Exception('Gotenberg conversion failed with status: ' . $response->getStatusCode());
             }
 
             // Générer le chemin du fichier PDF (même nom mais extension .pdf)
@@ -400,7 +408,7 @@ class DocumentGeneratorService
                 'docx_path' => $docxPath,
             ]);
 
-            throw new \Exception('Failed to convert document to PDF: '.$e->getMessage());
+            throw new \Exception('Failed to convert document to PDF: ' . $e->getMessage());
         }
     }
 }

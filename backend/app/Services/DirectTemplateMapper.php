@@ -41,15 +41,28 @@ class DirectTemplateMapper
      * Colonnes qui doivent être formatées comme des dates
      */
     private const DATE_COLUMNS = [
+<<<<<<< Updated upstream
         'date_naissance', 'date_situation_matrimoniale', 'date_evenement_professionnel',
         'date_evenement_retraite', 'date_effet', 'donation_date', 'der_date_rdv',
         'date_ouverture_souscription', 'created_at', 'updated_at',
+=======
+        'date_naissance',
+        'date_situation_matrimoniale',
+        'date_evenement_professionnel',
+        'date_evenement_retraite',
+        'date_effet',
+        'donation_date',
+        'der_date_rdv',
+        'created_at',
+        'updated_at',
+>>>>>>> Stashed changes
     ];
 
     /**
      * Colonnes qui doivent être formatées comme des montants
      */
     private const CURRENCY_COLUMNS = [
+<<<<<<< Updated upstream
         'revenus_annuels', 'revenus_annuels_foyer', 'impot_revenu', 'impot_paye_n_1',
         'cotisations_annuelles', 'montant_epargne_disponible', 'donation_montant',
         'capacite_epargne_estimee', 'actifs_financiers_total', 'actifs_immo_total',
@@ -59,21 +72,63 @@ class DirectTemplateMapper
         'montant_garanti', 'garanties_obseques', 'rente_enfants', 'rente_conjoint',
         'budget_mensuel_maximum', 'chargespro', 'valeur_actuelle_estimee',
         'valeur_acquisition', 'valeur_actuelle',
+=======
+        'revenus_annuels',
+        'revenus_annuels_foyer',
+        'impot_revenu',
+        'impot_paye_n_1',
+        'cotisations_annuelles',
+        'montant_epargne_disponible',
+        'donation_montant',
+        'capacite_epargne_estimee',
+        'actifs_financiers_total',
+        'actifs_immo_total',
+        'actifs_autres_total',
+        'passifs_total_emprunts',
+        'charges_totales',
+        'cotisations',
+        'revenu_a_garantir',
+        'montant_annuel_charges_professionnelles',
+        'montant_charges_professionnelles_a_garantir',
+        'capital_deces_souhaite',
+        'montant_garanti',
+        'garanties_obseques',
+        'rente_enfants',
+        'rente_conjoint',
+        'budget_mensuel_maximum',
+        'chargespro',
+>>>>>>> Stashed changes
     ];
 
     /**
      * Colonnes qui doivent être formatées comme des booléens
      */
     private const BOOLEAN_COLUMNS = [
-        'fumeur', 'activites_sportives', 'risques_professionnels', 'chef_entreprise',
-        'mandataire_social', 'travailleur_independant', 'consentement_audio',
-        'fiscalement_a_charge', 'garde_alternee', 'epargne_disponible',
-        'donation_realisee', 'souhaite_couverture_invalidite', 'souhaite_couvrir_charges_professionnelles',
-        'souhaite_garantie_outillage', 'garantir_totalite_charges_professionnelles',
-        'bilan_retraite_disponible', 'complementaire_retraite_mise_en_place',
-        'souhaite_medecine_douce', 'souhaite_cures_thermales', 'souhaite_autres_protheses',
-        'souhaite_protection_juridique', 'souhaite_protection_juridique_conjoint',
-        'placements_inquietude', 'epargne_precaution', 'situation_chomage',
+        'fumeur',
+        'activites_sportives',
+        'risques_professionnels',
+        'chef_entreprise',
+        'mandataire_social',
+        'travailleur_independant',
+        'consentement_audio',
+        'fiscalement_a_charge',
+        'garde_alternee',
+        'epargne_disponible',
+        'donation_realisee',
+        'souhaite_couverture_invalidite',
+        'souhaite_couvrir_charges_professionnelles',
+        'souhaite_garantie_outillage',
+        'garantir_totalite_charges_professionnelles',
+        'bilan_retraite_disponible',
+        'complementaire_retraite_mise_en_place',
+        'souhaite_medecine_douce',
+        'souhaite_cures_thermales',
+        'souhaite_autres_protheses',
+        'souhaite_protection_juridique',
+        'souhaite_protection_juridique_conjoint',
+        'placements_inquietude',
+        'epargne_precaution',
+        'situation_chomage',
     ];
 
     /**
@@ -160,7 +215,7 @@ class DirectTemplateMapper
 
         // Cas spéciaux - fiscalcharge1, fiscalcharge2, fiscalcharge3 (ancien format)
         if (preg_match('/^fiscalcharge(\d+)$/i', $variable, $matches)) {
-            $index = (int)$matches[1] - 1; // fiscalcharge1 = index 0
+            $index = (int) $matches[1] - 1; // fiscalcharge1 = index 0
             $enfant = $client->enfants->get($index);
             if ($enfant) {
                 return $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
@@ -171,10 +226,18 @@ class DirectTemplateMapper
         // Parser la variable au format: table.colonne ou table[index].colonne
         if (preg_match('/^([a-z_]+)(?:\[(\d+)\])?\.(.+)$/i', $variable, $matches)) {
             $tableName = $matches[1];
-            $index = isset($matches[2]) ? (int)$matches[2] : null;
+            $index = isset($matches[2]) ? (int) $matches[2] : null;
             $columnName = $matches[3];
 
             return $this->getValueFromTable($client, $tableName, $columnName, $index);
+        }
+
+        // FALLBACK: Si pas de point dans la variable, c'est probablement un ancien format
+        // On assume que c'est une colonne de la table clients
+        if (!str_contains($variable, '.')) {
+            // Renvoyer une chaîne vide pour indiquer "non géré par DirectMapper"
+            // Le DocumentGeneratorService utilise mapClientDataToVariables() pour ces anciennes variables
+            return '';
         }
 
         // Variable non reconnue
