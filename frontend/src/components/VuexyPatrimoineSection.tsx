@@ -8,6 +8,8 @@ import {
   LineChart,
   Coins,
   Plus,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import type { SectionType } from './SectionEditModal';
 
@@ -16,35 +18,135 @@ interface PatrimoineSectionProps {
   formatDate: (date?: string) => string;
   formatCurrency: (amount?: number) => string;
   onEditItem?: (type: SectionType, data?: any, isNew?: boolean) => void;
+  onDeleteItem?: (type: 'actif' | 'bien' | 'passif' | 'epargne', id: number) => void;
+  onDeleteBaeDetail?: (
+    field: 'actifs_financiers_details' | 'actifs_immo_details' | 'actifs_autres_details' | 'passifs_details',
+    index: number
+  ) => void;
 }
 
-// Helper pour parser les détails BAE (format: "nature: montant" ou juste "nature")
+// Helper pour parser un détail BAE (format: "nature: montant" ou juste "nature")
+const parseBaeDetailItem = (item: unknown): { nature: string; montant: number | null } | null => {
+  if (item === null || item === undefined) return null;
+  if (typeof item !== 'string') {
+    const value = String(item).trim();
+    return value ? { nature: value, montant: null } : null;
+  }
+
+  const raw = item.trim();
+  if (!raw) return null;
+
+  // Format "nature: montant" ou "nature : montant"
+  const match = raw.match(/^(.+?)\s*:\s*(\d+(?:[.,]\d+)?)\s*€?$/);
+  if (match) {
+    return {
+      nature: match[1].trim(),
+      montant: parseFloat(match[2].replace(',', '.')),
+    };
+  }
+
+  // Format avec montant à la fin sans séparateur
+  const matchEnd = raw.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*€?$/);
+  if (matchEnd) {
+    return {
+      nature: matchEnd[1].trim(),
+      montant: parseFloat(matchEnd[2].replace(',', '.')),
+    };
+  }
+
+  return { nature: raw, montant: null };
+};
+
 const parseBaeDetails = (details: string[] | null | undefined): { nature: string; montant: number | null }[] => {
   if (!details || !Array.isArray(details)) return [];
+  return details
+    .map(parseBaeDetailItem)
+    .filter((item): item is { nature: string; montant: number | null } => Boolean(item?.nature));
+};
 
-  return details.map(item => {
-    if (typeof item !== 'string') return { nature: String(item), montant: null };
+const normalizeTextKey = (value: string): string => {
+  const normalized = value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return normalized.replace(/\s+/g, ' ');
+};
 
-    // Format "nature: montant" ou "nature : montant"
-    const match = item.match(/^(.+?)\s*:\s*(\d+(?:[.,]\d+)?)\s*€?$/);
-    if (match) {
-      return {
-        nature: match[1].trim(),
-        montant: parseFloat(match[2].replace(',', '.')),
-      };
+const canonicalizeNature = (value: string): string => {
+  const normalized = normalizeTextKey(value);
+  if (!normalized) return value.trim();
+  if (normalized.includes('assurance vie')) return 'assurance-vie';
+  if (normalized.includes('compte titre')) return 'compte-titres';
+  if (normalized.includes('livret') && normalized.includes('a')) return 'livret A';
+  if (normalized.includes('ldds') || normalized === 'ldd') return 'LDDS';
+  if (normalized.includes('lep')) return 'LEP';
+  if (normalized.includes('pea')) return 'PEA';
+  if (normalized.includes('scpi')) return 'SCPI';
+  if (normalized.includes('opcvm')) return 'OPCVM';
+  if (normalized.includes('pel')) return 'PEL';
+  if (normalized.includes('cel')) return 'CEL';
+  if (normalized.includes('action')) return 'actions';
+  return value.trim();
+};
+
+const isCryptoNature = (nature: string): boolean => {
+  const lower = normalizeTextKey(nature);
+  return (
+    lower.includes('crypto') ||
+    lower.includes('bitcoin') ||
+    lower.includes('btc') ||
+    lower.includes('ethereum') ||
+    lower.includes('eth') ||
+    lower.includes('nft') ||
+    lower.includes('token')
+  );
+};
+
+type ActifFinancierRow = {
+  source: 'table' | 'bae';
+  id?: number;
+  nature: string;
+  etablissement?: string | null;
+  valeur?: number | null;
+  detenteur?: string | null;
+  date?: string | null;
+  raw?: any;
+  baeField?: 'actifs_financiers_details';
+  baeIndex?: number;
+};
+
+type AutreActifRow = {
+  source: 'table' | 'bae' | 'moved';
+  id?: number;
+  nature: string;
+  etablissement?: string | null;
+  valeur?: number | null;
+  date?: string | null;
+  raw?: any;
+  originType?: 'actif';
+  baeField?: 'actifs_autres_details' | 'actifs_financiers_details';
+  baeIndex?: number;
+};
+
+const buildDedupKey = (nature: string, etablissement?: string | null, valeur?: number | null, date?: string | null): string => {
+  const natureKey = canonicalizeNature(nature || '');
+  const etabKey = normalizeTextKey(etablissement || '');
+  const valueKey = typeof valeur === 'number' && !Number.isNaN(valeur) ? valeur.toFixed(2) : '';
+  const dateKey = date ? normalizeTextKey(date) : '';
+  return [natureKey, etabKey, valueKey, dateKey].join('|');
+};
+
+const dedupeByKey = <T,>(items: T[], getKey: (item: T) => string): T[] => {
+  const map = new Map<string, T>();
+  items.forEach(item => {
+    const key = getKey(item);
+    if (!map.has(key)) {
+      map.set(key, item);
     }
-
-    // Format avec montant à la fin sans séparateur
-    const matchEnd = item.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*€?$/);
-    if (matchEnd) {
-      return {
-        nature: matchEnd[1].trim(),
-        montant: parseFloat(matchEnd[2].replace(',', '.')),
-      };
-    }
-
-    return { nature: item.trim(), montant: null };
-  }).filter(item => item.nature);
+  });
+  return Array.from(map.values());
 };
 
 // Stat Card Component - Design avec bordure gauche colorée
@@ -192,9 +294,9 @@ const DataTable: React.FC<{
         </thead>
         <tbody>
           {rows.map((row, rowIdx) => (
-            <tr key={rowIdx} className="transition-colors hover:bg-[#F3F2F7]">
-              {row.map((cell, cellIdx) => (
-                <td
+          <tr key={rowIdx} className="transition-colors hover:bg-[#F3F2F7] group">
+            {row.map((cell, cellIdx) => (
+              <td
                   key={cellIdx}
                   className={`px-4 py-3 text-sm text-[#5E5873] border-b border-[#EBE9F1] ${
                     headers[cellIdx]?.align === 'right'
@@ -240,6 +342,8 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
   formatDate,
   formatCurrency,
   onEditItem,
+  onDeleteItem,
+  onDeleteBaeDetail,
 }) => {
   // Parser les détails BAE
   const baeActifsFinanciers = useMemo(() =>
@@ -252,6 +356,19 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
     [client.bae_epargne?.actifs_immo_details]
   );
 
+  const baeActifsImmoDisplay = useMemo(() => {
+    const raw = Array.isArray(client.bae_epargne?.actifs_immo_details)
+      ? client.bae_epargne.actifs_immo_details
+      : [];
+    return raw
+      .map((item: unknown, index: number) => {
+        const parsed = parseBaeDetailItem(item);
+        if (!parsed) return null;
+        return { ...parsed, baeIndex: index };
+      })
+      .filter((item): item is { nature: string; montant: number | null; baeIndex: number } => Boolean(item?.nature));
+  }, [client.bae_epargne?.actifs_immo_details]);
+
   const baeAutresActifs = useMemo(() =>
     parseBaeDetails(client.bae_epargne?.actifs_autres_details),
     [client.bae_epargne?.actifs_autres_details]
@@ -262,22 +379,152 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
     [client.bae_epargne?.passifs_details]
   );
 
+  const baePassifsDisplay = useMemo(() => {
+    const raw = Array.isArray(client.bae_epargne?.passifs_details)
+      ? client.bae_epargne.passifs_details
+      : [];
+    return raw
+      .map((item: unknown, index: number) => {
+        const parsed = parseBaeDetailItem(item);
+        if (!parsed) return null;
+        return { ...parsed, baeIndex: index };
+      })
+      .filter((item): item is { nature: string; montant: number | null; baeIndex: number } => Boolean(item?.nature));
+  }, [client.bae_epargne?.passifs_details]);
+
+  const { actifsFinanciersDisplay, autresActifsDisplay } = useMemo(() => {
+    const actifs: ActifFinancierRow[] = [];
+    const movedCrypto: AutreActifRow[] = [];
+    const autres: AutreActifRow[] = [];
+
+    (client.actifs_financiers || []).forEach((actif: any) => {
+      const nature = actif.nature || '';
+      if (!nature && !actif.valeur_actuelle && !actif.etablissement && !actif.detenteur) return;
+      const valeur = actif.valeur_actuelle !== undefined && actif.valeur_actuelle !== null
+        ? Number(actif.valeur_actuelle)
+        : null;
+      const entry = {
+        source: 'table' as const,
+        id: actif.id,
+        nature,
+        etablissement: actif.etablissement || null,
+        valeur: Number.isFinite(valeur as number) ? (valeur as number) : null,
+        detenteur: actif.detenteur || null,
+        date: actif.date_ouverture_souscription || null,
+        raw: actif,
+      };
+
+      if (isCryptoNature(nature)) {
+        movedCrypto.push({
+          source: 'moved',
+          nature,
+          etablissement: entry.etablissement,
+          valeur: entry.valeur,
+          date: entry.date,
+          id: entry.id,
+          raw: entry.raw,
+          originType: 'actif',
+        });
+        return;
+      }
+      actifs.push(entry);
+    });
+
+    const baeActifsFinanciersRaw = Array.isArray(client.bae_epargne?.actifs_financiers_details)
+      ? client.bae_epargne.actifs_financiers_details
+      : [];
+    baeActifsFinanciersRaw.forEach((rawItem: unknown, index: number) => {
+      const parsed = parseBaeDetailItem(rawItem);
+      if (!parsed) return;
+      const { nature, montant } = parsed;
+      const entry: ActifFinancierRow = {
+        source: 'bae',
+        nature,
+        etablissement: null,
+        valeur: montant ?? null,
+        detenteur: null,
+        date: null,
+        baeField: 'actifs_financiers_details',
+        baeIndex: index,
+      };
+
+      if (isCryptoNature(nature)) {
+        movedCrypto.push({
+          source: 'moved',
+          nature,
+          etablissement: null,
+          valeur: montant ?? null,
+          date: null,
+          baeField: 'actifs_financiers_details',
+          baeIndex: index,
+        });
+        return;
+      }
+      actifs.push(entry);
+    });
+
+    (client.autres_epargnes || []).forEach((epargne: any) => {
+      const nature = epargne.nature || '';
+      if (!nature && !epargne.valeur && !epargne.etablissement) return;
+      const valeur = epargne.valeur !== undefined && epargne.valeur !== null ? Number(epargne.valeur) : null;
+      autres.push({
+        source: 'table',
+        id: epargne.id,
+        nature,
+        etablissement: epargne.etablissement || null,
+        valeur: Number.isFinite(valeur as number) ? (valeur as number) : null,
+        date: epargne.date_ouverture || null,
+        raw: epargne,
+      });
+    });
+
+    const baeAutresActifsRaw = Array.isArray(client.bae_epargne?.actifs_autres_details)
+      ? client.bae_epargne.actifs_autres_details
+      : [];
+    baeAutresActifsRaw.forEach((rawItem: unknown, index: number) => {
+      const parsed = parseBaeDetailItem(rawItem);
+      if (!parsed) return;
+      autres.push({
+        source: 'bae',
+        nature: parsed.nature,
+        etablissement: null,
+        valeur: parsed.montant ?? null,
+        date: null,
+        baeField: 'actifs_autres_details',
+        baeIndex: index,
+      });
+    });
+
+    const actifsDeduped = dedupeByKey(actifs, item =>
+      buildDedupKey(item.nature, item.etablissement ?? undefined, item.valeur ?? undefined)
+    );
+    const movedCryptoDeduped = dedupeByKey(movedCrypto, item =>
+      buildDedupKey(item.nature, item.etablissement ?? undefined, item.valeur ?? undefined)
+    );
+    const autresWithCrypto = [...autres, ...movedCryptoDeduped];
+    const autresDeduped = dedupeByKey(autresWithCrypto, item =>
+      buildDedupKey(item.nature, item.etablissement ?? undefined, item.valeur ?? undefined, item.date ?? undefined)
+    );
+
+    return {
+      actifsFinanciersDisplay: actifsDeduped,
+      autresActifsDisplay: autresDeduped,
+    };
+  }, [
+    client.actifs_financiers,
+    client.autres_epargnes,
+    client.bae_epargne?.actifs_financiers_details,
+    client.bae_epargne?.actifs_autres_details,
+  ]);
+
   // Calculs des totaux depuis les tables principales
-  const totalActifsFinanciersTable = (client.actifs_financiers || []).reduce(
-    (sum: number, a: any) => sum + (Number(a.valeur_actuelle) || 0),
+  const totalActifsFinanciersDisplay = actifsFinanciersDisplay.reduce(
+    (sum, item) => sum + (item.valeur || 0),
     0
   );
-
-  // Totaux depuis BAE
-  const totalActifsFinanciersBae = baeActifsFinanciers.reduce(
-    (sum, item) => sum + (item.montant || 0),
-    0
-  );
-
-  // Utiliser le total BAE si disponible, sinon le total table
-  const totalActifsFinanciers = client.bae_epargne?.actifs_financiers_total
-    ? Number(client.bae_epargne.actifs_financiers_total)
-    : (totalActifsFinanciersTable + totalActifsFinanciersBae);
+  const totalActifsFinanciers = totalActifsFinanciersDisplay > 0
+    ? totalActifsFinanciersDisplay
+    : (client.bae_epargne?.actifs_financiers_total ? Number(client.bae_epargne.actifs_financiers_total) : 0);
 
   const totalActifsImmoTable = (client.biens_immobiliers || []).reduce(
     (sum: number, b: any) => sum + (Number(b.valeur_actuelle_estimee) || 0),
@@ -291,17 +538,13 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
     ? Number(client.bae_epargne.actifs_immo_total)
     : (totalActifsImmoTable + totalActifsImmoBae);
 
-  const totalAutresActifsTable = (client.autres_epargnes || []).reduce(
-    (sum: number, e: any) => sum + (Number(e.valeur) || 0),
+  const totalAutresActifsDisplay = autresActifsDisplay.reduce(
+    (sum, item) => sum + (item.valeur || 0),
     0
   );
-  const totalAutresActifsBae = baeAutresActifs.reduce(
-    (sum, item) => sum + (item.montant || 0),
-    0
-  );
-  const totalAutresActifs = client.bae_epargne?.actifs_autres_total
-    ? Number(client.bae_epargne.actifs_autres_total)
-    : (totalAutresActifsTable + totalAutresActifsBae);
+  const totalAutresActifs = totalAutresActifsDisplay > 0
+    ? totalAutresActifsDisplay
+    : (client.bae_epargne?.actifs_autres_total ? Number(client.bae_epargne.actifs_autres_total) : 0);
 
   const totalPassifsTable = (client.passifs || []).reduce(
     (sum: number, p: any) => sum + (Number(p.capital_restant_du) || 0),
@@ -323,9 +566,9 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
   const patrimoineNet = totalActifsFinanciers + totalActifsImmo + totalAutresActifs - totalPassifs;
 
   // Compteurs d'éléments
-  const countActifsFinanciers = (client.actifs_financiers?.length || 0) + baeActifsFinanciers.length;
+  const countActifsFinanciers = actifsFinanciersDisplay.length;
   const countBiensImmo = (client.biens_immobiliers?.length || 0) + baeActifsImmo.length;
-  const countAutresActifs = (client.autres_epargnes?.length || 0) + baeAutresActifs.length;
+  const countAutresActifs = autresActifsDisplay.length;
   const countPassifs = (client.passifs?.length || 0) + baePassifs.length;
 
   // Vérifie si la section doit être affichée
@@ -340,12 +583,10 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
     return null;
   }
 
-  // Détecter si c'est un actif crypto/bitcoin
-  const isCrypto = (nature: string): boolean => {
-    const lower = nature.toLowerCase();
-    return lower.includes('crypto') || lower.includes('bitcoin') || lower.includes('btc') ||
-           lower.includes('ethereum') || lower.includes('eth') || lower.includes('nft');
-  };
+  const showActifsActions = Boolean(onEditItem || onDeleteItem || onDeleteBaeDetail);
+  const showImmoActions = Boolean(onEditItem || onDeleteItem || onDeleteBaeDetail);
+  const showPassifsActions = Boolean(onEditItem || onDeleteItem || onDeleteBaeDetail);
+  const showAutresActions = Boolean(onEditItem || onDeleteItem || onDeleteBaeDetail);
 
   return (
     <div className="bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
@@ -431,37 +672,60 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Valeur actuelle', align: 'right' },
                 { label: 'Détenteur', align: 'left' },
                 { label: 'Ouvert le', align: 'left' },
+                ...(showActifsActions ? [{ label: 'Actions', align: 'right' as const }] : []),
               ]}
               rows={[
-                // Données de la table actifs_financiers
-                ...(client.actifs_financiers || []).map((actif: any) => [
-                  <strong className="text-[#5E5873]">{actif.nature || '-'}</strong>,
+                ...actifsFinanciersDisplay.map((actif) => [
+                  <strong className="text-[#5E5873]">{canonicalizeNature(actif.nature || '') || actif.nature || '-'}</strong>,
                   actif.etablissement || <span className="text-[#B9B9C3]">-</span>,
                   <span className="text-[#28C76F] font-semibold">
-                    {actif.valeur_actuelle ? formatCurrency(actif.valeur_actuelle) : '-'}
+                    {actif.valeur ? formatCurrency(actif.valeur) : <span className="text-[#B9B9C3]">-</span>}
                   </span>,
                   actif.detenteur || <span className="text-[#B9B9C3]">-</span>,
-                  actif.date_ouverture_souscription
-                    ? formatDate(actif.date_ouverture_souscription)
+                  actif.date
+                    ? formatDate(actif.date)
                     : <span className="text-[#B9B9C3]">-</span>,
-                ]),
-                // Données de bae_epargne.actifs_financiers_details
-                ...baeActifsFinanciers.map((item) => [
-                  <div className="flex items-center gap-2">
-                    <strong className="text-[#5E5873]">{item.nature}</strong>
-                    {isCrypto(item.nature) && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[#F7931A]/15 text-[#F7931A]">
-                        <Coins size={12} />
-                        Crypto
-                      </span>
-                    )}
-                  </div>,
-                  <span className="text-[#B9B9C3]">-</span>,
-                  <span className="text-[#28C76F] font-semibold">
-                    {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
-                  </span>,
-                  <span className="text-[#B9B9C3]">-</span>,
-                  <span className="text-[#B9B9C3]">-</span>,
+                  ...(showActifsActions
+                    ? [(
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEditItem && actif.source === 'table' && actif.id && (
+                          <button
+                            onClick={() => onEditItem('actif', actif.raw || { id: actif.id })}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {onDeleteItem && actif.source === 'table' && actif.id && (
+                          <button
+                            onClick={() => onDeleteItem('actif', actif.id as number)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {onDeleteBaeDetail && actif.source === 'bae' && typeof actif.baeIndex === 'number' && (
+                          <button
+                            onClick={() => onDeleteBaeDetail('actifs_financiers_details', actif.baeIndex as number)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {!onEditItem && !onDeleteItem && !onDeleteBaeDetail && (
+                          <span className="text-[#B9B9C3] text-xs">-</span>
+                        )}
+                        {(onEditItem || onDeleteItem || onDeleteBaeDetail) &&
+                          actif.source === 'bae' &&
+                          !onDeleteBaeDetail && (
+                            <span className="text-[#B9B9C3] text-xs">-</span>
+                          )}
+                      </div>
+                    )]
+                    : []),
                 ]),
               ]}
               footer={[
@@ -470,6 +734,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 <span className="text-[#28C76F] font-bold">{formatCurrency(totalActifsFinanciers)}</span>,
                 '',
                 '',
+                ...(showActifsActions ? [''] : []),
               ]}
               footerBgColor="bg-[#E8FFFE]"
             />
@@ -492,6 +757,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Valeur actuelle', align: 'right' },
                 { label: 'Forme propriété', align: 'left' },
                 { label: 'Acquisition', align: 'center' },
+                ...(showImmoActions ? [{ label: 'Actions', align: 'right' as const }] : []),
               ]}
               rows={[
                 // Données de la table biens_immobiliers
@@ -503,9 +769,33 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                   </span>,
                   bien.forme_propriete || <span className="text-[#B9B9C3]">-</span>,
                   bien.annee_acquisition || <span className="text-[#B9B9C3]">-</span>,
+                  ...(showImmoActions
+                    ? [(
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEditItem && bien.id && (
+                          <button
+                            onClick={() => onEditItem('bien', bien)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {onDeleteItem && bien.id && (
+                          <button
+                            onClick={() => onDeleteItem('bien', bien.id)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    )]
+                    : []),
                 ]),
                 // Données de bae_epargne.actifs_immo_details
-                ...baeActifsImmo.map((item) => [
+                ...baeActifsImmoDisplay.map((item) => [
                   <strong className="text-[#5E5873]">{item.nature}</strong>,
                   <span className="text-[#B9B9C3]">-</span>,
                   <span className="text-[#28C76F] font-semibold">
@@ -513,6 +803,22 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                   </span>,
                   <span className="text-[#B9B9C3]">-</span>,
                   <span className="text-[#B9B9C3]">-</span>,
+                  ...(showImmoActions
+                    ? [(
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onDeleteBaeDetail && (
+                          <button
+                            onClick={() => onDeleteBaeDetail('actifs_immo_details', item.baeIndex)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {!onDeleteBaeDetail && <span className="text-[#B9B9C3] text-xs">-</span>}
+                      </div>
+                    )]
+                    : []),
                 ]),
               ]}
               footer={[
@@ -521,6 +827,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 <span className="text-[#28C76F] font-bold">{formatCurrency(totalActifsImmo)}</span>,
                 '',
                 '',
+                ...(showImmoActions ? [''] : []),
               ]}
               footerBgColor="bg-[#FFF7ED]"
             />
@@ -543,6 +850,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Montant remb.', align: 'right' },
                 { label: 'Capital restant dû', align: 'right' },
                 { label: 'Durée restante', align: 'left' },
+                ...(showPassifsActions ? [{ label: 'Actions', align: 'right' as const }] : []),
               ]}
               rows={[
                 // Données de la table passifs
@@ -563,9 +871,33 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                     {passif.capital_restant_du ? formatCurrency(passif.capital_restant_du) : '-'}
                   </span>,
                   passif.duree_restante ? `${passif.duree_restante} mois` : <span className="text-[#B9B9C3]">-</span>,
+                  ...(showPassifsActions
+                    ? [(
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEditItem && passif.id && (
+                          <button
+                            onClick={() => onEditItem('passif', passif)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {onDeleteItem && passif.id && (
+                          <button
+                            onClick={() => onDeleteItem('passif', passif.id)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    )]
+                    : []),
                 ]),
                 // Données de bae_epargne.passifs_details
-                ...baePassifs.map((item) => [
+                ...baePassifsDisplay.map((item) => [
                   <div className="flex items-center gap-2">
                     <strong className="text-[#5E5873]">{item.nature}</strong>
                     {item.nature.toLowerCase().includes('immobilier') && (
@@ -580,6 +912,22 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                     {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
                   </span>,
                   <span className="text-[#B9B9C3]">-</span>,
+                  ...(showPassifsActions
+                    ? [(
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onDeleteBaeDetail && (
+                          <button
+                            onClick={() => onDeleteBaeDetail('passifs_details', item.baeIndex)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {!onDeleteBaeDetail && <span className="text-[#B9B9C3] text-xs">-</span>}
+                      </div>
+                    )]
+                    : []),
                 ]),
               ]}
               footer={[
@@ -588,6 +936,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 <span className="text-[#EA5455] font-bold">{formatCurrency(totalMensualites)}/mois</span>,
                 <span className="text-[#EA5455] font-bold">{formatCurrency(totalPassifs)}</span>,
                 '',
+                ...(showPassifsActions ? [''] : []),
               ]}
               footerBgColor="bg-[#FEF2F2]"
             />
@@ -609,27 +958,86 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 { label: 'Établissement', align: 'left' },
                 { label: 'Valeur', align: 'right' },
                 { label: 'Date', align: 'left' },
+                ...(showAutresActions ? [{ label: 'Actions', align: 'right' as const }] : []),
               ]}
               rows={[
                 // Données de la table autres_epargnes
-                ...(client.autres_epargnes || []).map((epargne: any) => [
-                  <strong className="text-[#5E5873]">{epargne.nature || '-'}</strong>,
-                  epargne.etablissement || <span className="text-[#B9B9C3]">-</span>,
+                ...autresActifsDisplay.map((item) => [
+                  <strong className="text-[#5E5873]">{item.nature || '-'}</strong>,
+                  item.etablissement || <span className="text-[#B9B9C3]">-</span>,
                   <span className="text-[#28C76F] font-semibold">
-                    {epargne.valeur ? formatCurrency(epargne.valeur) : '-'}
+                    {item.valeur ? formatCurrency(item.valeur) : <span className="text-[#B9B9C3]">-</span>}
                   </span>,
-                  epargne.date_ouverture
-                    ? formatDate(epargne.date_ouverture)
-                    : <span className="text-[#B9B9C3]">-</span>,
-                ]),
-                // Données de bae_epargne.actifs_autres_details
-                ...baeAutresActifs.map((item) => [
-                  <strong className="text-[#5E5873]">{item.nature}</strong>,
-                  <span className="text-[#B9B9C3]">-</span>,
-                  <span className="text-[#28C76F] font-semibold">
-                    {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
-                  </span>,
-                  <span className="text-[#B9B9C3]">-</span>,
+                  item.date ? formatDate(item.date) : <span className="text-[#B9B9C3]">-</span>,
+                  ...(showAutresActions
+                    ? [(
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEditItem && item.source === 'table' && item.id && (
+                          <button
+                            onClick={() => onEditItem('epargne', item.raw || { id: item.id })}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {onEditItem && item.source === 'moved' && item.originType === 'actif' && item.id && (
+                          <button
+                            onClick={() => onEditItem('actif', item.raw || { id: item.id })}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {onDeleteItem && item.source === 'table' && item.id && (
+                          <button
+                            onClick={() => onDeleteItem('epargne', item.id as number)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {onDeleteItem && item.source === 'moved' && item.originType === 'actif' && item.id && (
+                          <button
+                            onClick={() => onDeleteItem('actif', item.id as number)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {onDeleteBaeDetail && item.source === 'bae' && typeof item.baeIndex === 'number' && (
+                          <button
+                            onClick={() => onDeleteBaeDetail('actifs_autres_details', item.baeIndex as number)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {onDeleteBaeDetail &&
+                          item.source === 'moved' &&
+                          item.baeField === 'actifs_financiers_details' &&
+                          typeof item.baeIndex === 'number' && (
+                            <button
+                              onClick={() => onDeleteBaeDetail('actifs_financiers_details', item.baeIndex as number)}
+                              className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        {(onEditItem || onDeleteItem || onDeleteBaeDetail) &&
+                          item.source !== 'table' &&
+                          item.source !== 'moved' &&
+                          !onDeleteBaeDetail && (
+                            <span className="text-[#B9B9C3] text-xs">-</span>
+                          )}
+                      </div>
+                    )]
+                    : []),
                 ]),
               ]}
               footer={[
@@ -637,6 +1045,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 '',
                 <span className="text-[#28C76F] font-bold">{formatCurrency(totalAutresActifs)}</span>,
                 '',
+                ...(showAutresActions ? [''] : []),
               ]}
               footerBgColor="bg-[#E8FFFE]"
             />

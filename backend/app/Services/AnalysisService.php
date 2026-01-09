@@ -1313,6 +1313,9 @@ class AnalysisService
             // 🏠 Déduit code postal / ville quand l'adresse contient déjà tout
             $this->hydrateAddressComponents($data);
 
+            // 🌍 Résidence fiscale - fallback depuis transcription brute
+            $this->hydrateResidenceFiscaleFromTranscript($transcription, $data);
+
             // 🔤 PRIORITÉ ABSOLUE - Détection et application de l'épellation
             $this->detectAndApplySpelling($transcription, $data);
 
@@ -2235,6 +2238,54 @@ class AnalysisService
                 ]);
             }
         }
+    }
+
+    private function hydrateResidenceFiscaleFromTranscript(string $transcription, array &$data): void
+    {
+        if (!empty($data['residence_fiscale'])) {
+            return;
+        }
+
+        $value = $this->extractResidenceFiscale($transcription);
+        if ($value) {
+            $data['residence_fiscale'] = $value;
+            Log::info('🌍 Résidence fiscale détectée depuis transcription', [
+                'residence_fiscale' => $value,
+            ]);
+        }
+    }
+
+    private function extractResidenceFiscale(string $transcription): ?string
+    {
+        $patterns = [
+            '/résidence fiscale[^\\p{L}0-9]{0,6}([\\p{L}][\\p{L}\\s\\-\'’]{1,60})/iu',
+            '/résident fiscal[^\\p{L}0-9]{0,6}([\\p{L}][\\p{L}\\s\\-\'’]{1,60})/iu',
+            '/pays de résidence(?: fiscale)?[^\\p{L}0-9]{0,6}([\\p{L}][\\p{L}\\s\\-\'’]{1,60})/iu',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (!preg_match($pattern, $transcription, $matches)) {
+                continue;
+            }
+
+            $candidate = trim($matches[1]);
+            $candidate = preg_split('/[\\n\\r\\.?;:!]+/u', $candidate)[0] ?? $candidate;
+            $candidate = preg_split('/\\b(conseiller|client|courtier)\\b/iu', $candidate)[0] ?? $candidate;
+            $candidate = trim($candidate, " \t\n\r\0\x0B-");
+
+            if ($candidate === '' || mb_strlen($candidate) < 2) {
+                continue;
+            }
+
+            $lower = mb_strtolower($candidate);
+            if (in_array($lower, ['oui', 'non', 'ok', "d'accord"], true)) {
+                continue;
+            }
+
+            return $candidate;
+        }
+
+        return null;
     }
 
     /**

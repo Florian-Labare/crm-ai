@@ -597,6 +597,23 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
 
+        $detailFields = [
+            'actifs_financiers_details',
+            'actifs_immo_details',
+            'actifs_autres_details',
+            'passifs_details',
+            'charges_details',
+        ];
+        foreach ($detailFields as $field) {
+            $value = $request->input($field);
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $request->merge([$field => $decoded]);
+                }
+            }
+        }
+
         $validated = $request->validate([
             'epargne_disponible' => 'nullable|boolean',
             'montant_epargne_disponible' => 'nullable|numeric|min:0',
@@ -608,17 +625,17 @@ class ClientController extends Controller
             'capacite_epargne_estimee' => 'nullable|numeric|min:0',
             'actifs_financiers_pourcentage' => 'nullable|numeric|min:0|max:100',
             'actifs_financiers_total' => 'nullable|numeric|min:0',
-            'actifs_financiers_details' => 'nullable|json',
+            'actifs_financiers_details' => 'nullable|array',
             'actifs_immo_pourcentage' => 'nullable|numeric|min:0|max:100',
             'actifs_immo_total' => 'nullable|numeric|min:0',
-            'actifs_immo_details' => 'nullable|json',
+            'actifs_immo_details' => 'nullable|array',
             'actifs_autres_pourcentage' => 'nullable|numeric|min:0|max:100',
             'actifs_autres_total' => 'nullable|numeric|min:0',
-            'actifs_autres_details' => 'nullable|json',
+            'actifs_autres_details' => 'nullable|array',
             'passifs_total_emprunts' => 'nullable|numeric|min:0',
-            'passifs_details' => 'nullable|json',
+            'passifs_details' => 'nullable|array',
             'charges_totales' => 'nullable|numeric|min:0',
-            'charges_details' => 'nullable|json',
+            'charges_details' => 'nullable|array',
             'situation_financiere_revenus_charges' => 'nullable|string',
         ]);
 
@@ -633,6 +650,23 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
 
+        $detailFields = [
+            'actifs_financiers_details',
+            'actifs_immo_details',
+            'actifs_autres_details',
+            'passifs_details',
+            'charges_details',
+        ];
+        foreach ($detailFields as $field) {
+            $value = $request->input($field);
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $request->merge([$field => $decoded]);
+                }
+            }
+        }
+
         $validated = $request->validate([
             'epargne_disponible' => 'nullable|boolean',
             'montant_epargne_disponible' => 'nullable|numeric|min:0',
@@ -644,17 +678,17 @@ class ClientController extends Controller
             'capacite_epargne_estimee' => 'nullable|numeric|min:0',
             'actifs_financiers_pourcentage' => 'nullable|numeric|min:0|max:100',
             'actifs_financiers_total' => 'nullable|numeric|min:0',
-            'actifs_financiers_details' => 'nullable|json',
+            'actifs_financiers_details' => 'nullable|array',
             'actifs_immo_pourcentage' => 'nullable|numeric|min:0|max:100',
             'actifs_immo_total' => 'nullable|numeric|min:0',
-            'actifs_immo_details' => 'nullable|json',
+            'actifs_immo_details' => 'nullable|array',
             'actifs_autres_pourcentage' => 'nullable|numeric|min:0|max:100',
             'actifs_autres_total' => 'nullable|numeric|min:0',
-            'actifs_autres_details' => 'nullable|json',
+            'actifs_autres_details' => 'nullable|array',
             'passifs_total_emprunts' => 'nullable|numeric|min:0',
-            'passifs_details' => 'nullable|json',
+            'passifs_details' => 'nullable|array',
             'charges_totales' => 'nullable|numeric|min:0',
-            'charges_details' => 'nullable|json',
+            'charges_details' => 'nullable|array',
             'situation_financiere_revenus_charges' => 'nullable|string',
         ]);
 

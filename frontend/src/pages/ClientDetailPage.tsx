@@ -543,6 +543,37 @@ const ClientDetailPage: React.FC = () => {
     });
   };
 
+  const handleDeleteBaeDetail = (
+    field: 'actifs_financiers_details' | 'actifs_immo_details' | 'actifs_autres_details' | 'passifs_details',
+    index: number
+  ) => {
+    const fieldLabels: Record<string, string> = {
+      actifs_financiers_details: 'actif financier (BAE)',
+      actifs_immo_details: 'bien immobilier (BAE)',
+      actifs_autres_details: 'autre actif (BAE)',
+      passifs_details: 'passif (BAE)',
+    };
+
+    setConfirmDialog({
+      isOpen: true,
+      title: `Supprimer ${fieldLabels[field]}`,
+      message: `Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const current = Array.isArray(client?.bae_epargne?.[field]) ? client.bae_epargne[field] : [];
+          const next = current.filter((_: unknown, idx: number) => idx !== index);
+          await api.put(`/clients/${id}/bae-epargne`, { [field]: next });
+          toast.success(`${fieldLabels[field]} supprimé avec succès`);
+          fetchClient();
+        } catch (err) {
+          console.error(err);
+          toast.error(`Erreur lors de la suppression`);
+        }
+      },
+    });
+  };
+
   if (loading) return <div className="text-center mt-10">Chargement...</div>;
   if (!client) return <div className="text-center mt-10">Client introuvable.</div>;
 
@@ -632,6 +663,7 @@ const ClientDetailPage: React.FC = () => {
                     formatCurrency={formatCurrency}
                     onEditSection={handleEditSection}
                     onDeleteItem={handleDeleteItem}
+                    onDeleteBaeDetail={handleDeleteBaeDetail}
                   />
                 ),
               },

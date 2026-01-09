@@ -47,6 +47,7 @@ class ClientActifsFinanciersExtractor
             // 🔀 Déduplication intelligente des actifs financiers
             if (isset($data['client_actifs_financiers']) && is_array($data['client_actifs_financiers'])) {
                 $data['client_actifs_financiers'] = $this->deduplicateActifs($data['client_actifs_financiers']);
+                $data['client_actifs_financiers'] = $this->sanitizeActifs($data['client_actifs_financiers']);
             }
 
             return $data;
@@ -161,6 +162,54 @@ PROMPT;
         }
 
         return $existing;
+    }
+
+    private function sanitizeActifs(array $actifs): array
+    {
+        $filtered = [];
+        $seen = [];
+        foreach ($actifs as $actif) {
+            $nature = $actif['nature'] ?? '';
+            $natureKey = $this->normalizeKey($nature);
+            if ($natureKey === '' || $this->isCryptoNature($natureKey)) {
+                continue;
+            }
+
+            $etablissementKey = $this->normalizeKey($actif['etablissement'] ?? '');
+            $valeurKey = isset($actif['valeur_actuelle']) ? number_format((float) $actif['valeur_actuelle'], 2, '.', '') : '';
+            $key = $natureKey . '|' . $etablissementKey . '|' . $valeurKey;
+
+            if (isset($seen[$key])) {
+                $filtered[$seen[$key]] = $this->mergeActifData($filtered[$seen[$key]], $actif);
+                continue;
+            }
+
+            $seen[$key] = count($filtered);
+            $filtered[] = $actif;
+        }
+
+        return $filtered;
+    }
+
+    private function normalizeKey(string $value): string
+    {
+        $normalized = mb_strtolower(trim($value), 'UTF-8');
+        $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
+        $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized);
+
+        return trim((string) $normalized, '_');
+    }
+
+    private function isCryptoNature(string $value): bool
+    {
+        return str_contains($value, 'crypto')
+            || str_contains($value, 'bitcoin')
+            || str_contains($value, 'btc')
+            || str_contains($value, 'ethereum')
+            || str_contains($value, 'eth')
+            || str_contains($value, 'solana')
+            || str_contains($value, 'xrp')
+            || str_contains($value, 'token');
     }
 
     private function getSystemPrompt(): string

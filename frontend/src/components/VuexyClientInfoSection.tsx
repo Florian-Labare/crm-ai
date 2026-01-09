@@ -25,6 +25,10 @@ interface VuexyClientInfoSectionProps {
   formatCurrency: (amount?: number) => string;
   onEditSection?: (sectionType: SectionType, data?: any, isNew?: boolean) => void;
   onDeleteItem?: (type: 'enfant' | 'revenu' | 'conjoint' | 'actif' | 'bien' | 'passif' | 'epargne', id: number) => void;
+  onDeleteBaeDetail?: (
+    field: 'actifs_financiers_details' | 'actifs_immo_details' | 'actifs_autres_details' | 'passifs_details',
+    index: number
+  ) => void;
 }
 
 export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
@@ -33,6 +37,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   formatCurrency,
   onEditSection,
   onDeleteItem,
+  onDeleteBaeDetail,
 }) => {
   // Calcul des revenus annuels depuis le tableau client.revenus (prioritaire)
   // Fallback sur les champs uniques pour compatibilité avec anciennes données
@@ -118,6 +123,8 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
     client.autres_epargnes?.length > 0 ||
     client.passifs?.length > 0 ||
     client.bae_epargne;
+
+  const showAudioConsent = client.consentement_audio !== undefined;
 
   const buildBesoinLabels = (): string[] => {
     const labels: string[] = [];
@@ -672,6 +679,25 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         )}
       </VuexyInfoSection>
 
+      {showAudioConsent && (
+        <VuexyInfoSection
+          title="Consentement"
+          icon={<Activity size={18} />}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <VuexyInfoRow
+              label="Enregistrement accepté"
+              value={
+                client.consentement_audio
+                  ? 'Oui, le client a accepté'
+                  : 'Non, le client a refusé'
+              }
+              empty={false}
+            />
+          </div>
+        </VuexyInfoSection>
+      )}
+
       {/* ========================================
           SECTION MÈRE : ÉPARGNE & PATRIMOINE (UNIFIÉE)
           ======================================== */}
@@ -681,6 +707,8 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
           formatDate={formatDate}
           formatCurrency={formatCurrency}
           onEditItem={onEditSection}
+          onDeleteItem={onDeleteItem}
+          onDeleteBaeDetail={onDeleteBaeDetail}
         />
       )}
 

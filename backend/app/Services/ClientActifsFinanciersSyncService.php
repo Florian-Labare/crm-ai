@@ -16,6 +16,8 @@ class ClientActifsFinanciersSyncService
      */
     public function syncActifsFinanciers(Client $client, array $actifsData): void
     {
+        $actifsData = $this->sanitizeIncomingActifs($actifsData);
+
         Log::info("📈 [ACTIFS FINANCIERS] Synchronisation des actifs financiers pour le client #{$client->id}", [
             'nombre_actifs_recus' => count($actifsData),
         ]);
@@ -92,6 +94,69 @@ class ClientActifsFinanciersSyncService
         }
 
         return null;
+    }
+
+    private function sanitizeIncomingActifs(array $actifsData): array
+    {
+        $filtered = [];
+        foreach ($actifsData as $actif) {
+            $actif = $this->filterEmptyValues($actif);
+            if (empty($actif)) {
+                continue;
+            }
+
+            $nature = $this->normalizeString($actif['nature'] ?? '');
+            if ($nature === null) {
+                continue;
+            }
+
+            if ($this->isCryptoNature($nature)) {
+                Log::info("📈 [ACTIFS FINANCIERS] Actif crypto ignoré (autres épargnes)", [
+                    'nature' => $actif['nature'] ?? 'inconnu',
+                ]);
+                continue;
+            }
+
+            $filtered[] = $actif;
+        }
+
+        return $this->deduplicateByKey($filtered);
+    }
+
+    private function deduplicateByKey(array $actifs): array
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($actifs as $actif) {
+            $nature = $this->normalizeString($actif['nature'] ?? '');
+            $etablissement = $this->normalizeString($actif['etablissement'] ?? '');
+            $valueKey = isset($actif['valeur_actuelle']) ? number_format((float) $actif['valeur_actuelle'], 2, '.', '') : '';
+            $key = ($nature ?? '') . '|' . ($etablissement ?? '') . '|' . $valueKey;
+
+            if (isset($seen[$key])) {
+                $index = $seen[$key];
+                $result[$index] = array_merge($result[$index], array_filter($actif, fn($v) => $v !== null && $v !== ''));
+                continue;
+            }
+
+            $seen[$key] = count($result);
+            $result[] = $actif;
+        }
+
+        return $result;
+    }
+
+    private function isCryptoNature(string $value): bool
+    {
+        return str_contains($value, 'crypto')
+            || str_contains($value, 'bitcoin')
+            || str_contains($value, 'btc')
+            || str_contains($value, 'ethereum')
+            || str_contains($value, 'eth')
+            || str_contains($value, 'solana')
+            || str_contains($value, 'xrp')
+            || str_contains($value, 'token');
     }
 
     /**
