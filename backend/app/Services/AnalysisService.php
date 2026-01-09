@@ -1307,6 +1307,9 @@ class AnalysisService
             // 🛑 Gère explicitement les négations/affirmations orales (oui/non)
             $this->applyBooleanNegationsFromTranscript($transcription, $data);
 
+            // 🎙️ Consentement audio - détection explicite dans la transcription
+            $this->hydrateConsentementAudioFromTranscript($transcription, $data);
+
             // 🔁 Sécurise les drapeaux entreprise grâce à la transcription brute
             $this->hydrateEnterpriseFieldsFromTranscript($transcription, $data);
 
@@ -2013,6 +2016,55 @@ class AnalysisService
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Détecte explicitement le consentement audio dans la transcription.
+     */
+    private function hydrateConsentementAudioFromTranscript(string $transcription, array &$data): void
+    {
+        $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
+
+        $negative = [
+            "/je\s+ne\s+souhaite\s+pas\s+être\s+enregistr[ée]/u",
+            "/je\s+ne\s+veux\s+pas\s+être\s+enregistr[ée]/u",
+            "/je\s+refuse\s+l['e]\s+enregistrement/u",
+            "/pas\s+d['e]\s+enregistrement/u",
+            "/sans\s+enregistrement/u",
+            "/je\s+ne\s+suis\s+pas\s+d['e]\s+accord\s+pour\s+l['e]\s+enregistrement/u",
+            "/je\s+ne\s+suis\s+pas\s+d['e]\s+accord\s+pour\s+enregistrer/u",
+            "/je\s+n['e]\s+accepte\s+pas\s+l['e]\s+enregistrement/u",
+            "/je\s+n['e]\s+accepte\s+pas\s+que\s+.*\s+soit\s+enregistr[ée]/u",
+            "/ne\s+pas\s+enregistrer\s+(?:le\s+)?(?:rdv|rendez-vous|entretien|conversation)/u",
+        ];
+
+        foreach ($negative as $regex) {
+            if (preg_match($regex, $text)) {
+                Log::info('🔍 [CONSENTEMENT] Refus détecté', ['pattern' => $regex]);
+                $data['consentement_audio'] = false;
+                return;
+            }
+        }
+
+        $positive = [
+            "/j['e]\s+accepte\s+l['e]\s+enregistrement/u",
+            "/j['e]\s+accepte\s+que\s+.*\s+soit\s+enregistr[ée]/u",
+            "/je\s+suis\s+d['e]\s+accord\s+pour\s+l['e]\s+enregistrement/u",
+            "/je\s+suis\s+d['e]\s+accord\s+pour\s+enregistrer/u",
+            "/ok\s+pour\s+l['e]\s+enregistrement/u",
+            "/oui\s+pour\s+l['e]\s+enregistrement/u",
+            "/vous\s+pouvez\s+enregistrer/u",
+            "/vous\s+pouvez\s+enregistrer\s+(?:le\s+)?(?:rdv|rendez-vous|entretien|conversation)/u",
+            "/c['e]\s+est\s+bon\s+pour\s+l['e]\s+enregistrement/u",
+        ];
+
+        foreach ($positive as $regex) {
+            if (preg_match($regex, $text)) {
+                Log::info('✅ [CONSENTEMENT] Accord détecté', ['pattern' => $regex]);
+                $data['consentement_audio'] = true;
+                return;
             }
         }
     }

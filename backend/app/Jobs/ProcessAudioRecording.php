@@ -271,6 +271,22 @@ class ProcessAudioRecording implements ShouldQueue
                     $filteredData['civilite'] = $this->normalizeCivilite($filteredData['civilite']);
                 }
 
+                // 🎙️ Appliquer immédiatement le consentement audio (même en mode review)
+                if (array_key_exists('consentement_audio', $filteredData)) {
+                    $consentValue = $filteredData['consentement_audio'];
+                    unset($filteredData['consentement_audio']);
+
+                    if ($consentValue !== null) {
+                        $client->consentement_audio = (bool) $consentValue;
+                        if ($client->isDirty('consentement_audio')) {
+                            $client->save();
+                            Log::info("✅ Consentement audio mis à jour pour le client #{$client->id}", [
+                                'consentement_audio' => $client->consentement_audio,
+                            ]);
+                        }
+                    }
+                }
+
                 // 🔒 MODE REVIEW : Créer un PendingChange au lieu d'appliquer directement
                 if ($this->reviewMode) {
                     Log::info("🔍 [MODE REVIEW] Création d'un PendingChange pour validation", [
@@ -340,6 +356,22 @@ class ProcessAudioRecording implements ShouldQueue
                 $client = $result['client'];
                 $wasExisting = $result['was_existing'];
                 $cleanData = $result['clean_data'];
+
+                // 🎙️ Appliquer immédiatement le consentement audio (même en mode review)
+                if (array_key_exists('consentement_audio', $cleanData)) {
+                    $consentValue = $cleanData['consentement_audio'];
+                    unset($cleanData['consentement_audio']);
+
+                    if ($consentValue !== null) {
+                        $client->consentement_audio = (bool) $consentValue;
+                        if ($client->isDirty('consentement_audio')) {
+                            $client->save();
+                            Log::info("✅ Consentement audio mis à jour pour le client #{$client->id}", [
+                                'consentement_audio' => $client->consentement_audio,
+                            ]);
+                        }
+                    }
+                }
 
                 // 🔒 MODE REVIEW : Si un client EXISTANT a été trouvé, créer un PendingChange
                 if ($wasExisting && $this->reviewMode) {

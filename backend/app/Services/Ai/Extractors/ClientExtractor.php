@@ -161,8 +161,21 @@ Extraire UNIQUEMENT les informations personnelles du client depuis la transcript
 - "details_activites_sportives" (string) : détails
 - "niveau_activites_sportives" (string) : niveau de pratique
 
-**Autres :**
-- "consentement_audio" (boolean) : consentement pour l'enregistrement
+**Consentement enregistrement :**
+- "consentement_audio" (boolean) : true si le client accepte l'enregistrement, false s'il refuse
+
+🎙️ CONSENTEMENT AUDIO - RÈGLES CRITIQUES :
+- Si le conseiller demande "acceptez-vous que cette conversation soit enregistrée ?" et le client répond OUI → consentement_audio: true
+- Si le client dit "oui", "d'accord", "pas de problème", "je suis d'accord", "ça me va" → consentement_audio: true
+- Si le client dit "non", "je refuse", "je préfère pas", "non merci" → consentement_audio: false
+- Mots-clés à détecter : "enregistrer", "enregistrement", "conversation enregistrée", "accord pour l'enregistrement"
+
+Exemples consentement :
+- "Êtes-vous d'accord pour l'enregistrement ?" "Oui bien sûr" → consentement_audio: true
+- "Acceptez-vous que la conversation soit enregistrée ?" "Oui, pas de souci" → consentement_audio: true
+- "Êtes-vous d'accord pour que j'enregistre ?" "Non" → consentement_audio: false
+- "Ça vous dérange si j'enregistre ?" "Non ça ne me dérange pas" → consentement_audio: true (attention: "non" ici = pas de dérangement = acceptation)
+- "Est-ce que c'est ok pour vous l'enregistrement ?" "Oui c'est ok" → consentement_audio: true
 
 📋 STRUCTURE ENFANTS (tableau d'objets) :
 Si le client mentionne ses enfants, retourne un tableau avec ces champs par enfant :
@@ -255,6 +268,7 @@ Exemple JSON valide (CLIENT PRINCIPAL uniquement) :
   "activites_sportives": true,
   "details_activites_sportives": "tennis, natation",
   "niveau_activites_sportives": "loisir",
+  "consentement_audio": true,
   "enfants": [
     {"prenom": "Marie", "date_naissance": "2010-01-01", "fiscalement_a_charge": true}
   ]
