@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use App\Services\Ai\RouterService;
 use App\Services\Ai\AiDataNormalizer;
+use App\Services\Ai\ExtractionGuardrailsService;
 use App\Services\Ai\Extractors\ClientExtractor;
 use App\Services\Ai\Extractors\ConjointExtractor;
 use App\Services\Ai\Extractors\PrevoyanceExtractor;
@@ -36,6 +37,7 @@ class AnalysisService
     public function __construct(
         private RouterService $router,
         private AiDataNormalizer $normalizer,
+        private ExtractionGuardrailsService $guardrails,
         private ClientExtractor $clientExtractor,
         private ConjointExtractor $conjointExtractor,
         private PrevoyanceExtractor $prevoyanceExtractor,
@@ -90,6 +92,14 @@ class AnalysisService
 
             // 🔒 GARDE-FOU : Nettoyer les données client si elles correspondent au conjoint
             $mergedData = $this->cleanClientDataIfConjointDetected($mergedData, $sections);
+
+            // 🛡️ GUARDRAILS LAYER - Détecter les champs manqués et valider
+            $mergedData = $this->guardrails->apply($mergedData, $transcription);
+            $mergedData = $this->guardrails->checkCoherence($mergedData);
+
+            Log::info('🛡️ [AnalysisService] Guardrails appliqués', [
+                'keys_after_guardrails' => array_keys($mergedData),
+            ]);
 
             // 3️⃣ NORMALISATION - Appliquer toutes les règles de normalisation
             $normalizedData = $this->normalizer->normalize($mergedData, $transcription);
