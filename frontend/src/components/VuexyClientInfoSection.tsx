@@ -34,16 +34,10 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   onEditSection,
   onDeleteItem,
 }) => {
-  // Calcul des revenus annuels depuis toutes les sources possibles
+  // Calcul des revenus annuels depuis le tableau client.revenus (prioritaire)
+  // Fallback sur les champs uniques pour compatibilité avec anciennes données
   const calculateRevenusAnnuels = (): number | null => {
-    if (client.revenus_annuels && client.revenus_annuels > 0) {
-      return client.revenus_annuels;
-    }
-
-    if (client.bae_retraite?.revenus_annuels && client.bae_retraite.revenus_annuels > 0) {
-      return client.bae_retraite.revenus_annuels;
-    }
-
+    // 1. PRIORITÉ : Calculer depuis le tableau des revenus (client_revenus)
     if (client.revenus && Array.isArray(client.revenus) && client.revenus.length > 0) {
       let totalAnnuel = 0;
       for (const revenu of client.revenus) {
@@ -60,6 +54,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
           } else if (periodicite.includes('semest')) {
             totalAnnuel += montant * 2;
           } else {
+            // Par défaut, considérer comme mensuel
             totalAnnuel += montant * 12;
           }
         }
@@ -67,6 +62,16 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
       if (totalAnnuel > 0) {
         return totalAnnuel;
       }
+    }
+
+    // 2. FALLBACK : Champ unique revenus_annuels (anciennes données)
+    if (client.revenus_annuels && client.revenus_annuels > 0) {
+      return client.revenus_annuels;
+    }
+
+    // 3. FALLBACK : Revenus dans bae_retraite
+    if (client.bae_retraite?.revenus_annuels && client.bae_retraite.revenus_annuels > 0) {
+      return client.bae_retraite.revenus_annuels;
     }
 
     return null;
@@ -114,6 +119,94 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
     client.passifs?.length > 0 ||
     client.bae_epargne;
 
+  const buildBesoinLabels = (): string[] => {
+    const labels: string[] = [];
+    const needs: string[] = Array.isArray(client.besoins) ? client.besoins : [];
+
+    const isRetraiteBesoinText = (besoin: string) => {
+      const text = besoin.toLowerCase();
+      if (text.includes('retraite') || text.includes('plan epargne retraite') || text.includes('plan épargne retraite')) {
+        return true;
+      }
+      return /\bper\b/.test(text);
+    };
+
+    const matches = (keywords: string[]) =>
+      needs.some((besoin) => keywords.some((keyword) => besoin.toLowerCase().includes(keyword)));
+
+    if (matches(['santé', 'sante', 'mutuelle', 'complémentaire', 'complementaire'])) {
+      labels.push('Santé');
+    }
+    if (matches(['prévoyance', 'prevoyance', 'décès', 'deces', 'invalidité', 'invalidite', 'obsèques', 'obseques'])) {
+      labels.push('Prévoyance');
+    }
+    if (matches(['retraite', 'per', 'pension'])) {
+      labels.push('Retraite');
+    }
+    if (matches(['emprunt', 'emprunteur', 'crédit', 'credit', 'assurance emprunteur'])) {
+      labels.push('Emprunteur');
+    }
+    const isEpargneBesoin = needs.some((besoin) => {
+      const lower = besoin.toLowerCase();
+      if (isRetraiteBesoinText(lower)) {
+        return false;
+      }
+      return ['epargne', 'épargne', 'patrimoine', 'placement', 'investissement', 'assurance vie', 'pea', 'livret', 'immobilier']
+        .some((keyword) => lower.includes(keyword));
+    });
+
+    if (isEpargneBesoin) {
+      labels.push('Épargne');
+    }
+
+    if (showSante && !labels.includes('Santé')) {
+      labels.push('Santé');
+    }
+    if (showPrevoyance && !labels.includes('Prévoyance')) {
+      labels.push('Prévoyance');
+    }
+    if (showRetraite && !labels.includes('Retraite')) {
+      labels.push('Retraite');
+    }
+    if (showEpargneSection && !labels.includes('Épargne')) {
+      labels.push('Épargne');
+    }
+
+    const normalized = needs
+      .map((besoin) => besoin.trim())
+      .filter((besoin) => besoin.length > 0);
+
+    if (labels.length === 0 && normalized.length > 0) {
+      return normalized.map((besoin) => besoin[0].toUpperCase() + besoin.slice(1));
+    }
+
+    return labels;
+  };
+
+  const besoinLabels = buildBesoinLabels();
+  const renderBesoinBadges = () => {
+    if (besoinLabels.length === 0) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]">
+          0 besoins
+        </span>
+      );
+    }
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        {besoinLabels.map((label) => (
+          <span
+            key={label}
+            className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8">
       {/* Stats Grid */}
@@ -139,6 +232,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         <VuexyStatCard
           label="Besoins"
           value={client.besoins?.length || 0}
+          footer={renderBesoinBadges()}
           icon={<TrendingUp size={20} />}
           color="purple"
           delay={0.3}
@@ -763,8 +857,27 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
             />
             <VuexyInfoRow
               label="Contrat en place"
-              value={client.bae_retraite.contrat_en_place}
-              empty={!client.bae_retraite.contrat_en_place}
+              value={(() => {
+                const value = client.bae_retraite.contrat_en_place;
+                if (!value) {
+                  return undefined;
+                }
+                const lowered = value.toLowerCase();
+                if (/\bper\b/.test(lowered) || lowered.includes('plan epargne retraite') || lowered.includes('plan épargne retraite')) {
+                  return undefined;
+                }
+                const etablissement = client.bae_retraite.designation_etablissement;
+                if (etablissement) {
+                  return `${value} (${etablissement})`;
+                }
+                return value;
+              })()}
+              empty={
+                !client.bae_retraite.contrat_en_place
+                || /\bper\b/i.test(client.bae_retraite.contrat_en_place)
+                || client.bae_retraite.contrat_en_place.toLowerCase().includes('plan epargne retraite')
+                || client.bae_retraite.contrat_en_place.toLowerCase().includes('plan épargne retraite')
+              }
             />
             <VuexyInfoRow
               label="Cotisations annuelles"

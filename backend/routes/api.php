@@ -13,6 +13,7 @@ use App\Http\Controllers\RecordingController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpeakerCorrectionController;
 use App\Http\Controllers\PendingChangesController;
+use App\Http\Controllers\MeetingSummaryController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -101,6 +102,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/clients/{id}/export/pdf', [ExportController::class, 'exportPdf']);
     Route::get('/clients/{id}/export/word', [ExportController::class, 'exportWord']);
     Route::get('/clients/{id}/questionnaires/export/pdf', [ExportController::class, 'exportQuestionnairePdf']);
+
+    // Résumé de rendez-vous
+    Route::get('/clients/{client}/meeting-summary', [MeetingSummaryController::class, 'showLatest']);
+    Route::post('/clients/{client}/meeting-summary/regenerate', [MeetingSummaryController::class, 'regenerate']);
 
     // ============================================
     // 🔒 PENDING CHANGES - Système de merge avec validation

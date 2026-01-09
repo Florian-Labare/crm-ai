@@ -161,4 +161,9 @@ class Client extends Model
     {
         return $this->hasMany(RecordingSession::class);
     }
+
+    public function meetingSummaries(): HasMany
+    {
+        return $this->hasMany(MeetingSummary::class);
+    }
 }

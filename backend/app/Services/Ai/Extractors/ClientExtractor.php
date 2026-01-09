@@ -135,10 +135,13 @@ Extraire UNIQUEMENT les informations personnelles du client depuis la transcript
 **Situation professionnelle :**
 - "situation_actuelle" (string) : "Salarié(e)", "Retraité(e)", "Étudiant(e)", "Demandeur d'emploi"
 - "profession" (string) : métier exact (ex: "plombier", "médecin")
-- "revenus_annuels" (string) : revenus annuels
 - "risques_professionnels" (boolean) : true/false
 - "details_risques_professionnels" (string) : détails sur les risques
 - "date_evenement_professionnel" (string) : date d'un événement pro
+
+⚠️ IMPORTANT - REVENUS :
+- NE PAS extraire les revenus ici (salaires, loyers, SCI, dividendes)
+- Les revenus sont gérés par un extracteur dédié ClientRevenusExtractor
 
 **Informations entreprise :**
 - "chef_entreprise" (boolean) : true si chef d'entreprise

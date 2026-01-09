@@ -21,6 +21,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Services\ClientSyncService;
 use Illuminate\Queue\InteractsWithQueue;
 use App\Services\TranscriptionService;
+use App\Services\MeetingSummaryService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Log;
@@ -85,6 +86,32 @@ class ProcessAudioRecording implements ShouldQueue
         MergeService $mergeService,
         AssetCategorizationService $assetCategorizationService
     ): void {
+        $summaryStored = false;
+        $storeMeetingSummary = function (Client $client, string $transcription) use (&$summaryStored): void {
+            if ($summaryStored) {
+                return;
+            }
+
+            try {
+                $summaryService = new MeetingSummaryService();
+                $summaryPayload = $summaryService->generateSummary($transcription);
+                if (!empty($summaryPayload['summary_text']) || !empty($summaryPayload['summary_json'])) {
+                    $summaryService->storeSummary(
+                        $client->id,
+                        $this->audioRecord->user_id,
+                        $this->audioRecord->id,
+                        $summaryPayload
+                    );
+                    $summaryStored = true;
+                    Log::info("📝 Résumé de rendez-vous généré pour audio #{$this->audioRecord->id}");
+                } else {
+                    Log::warning("⚠️ Résumé non généré (payload vide) pour audio #{$this->audioRecord->id}");
+                }
+            } catch (\Throwable $e) {
+                Log::warning("⚠️ Échec génération résumé audio #{$this->audioRecord->id}: {$e->getMessage()}");
+            }
+        };
+
         try {
             Log::info("🎵 Début du traitement audio #{$this->audioRecord->id}");
 
@@ -146,7 +173,10 @@ class ProcessAudioRecording implements ShouldQueue
 
             if ($this->existingClientId) {
                 // Mise à jour d'un client existant (vérifier qu'il appartient au bon utilisateur)
-                $client = Client::where('id', $this->existingClientId)
+                // Utiliser withoutGlobalScope pour éviter le filtre par team qui peut échouer
+                // si le job s'exécute dans un contexte différent (queue worker)
+                $client = Client::withoutGlobalScope(\App\Scopes\TeamScope::class)
+                    ->where('id', $this->existingClientId)
                     ->where('user_id', $this->audioRecord->user_id)
                     ->firstOrFail();
 
@@ -270,6 +300,8 @@ class ProcessAudioRecording implements ShouldQueue
                         'conflicts_count' => $pendingChange->conflicts_count,
                     ]);
 
+                    $storeMeetingSummary($client, $transcription);
+
                     // Sortir du job - les relations seront synchronisées après validation
                     return;
                 }
@@ -333,6 +365,8 @@ class ProcessAudioRecording implements ShouldQueue
                         'changes_count' => $pendingChange->changes_count,
                         'conflicts_count' => $pendingChange->conflicts_count,
                     ]);
+
+                    $storeMeetingSummary($client, $transcription);
 
                     return; // Sortir - validation manuelle requise
                 }
@@ -418,6 +452,8 @@ class ProcessAudioRecording implements ShouldQueue
                 'client_id' => $client->id,
                 'processed_at' => now(),
             ]);
+
+            $storeMeetingSummary($client, $transcription);
 
             Log::info("🎉 Traitement audio #{$this->audioRecord->id} terminé avec succès !");
 

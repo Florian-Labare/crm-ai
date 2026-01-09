@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAudioRequest;
 use App\Http\Resources\AudioRecordResource;
 use App\Models\AudioRecord;
+use App\Models\Client;
+use App\Scopes\TeamScope;
 use App\Services\AudioService;
 use Illuminate\Http\JsonResponse;
 
@@ -50,17 +52,29 @@ class AudioController extends Controller
      */
     public function status(int $id): JsonResponse
     {
-        // Récupérer l'enregistrement avec relations
-        $audioRecord = AudioRecord::with([
-            'client.conjoint',
-            'client.enfants',
-            'client.santeSouhait',
-            'client.baePrevoyance',
-            'client.baeRetraite',
-            'client.baeEpargne',
-        ])
-            ->where('user_id', auth()->id())
+        // Récupérer l'enregistrement audio (sans eager load le client pour éviter les erreurs de scope)
+        $audioRecord = AudioRecord::where('user_id', auth()->id())
             ->findOrFail($id);
+
+        // Charger le client séparément, sans le TeamScope pour éviter les erreurs
+        // si le client a été créé/modifié par le job et n'est pas encore accessible via le scope
+        if ($audioRecord->client_id) {
+            $client = Client::withoutGlobalScope(TeamScope::class)
+                ->with([
+                    'conjoint',
+                    'enfants',
+                    'santeSouhait',
+                    'baePrevoyance',
+                    'baeRetraite',
+                    'baeEpargne',
+                ])
+                ->find($audioRecord->client_id);
+
+            // Associer le client chargé à l'audioRecord pour la resource
+            if ($client) {
+                $audioRecord->setRelation('client', $client);
+            }
+        }
 
         // Retourner la resource formatée
         return AudioRecordResource::make($audioRecord)

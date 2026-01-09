@@ -13,7 +13,7 @@ import { ReviewChangesModal } from "../components/ReviewChangesModal";
 import { TemplateSelectModal } from "../components/TemplateSelectModal";
 import { DocumentFormModal } from "../components/DocumentFormModal";
 import { SectionEditModal, type SectionType } from "../components/SectionEditModal";
-import { Info, ClipboardList, Folder, AlertTriangle } from "lucide-react";
+import { Info, ClipboardList, Folder, AlertTriangle, FileText } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
 
@@ -76,12 +76,35 @@ interface DocumentFormField {
   value: string | number | null;
 }
 
+interface MeetingSummary {
+  id: number;
+  summary_text?: string | null;
+  summary_json?: {
+    overview?: string;
+    chronology?: Array<{
+      phase?: string;
+      topics?: Array<{
+        title?: string;
+        details?: string[];
+      }>;
+    }>;
+    key_points?: Array<{
+      section?: string;
+      items?: string[];
+    }>;
+    needs?: string[];
+    next_steps?: string[];
+  } | null;
+  created_at?: string;
+  audio_record_id?: number | null;
+}
+
 const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [client, setClient] = useState<ExtendedClient | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents" | "summary">("info");
   const [documents, setDocuments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -96,6 +119,9 @@ const ClientDetailPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingChanges, setPendingChanges] = useState<PendingChangeItem[]>([]);
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
+  const [meetingSummary, setMeetingSummary] = useState<MeetingSummary | null>(null);
+  const [meetingSummaryLoading, setMeetingSummaryLoading] = useState(false);
+  const [meetingSummaryGenerating, setMeetingSummaryGenerating] = useState(false);
 
   // État pour le modal d'édition par section
   const [editModal, setEditModal] = useState<{
@@ -151,6 +177,12 @@ const ClientDetailPage: React.FC = () => {
     }
   }, [showDocumentFormModal, formTemplateId]);
 
+  useEffect(() => {
+    if (activeTab === "summary") {
+      fetchMeetingSummary();
+    }
+  }, [activeTab]);
+
   const fetchDocuments = async () => {
     try {
       const res = await api.get(`/clients/${id}/documents`);
@@ -168,6 +200,34 @@ const ClientDetailPage: React.FC = () => {
     } catch (err) {
       console.error("Erreur lors du chargement des templates :", err);
       toast.error("Erreur lors du chargement des templates");
+    }
+  };
+
+  const fetchMeetingSummary = async () => {
+    try {
+      setMeetingSummaryLoading(true);
+      const res = await api.get(`/clients/${id}/meeting-summary`);
+      setMeetingSummary(res.data?.data || null);
+    } catch (err) {
+      console.error("Erreur lors du chargement du résumé :", err);
+      setMeetingSummary(null);
+    } finally {
+      setMeetingSummaryLoading(false);
+    }
+  };
+
+  const handleGenerateMeetingSummary = async () => {
+    if (!id) return;
+    try {
+      setMeetingSummaryGenerating(true);
+      const res = await api.post(`/clients/${id}/meeting-summary/regenerate`);
+      setMeetingSummary(res.data?.data || null);
+      toast.success("Résumé généré");
+    } catch (err: any) {
+      console.error("Erreur lors de la génération du résumé :", err);
+      toast.error(err.response?.data?.message || "Erreur lors de la génération du résumé");
+    } finally {
+      setMeetingSummaryGenerating(false);
     }
   };
 
@@ -500,6 +560,7 @@ const ClientDetailPage: React.FC = () => {
   };
 
   const selectedFormTemplate = templates.find((template: any) => template.id === formTemplateId);
+  const summaryData = meetingSummary?.summary_json;
 
   return (
     <>
@@ -558,7 +619,7 @@ const ClientDetailPage: React.FC = () => {
           {/* Vuexy Tabs */}
           <VuexyTabs
             defaultTab={activeTab}
-            onTabChange={(tabId) => setActiveTab(tabId as "info" | "questionnaires" | "documents")}
+            onTabChange={(tabId) => setActiveTab(tabId as "info" | "questionnaires" | "documents" | "summary")}
             tabs={[
               {
                 id: "info",
@@ -596,6 +657,175 @@ const ClientDetailPage: React.FC = () => {
                     onSendEmail={handleSendDocumentByEmail}
                     onDelete={handleDeleteDocument}
                   />
+                ),
+              },
+              {
+                id: "summary",
+                label: "Résumé de rendez-vous",
+                icon: <FileText size={18} />,
+                content: (
+                  <div className="space-y-6">
+                    <div className="vx-card p-6">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#5E5873]">Résumé de rendez-vous</h3>
+                          <p className="text-sm text-[#6E6B7B]">
+                            {meetingSummary?.created_at
+                              ? `Généré le ${new Date(meetingSummary.created_at).toLocaleDateString("fr-FR")}`
+                              : "Aucun résumé disponible"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {meetingSummary?.audio_record_id && (
+                            <span className="text-xs font-semibold text-[#7367F0] bg-[#F2F0FF] px-3 py-1 rounded-full">
+                              Audio #{meetingSummary.audio_record_id}
+                            </span>
+                          )}
+                          <button
+                            onClick={handleGenerateMeetingSummary}
+                            className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#7367F0] text-white hover:bg-[#6558E8] transition-colors disabled:opacity-60"
+                            disabled={meetingSummaryGenerating}
+                          >
+                            {meetingSummaryGenerating ? "Génération..." : "Générer un résumé"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {meetingSummaryLoading && (
+                      <div className="vx-card p-6 text-sm text-[#6E6B7B]">Chargement du résumé...</div>
+                    )}
+
+                    {!meetingSummaryLoading && !meetingSummary && (
+                      <div className="vx-card p-6 text-sm text-[#6E6B7B]">
+                        Aucun résumé n'a encore été généré pour ce client.
+                      </div>
+                    )}
+
+                    {!meetingSummaryLoading && meetingSummary && (
+                      <>
+                        {summaryData?.overview && (
+                          <div className="vx-card p-6 border-l-4 border-[#7367F0]">
+                            <h4 className="text-sm font-semibold text-[#7367F0] uppercase tracking-wide mb-2">
+                              Vue d'ensemble
+                            </h4>
+                            <p className="text-[#5E5873] leading-relaxed">{summaryData.overview}</p>
+                          </div>
+                        )}
+
+                        {summaryData?.chronology && summaryData.chronology.length > 0 && (
+                          <div className="vx-card p-6">
+                            <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">
+                              Chronologie de l'échange
+                            </h4>
+                            <div className="space-y-4">
+                              {summaryData.chronology.map((phase, index) => (
+                                <div
+                                  key={`${phase.phase || "phase"}-${index}`}
+                                  className="rounded-xl border border-[#F0EEFA] bg-[#FBFAFF] p-4"
+                                >
+                                  {phase.phase && (
+                                    <div className="text-sm font-semibold text-[#5E5873] mb-2">
+                                      {phase.phase}
+                                    </div>
+                                  )}
+                                  <div className="space-y-3">
+                                    {(phase.topics || []).map((topic, topicIndex) => (
+                                      <div key={`${topic.title || "topic"}-${topicIndex}`}>
+                                        {topic.title && (
+                                          <div className="text-sm font-semibold text-[#6E6B7B]">
+                                            {topic.title}
+                                          </div>
+                                        )}
+                                        {topic.details && topic.details.length > 0 && (
+                                          <ul className="mt-2 space-y-1 text-sm text-[#5E5873] list-disc list-inside">
+                                            {topic.details.map((detail, detailIndex) => (
+                                              <li key={`${detail}-${detailIndex}`}>{detail}</li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {summaryData?.key_points && summaryData.key_points.length > 0 && (
+                          <div className="vx-card p-6">
+                            <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">
+                              Points essentiels
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {summaryData.key_points.map((section, index) => (
+                                <div key={`${section.section || "section"}-${index}`} className="rounded-xl border border-[#F0EEFA] p-4">
+                                  {section.section && (
+                                    <div className="text-sm font-semibold text-[#6E6B7B] mb-2">
+                                      {section.section}
+                                    </div>
+                                  )}
+                                  {section.items && section.items.length > 0 && (
+                                    <ul className="space-y-1 text-sm text-[#5E5873] list-disc list-inside">
+                                      {section.items.map((item, itemIndex) => (
+                                        <li key={`${item}-${itemIndex}`}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(summaryData?.needs?.length || summaryData?.next_steps?.length) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {summaryData.needs && summaryData.needs.length > 0 && (
+                              <div className="vx-card p-6">
+                                <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">
+                                  Besoins exprimés
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {summaryData.needs.map((need, needIndex) => (
+                                    <span
+                                      key={`${need}-${needIndex}`}
+                                      className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]"
+                                    >
+                                      {need}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {summaryData.next_steps && summaryData.next_steps.length > 0 && (
+                              <div className="vx-card p-6">
+                                <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">
+                                  Suites envisagées
+                                </h4>
+                                <ul className="space-y-1 text-sm text-[#5E5873] list-disc list-inside">
+                                  {summaryData.next_steps.map((step, stepIndex) => (
+                                    <li key={`${step}-${stepIndex}`}>{step}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {!summaryData && meetingSummary.summary_text && (
+                          <div className="vx-card p-6">
+                            <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">
+                              Résumé
+                            </h4>
+                            <pre className="whitespace-pre-wrap text-sm text-[#5E5873] font-sans">
+                              {meetingSummary.summary_text}
+                            </pre>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 ),
               },
             ]}

@@ -2,7 +2,8 @@ import React from 'react';
 
 interface VuexyStatCardProps {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
+  footer?: React.ReactNode;
   icon: React.ReactNode;
   color: 'blue' | 'green' | 'purple' | 'orange';
   delay?: number;
@@ -11,10 +12,15 @@ interface VuexyStatCardProps {
 export const VuexyStatCard: React.FC<VuexyStatCardProps> = ({
   label,
   value,
+  footer,
   icon,
   color,
   delay = 0,
 }) => {
+  const isCompactValue = typeof value === 'string' && value.length > 22;
+  const valueClass = isCompactValue
+    ? 'text-base md:text-lg font-semibold text-[#5E5873] leading-tight'
+    : 'text-3xl font-bold text-[#5E5873]';
   const colorClasses = {
     blue: {
       bg: 'vx-gradient-bg blue',
@@ -47,7 +53,8 @@ export const VuexyStatCard: React.FC<VuexyStatCardProps> = ({
           {icon}
         </div>
       </div>
-      <div className="text-3xl font-bold text-[#5E5873]">{value}</div>
+      <div className={valueClass}>{value}</div>
+      {footer && <div className="mt-3">{footer}</div>}
     </div>
   );
 };

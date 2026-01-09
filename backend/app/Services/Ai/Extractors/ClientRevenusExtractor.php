@@ -85,7 +85,7 @@ Détecter et extraire toutes les sources de revenus mentionnées par le client.
 - Ne tiens compte QUE des phrases du client
 
 🔍 MOTS-CLÉS REVENUS :
-Salaire, revenus, rémunération, pension, retraite, loyer, revenus locatifs, dividendes, BNC, BIC, revenus fonciers, allocations, indemnités
+Salaire, revenus, rémunération, pension, retraite, loyer, revenus locatifs, dividendes, BNC, BIC, revenus fonciers, allocations, indemnités, SCI, SCPI, rente, fermage
 
 ✅ SI LE CLIENT PARLE DE REVENUS :
 
@@ -93,7 +93,7 @@ Retourne :
 {
   "client_revenus": [
     {
-      "nature": "salaire|pension|revenus_locatifs|dividendes|autre",
+      "nature": "salaire|pension|revenus_locatifs|dividendes|SCI|SCPI|BNC|BIC|autre",
       "periodicite": "mensuel|annuel|trimestriel",
       "montant": 3500.00
     }
@@ -101,15 +101,25 @@ Retourne :
 }
 
 📋 CHAMPS pour chaque revenu :
-- "nature" (string, requis) : Type de revenu (salaire, pension, revenus locatifs, dividendes, BNC, BIC, autre)
+- "nature" (string, requis) : Type de revenu
+  - "salaire" : revenus salariaux, rémunération
+  - "pension" : retraite, pension de réversion
+  - "revenus_locatifs" : loyers perçus sur immobilier en direct
+  - "SCI" : revenus de Société Civile Immobilière
+  - "SCPI" : revenus de parts de SCPI
+  - "dividendes" : dividendes d'actions ou parts sociales
+  - "BNC" : Bénéfices Non Commerciaux (professions libérales)
+  - "BIC" : Bénéfices Industriels et Commerciaux
+  - "autre" : tout autre type de revenu
 - "periodicite" (string, optionnel) : Fréquence (mensuel, annuel, trimestriel)
 - "montant" (decimal, optionnel) : Montant
 
 ⚠️ RÈGLES IMPORTANTES :
-- Créer une entrée séparée pour chaque source de revenu
+- Créer une entrée séparée pour CHAQUE source de revenu
 - Si plusieurs revenus mentionnés, retourner un array avec plusieurs objets
-- Si montant annuel mentionné pour salaire, le noter tel quel avec periodicite="annuel"
+- Si montant annuel mentionné, periodicite="annuel"
 - Si montant mensuel, periodicite="mensuel"
+- Les revenus de SCI/SCPI sont généralement annuels
 
 ❌ SI LE CLIENT NE PARLE PAS DE REVENUS :
 Retourne un objet vide :
@@ -148,7 +158,22 @@ Exemple 6 - Multiples sources :
   {"nature": "dividendes", "periodicite": "mensuel", "montant": 200}
 ]}
 
-Exemple 7 - Pas concerné :
+Exemple 7 - SCI :
+"J'ai une SCI qui me rapporte 25000 euros par an"
+→ {"client_revenus": [{"nature": "SCI", "periodicite": "annuel", "montant": 25000}]}
+
+Exemple 8 - Salaire + SCI :
+"Je gagne 4000€ par mois en salaire et j'ai une SCI qui me rapporte 30000€ annuels"
+→ {"client_revenus": [
+  {"nature": "salaire", "periodicite": "mensuel", "montant": 4000},
+  {"nature": "SCI", "periodicite": "annuel", "montant": 30000}
+]}
+
+Exemple 9 - SCPI :
+"Mes parts de SCPI me versent 8000€ par an"
+→ {"client_revenus": [{"nature": "SCPI", "periodicite": "annuel", "montant": 8000}]}
+
+Exemple 10 - Pas concerné :
 "Je veux partir à la retraite à 62 ans"
 → {}
 PROMPT;
