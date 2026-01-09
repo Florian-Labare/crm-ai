@@ -62,18 +62,12 @@ class DocumentTemplateFormService
             $defaultValue = $defaults[$variable] ?? null;
 
             if ($this->isComputedVariable($variable)) {
-                $label = $questionLabels[$variable] ?? $this->fieldService->labelForVariable($variable);
-            if ($label === 'Situation actuelle' && !$this->variableIsSituationActuelle($variable)) {
-                $label = $this->fieldService->labelForVariable($variable);
-            }
-            if ($label === 'Nom - Prénom - Date De Naissance' && !$this->variableIsFullName($variable)) {
-                $label = $this->fieldService->labelForVariable($variable);
-            }
-            $fields[] = [
-                'variable' => $variable,
-                'column' => $column,
-                'label' => $label,
-                'value' => $defaultValue,
+                $label = $this->buildLabel($variable, $questionLabels);
+                $fields[] = [
+                    'variable' => $variable,
+                    'column' => $column,
+                    'label' => $label,
+                    'value' => $defaultValue,
                 ];
                 continue;
             }
@@ -82,13 +76,7 @@ class DocumentTemplateFormService
                 ? $savedValue
                 : $defaultValue;
 
-            $label = $questionLabels[$variable] ?? $this->fieldService->labelForVariable($variable);
-            if ($label === 'Situation actuelle' && !$this->variableIsSituationActuelle($variable)) {
-                $label = $this->fieldService->labelForVariable($variable);
-            }
-            if ($label === 'Nom - Prénom - Date De Naissance' && !$this->variableIsFullName($variable)) {
-                $label = $this->fieldService->labelForVariable($variable);
-            }
+            $label = $this->buildLabel($variable, $questionLabels);
 
             $fields[] = [
                 'variable' => $variable,
@@ -99,6 +87,105 @@ class DocumentTemplateFormService
         }
 
         return $fields;
+    }
+
+    /**
+     * Construit le label pour une variable en ajoutant le suffixe contextuel
+     */
+    private function buildLabel(string $variable, array $questionLabels): string
+    {
+        $baseLabel = $questionLabels[$variable] ?? null;
+        $generatedLabel = $this->fieldService->labelForVariable($variable);
+
+        // Si pas de label du template, utiliser le label généré
+        if (!$baseLabel) {
+            return $generatedLabel;
+        }
+
+        // Vérifier si ce label du template est partagé par plusieurs variables
+        // Dans ce cas, utiliser le label généré qui est plus spécifique
+        if ($this->isSharedTemplateLabel($baseLabel, $variable)) {
+            return $generatedLabel;
+        }
+
+        // Extraire le suffixe contextuel du label généré
+        $suffix = $this->extractSuffix($generatedLabel);
+
+        // Si le label du template contient déjà le contexte, ne pas ajouter de suffixe
+        if (!$suffix || $this->labelAlreadyHasContext($baseLabel, $variable)) {
+            return $baseLabel;
+        }
+
+        return trim($baseLabel) . $suffix;
+    }
+
+    /**
+     * Vérifie si un label du template est partagé par plusieurs types de champs
+     */
+    private function isSharedTemplateLabel(string $label, string $variable): bool
+    {
+        $lower = strtolower($label);
+        $varLower = strtolower($variable);
+
+        // Labels connus comme étant partagés
+        $sharedLabels = [
+            'date et lieu de naissance',
+            'adresse complète',
+            'nom - prénom - date de naissance',
+            'situation actuelle',
+            'régime de protection juridique',
+            'total',
+            'premier objectif',
+            // Questionnaire risque - produits financiers
+            'obligations ou opcvm',
+            'actions ou opcvm',
+            'des fip',
+            'des scpi',
+            'des produits structurés',
+            'des produits monétaires',
+            'des parts sociales',
+            'des titres participatifs',
+            'des fps',
+            'défiscalisation girardin',
+        ];
+
+        foreach ($sharedLabels as $shared) {
+            if (str_contains($lower, $shared)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Extrait le suffixe contextuel d'un label (ex: " (conjoint)", " (enfant 1)")
+     */
+    private function extractSuffix(string $label): string
+    {
+        if (preg_match('/(\s*\([^)]+\))$/', $label, $matches)) {
+            return $matches[1];
+        }
+        return '';
+    }
+
+    /**
+     * Vérifie si le label du template contient déjà le contexte
+     */
+    private function labelAlreadyHasContext(string $label, string $variable): bool
+    {
+        $lower = strtolower($label);
+        $varLower = strtolower($variable);
+
+        // Si le label mentionne déjà conjoint/enfant/etc.
+        if (str_contains($lower, 'conjoint') && str_contains($varLower, 'conjoint')) {
+            return true;
+        }
+        if (preg_match('/enfant\s*\d/', $lower) && preg_match('/enfant\d/', $varLower)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

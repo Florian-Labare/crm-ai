@@ -464,7 +464,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
     });
 
     (client.autres_epargnes || []).forEach((epargne: any) => {
-      const nature = epargne.nature || '';
+      const nature = epargne.designation || epargne.nature || '';
       if (!nature && !epargne.valeur && !epargne.etablissement) return;
       const valeur = epargne.valeur !== undefined && epargne.valeur !== null ? Number(epargne.valeur) : null;
       autres.push({

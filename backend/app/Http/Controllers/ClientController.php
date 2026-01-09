@@ -84,7 +84,7 @@ class ClientController extends Controller
         $client->update($request->validated());
 
         // Créer automatiquement les sections BAE en fonction des besoins
-        if ($request->has('besoins')) {
+        if ($request->has('besoins') && is_array($request->besoins)) {
             $this->createBaeSectionsFromBesoins($client, $request->besoins);
         }
 
