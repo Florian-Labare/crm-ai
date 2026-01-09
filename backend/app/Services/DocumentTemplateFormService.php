@@ -62,11 +62,18 @@ class DocumentTemplateFormService
             $defaultValue = $defaults[$variable] ?? null;
 
             if ($this->isComputedVariable($variable)) {
-                $fields[] = [
-                    'variable' => $variable,
-                    'column' => $column,
-                    'label' => $questionLabels[$variable] ?? $this->fieldService->labelForVariable($variable),
-                    'value' => $defaultValue,
+                $label = $questionLabels[$variable] ?? $this->fieldService->labelForVariable($variable);
+            if ($label === 'Situation actuelle' && !$this->variableIsSituationActuelle($variable)) {
+                $label = $this->fieldService->labelForVariable($variable);
+            }
+            if ($label === 'Nom - Prénom - Date De Naissance' && !$this->variableIsFullName($variable)) {
+                $label = $this->fieldService->labelForVariable($variable);
+            }
+            $fields[] = [
+                'variable' => $variable,
+                'column' => $column,
+                'label' => $label,
+                'value' => $defaultValue,
                 ];
                 continue;
             }
@@ -75,10 +82,18 @@ class DocumentTemplateFormService
                 ? $savedValue
                 : $defaultValue;
 
+            $label = $questionLabels[$variable] ?? $this->fieldService->labelForVariable($variable);
+            if ($label === 'Situation actuelle' && !$this->variableIsSituationActuelle($variable)) {
+                $label = $this->fieldService->labelForVariable($variable);
+            }
+            if ($label === 'Nom - Prénom - Date De Naissance' && !$this->variableIsFullName($variable)) {
+                $label = $this->fieldService->labelForVariable($variable);
+            }
+
             $fields[] = [
                 'variable' => $variable,
                 'column' => $column,
-                'label' => $questionLabels[$variable] ?? $this->fieldService->labelForVariable($variable),
+                'label' => $label,
                 'value' => $value,
             ];
         }
@@ -165,5 +180,18 @@ class DocumentTemplateFormService
     private function isComputedVariable(string $variable): bool
     {
         return in_array($variable, self::COMPUTED_VARIABLES, true);
+    }
+
+    private function variableIsSituationActuelle(string $variable): bool
+    {
+        return $variable === 'clients.situation_actuelle'
+            || $variable === 'conjoints.situation_actuelle_statut';
+    }
+
+    private function variableIsFullName(string $variable): bool
+    {
+        return str_ends_with($variable, '.full_name')
+            || str_starts_with($variable, 'nomprenom')
+            || str_starts_with($variable, 'nomprenom');
     }
 }

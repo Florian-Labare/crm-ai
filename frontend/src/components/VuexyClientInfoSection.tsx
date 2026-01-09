@@ -11,21 +11,28 @@ import {
   DollarSign,
   TrendingUp,
   Shield,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { VuexyInfoSection, VuexyInfoRow } from './VuexyInfoSection';
 import { VuexyStatCard } from './VuexyStatCard';
 import { VuexyPatrimoineSection } from './VuexyPatrimoineSection';
+import type { SectionType } from './SectionEditModal';
 
 interface VuexyClientInfoSectionProps {
   client: any;
   formatDate: (date?: string) => string;
   formatCurrency: (amount?: number) => string;
+  onEditSection?: (sectionType: SectionType, data?: any, isNew?: boolean) => void;
+  onDeleteItem?: (type: 'enfant' | 'revenu' | 'conjoint' | 'actif' | 'bien' | 'passif' | 'epargne', id: number) => void;
 }
 
 export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   client,
   formatDate,
   formatCurrency,
+  onEditSection,
+  onDeleteItem,
 }) => {
   // Calcul des revenus annuels depuis toutes les sources possibles
   const calculateRevenusAnnuels = (): number | null => {
@@ -148,7 +155,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
       {/* Info Sections Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* État Civil */}
-        <VuexyInfoSection title="État Civil" icon={<User size={18} />}>
+        <VuexyInfoSection
+          title="État Civil"
+          icon={<User size={18} />}
+          onEdit={onEditSection ? () => onEditSection('etat_civil', client) : undefined}
+        >
           <VuexyInfoRow
             label="Nom complet"
             value={`${client.prenom || ''} ${client.nom?.toUpperCase() || ''}`.trim()}
@@ -175,7 +186,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         </VuexyInfoSection>
 
         {/* Coordonnées */}
-        <VuexyInfoSection title="Coordonnées" icon={<MapPin size={18} />}>
+        <VuexyInfoSection
+          title="Coordonnées"
+          icon={<MapPin size={18} />}
+          onEdit={onEditSection ? () => onEditSection('coordonnees', client) : undefined}
+        >
           <VuexyInfoRow
             label="Adresse complète"
             value={
@@ -204,7 +219,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         </VuexyInfoSection>
 
         {/* Professionnel */}
-        <VuexyInfoSection title="Informations Professionnelles" icon={<Briefcase size={18} />}>
+        <VuexyInfoSection
+          title="Informations Professionnelles"
+          icon={<Briefcase size={18} />}
+          onEdit={onEditSection ? () => onEditSection('professionnel', client) : undefined}
+        >
           <VuexyInfoRow label="Profession" value={client.profession} empty={!client.profession} />
           <VuexyInfoRow
             label="Revenus annuels"
@@ -240,7 +259,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         </VuexyInfoSection>
 
         {/* Mode de vie */}
-        <VuexyInfoSection title="Mode de Vie" icon={<Activity size={18} />}>
+        <VuexyInfoSection
+          title="Mode de Vie"
+          icon={<Activity size={18} />}
+          onEdit={onEditSection ? () => onEditSection('mode_vie', client) : undefined}
+        >
           <VuexyInfoRow
             label="Fumeur"
             value={
@@ -280,7 +303,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
 
       {/* Entreprise (si applicable) */}
       {(client.chef_entreprise || client.travailleur_independant || client.mandataire_social) && (
-        <VuexyInfoSection title="Informations Entreprise" icon={<Building size={18} />}>
+        <VuexyInfoSection
+          title="Informations Entreprise"
+          icon={<Building size={18} />}
+          onEdit={onEditSection ? () => onEditSection('entreprise', client) : undefined}
+        >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <VuexyInfoRow
               label="Chef d'entreprise"
@@ -332,8 +359,12 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
       )}
 
       {/* Conjoint */}
-      {client.conjoint && (
-        <VuexyInfoSection title="Conjoint" icon={<Heart size={18} />}>
+      {client.conjoint ? (
+        <VuexyInfoSection
+          title="Conjoint"
+          icon={<Heart size={18} />}
+          onEdit={onEditSection ? () => onEditSection('conjoint', client.conjoint) : undefined}
+        >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <VuexyInfoRow
               label="Nom complet"
@@ -386,20 +417,55 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
             />
           </div>
         </VuexyInfoSection>
+      ) : onEditSection && (
+        <VuexyInfoSection
+          title="Conjoint"
+          icon={<Heart size={18} />}
+          onAdd={() => onEditSection('conjoint', {}, true)}
+          addLabel="Ajouter un conjoint"
+        >
+          <div className="text-center py-6 text-[#B9B9C3]">
+            <Heart size={32} className="mx-auto mb-2 opacity-50" />
+            <p>Aucun conjoint enregistré</p>
+          </div>
+        </VuexyInfoSection>
       )}
 
       {/* Enfants */}
-      {client.enfants && client.enfants.length > 0 && (
-        <VuexyInfoSection
-          title={`Enfants (${client.enfants.length})`}
-          icon={<Users size={18} />}
-        >
+      <VuexyInfoSection
+        title={`Enfants${client.enfants?.length > 0 ? ` (${client.enfants.length})` : ''}`}
+        icon={<Users size={18} />}
+        onAdd={onEditSection ? () => onEditSection('enfant', {}, true) : undefined}
+        addLabel="Ajouter"
+      >
+        {client.enfants && client.enfants.length > 0 ? (
           <div className="space-y-4">
             {client.enfants.map((enfant: any, index: number) => (
               <div
                 key={enfant.id}
-                className="p-5 bg-[#F8F8F8] rounded-lg border border-[#EBE9F1]"
+                className="p-5 bg-[#F8F8F8] rounded-lg border border-[#EBE9F1] relative group"
               >
+                {/* Boutons d'action sur hover */}
+                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {onEditSection && (
+                    <button
+                      onClick={() => onEditSection('enfant', enfant)}
+                      className="w-7 h-7 rounded-md flex items-center justify-center bg-white text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200 shadow-sm"
+                      title="Modifier"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {onDeleteItem && (
+                    <button
+                      onClick={() => onDeleteItem('enfant', enfant.id)}
+                      className="w-7 h-7 rounded-md flex items-center justify-center bg-white text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200 shadow-sm"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-semibold text-[#5E5873]">
                     Enfant {index + 1}
@@ -443,15 +509,22 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
               </div>
             ))}
           </div>
-        </VuexyInfoSection>
-      )}
+        ) : (
+          <div className="text-center py-6 text-[#B9B9C3]">
+            <Users size={32} className="mx-auto mb-2 opacity-50" />
+            <p>Aucun enfant enregistré</p>
+          </div>
+        )}
+      </VuexyInfoSection>
 
       {/* Revenus */}
-      {client.revenus && client.revenus.length > 0 && (
-        <VuexyInfoSection
-          title={`Revenus (${client.revenus.length})`}
-          icon={<DollarSign size={18} />}
-        >
+      <VuexyInfoSection
+        title={`Revenus${client.revenus?.length > 0 ? ` (${client.revenus.length})` : ''}`}
+        icon={<DollarSign size={18} />}
+        onAdd={onEditSection ? () => onEditSection('revenu', {}, true) : undefined}
+        addLabel="Ajouter"
+      >
+        {client.revenus && client.revenus.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-[#EBE9F1]">
               <thead className="bg-[#F8F8F8]">
@@ -459,23 +532,51 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#5E5873] uppercase tracking-wider">Nature</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-[#5E5873] uppercase tracking-wider">Périodicité</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-[#5E5873] uppercase tracking-wider">Montant</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-[#5E5873] uppercase tracking-wider w-24">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[#EBE9F1]">
                 {client.revenus.map((revenu: any) => (
-                  <tr key={revenu.id} className="hover:bg-[#F8F8F8] transition-colors">
+                  <tr key={revenu.id} className="hover:bg-[#F8F8F8] transition-colors group">
                     <td className="px-4 py-3 text-sm text-[#5E5873] font-medium">{revenu.nature || <span className="text-[#B9B9C3] italic">Non renseigné</span>}</td>
                     <td className="px-4 py-3 text-sm text-[#6E6B7B]">{revenu.periodicite || <span className="text-[#B9B9C3] italic">Non renseigné</span>}</td>
                     <td className="px-4 py-3 text-sm text-[#5E5873] text-right font-semibold">
                       {revenu.montant ? formatCurrency(revenu.montant) : <span className="text-[#B9B9C3] italic font-normal">Non renseigné</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onEditSection && (
+                          <button
+                            onClick={() => onEditSection('revenu', revenu)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+                            title="Modifier"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        )}
+                        {onDeleteItem && (
+                          <button
+                            onClick={() => onDeleteItem('revenu', revenu.id)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </VuexyInfoSection>
-      )}
+        ) : (
+          <div className="text-center py-6 text-[#B9B9C3]">
+            <DollarSign size={32} className="mx-auto mb-2 opacity-50" />
+            <p>Aucun revenu enregistré</p>
+          </div>
+        )}
+      </VuexyInfoSection>
 
       {/* ========================================
           SECTION MÈRE : ÉPARGNE & PATRIMOINE (UNIFIÉE)
@@ -485,12 +586,17 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
           client={client}
           formatDate={formatDate}
           formatCurrency={formatCurrency}
+          onEditItem={onEditSection}
         />
       )}
 
       {/* Santé */}
       {showSante && (
-        <VuexyInfoSection title="Santé" icon={<Heart size={18} />}>
+        <VuexyInfoSection
+          title="Santé"
+          icon={<Heart size={18} />}
+          onEdit={onEditSection ? () => onEditSection('sante', client.sante_souhait || {}) : undefined}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <VuexyInfoRow
               label="Contrat en place"
@@ -553,7 +659,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
 
       {/* Prévoyance */}
       {showPrevoyance && client.bae_prevoyance && (
-        <VuexyInfoSection title="Prévoyance" icon={<Shield size={18} />}>
+        <VuexyInfoSection
+          title="Prévoyance"
+          icon={<Shield size={18} />}
+          onEdit={onEditSection ? () => onEditSection('prevoyance', client.bae_prevoyance) : undefined}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <VuexyInfoRow
               label="Contrat en place"
@@ -605,7 +715,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
 
       {/* Retraite */}
       {showRetraite && client.bae_retraite && (
-        <VuexyInfoSection title="Retraite" icon={<TrendingUp size={18} />}>
+        <VuexyInfoSection
+          title="Retraite"
+          icon={<TrendingUp size={18} />}
+          onEdit={onEditSection ? () => onEditSection('retraite', client.bae_retraite) : undefined}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             <VuexyInfoRow
               label="Revenus annuels"

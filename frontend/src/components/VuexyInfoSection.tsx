@@ -1,24 +1,54 @@
 import React from 'react';
+import { Pencil, Plus } from 'lucide-react';
 
 interface VuexyInfoSectionProps {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  onEdit?: () => void;
+  onAdd?: () => void;
+  addLabel?: string;
 }
 
 export const VuexyInfoSection: React.FC<VuexyInfoSectionProps> = ({
   title,
   icon,
   children,
+  onEdit,
+  onAdd,
+  addLabel = "Ajouter",
 }) => {
   return (
     <div className="vx-card vx-fade-in">
       {/* Section Header */}
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#EBE9F1]">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white">
-          {icon}
+      <div className="flex items-center justify-between gap-3 mb-6 pb-4 border-b border-[#EBE9F1]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white">
+            {icon}
+          </div>
+          <h3 className="text-lg font-semibold text-[#5E5873]">{title}</h3>
         </div>
-        <h3 className="text-lg font-semibold text-[#5E5873]">{title}</h3>
+        <div className="flex items-center gap-2">
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-[#7367F0]/10 text-[#7367F0] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+              title={addLabel}
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">{addLabel}</span>
+            </button>
+          )}
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+              title="Modifier cette section"
+            >
+              <Pencil size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Section Content */}

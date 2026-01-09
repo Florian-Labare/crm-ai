@@ -10,6 +10,9 @@ import { VuexyClientInfoSection } from "../components/VuexyClientInfoSection";
 import { VuexyTabs } from "../components/VuexyTabs";
 import { VuexyDocumentsSection } from "../components/VuexyDocumentsSection";
 import { ReviewChangesModal } from "../components/ReviewChangesModal";
+import { TemplateSelectModal } from "../components/TemplateSelectModal";
+import { DocumentFormModal } from "../components/DocumentFormModal";
+import { SectionEditModal, type SectionType } from "../components/SectionEditModal";
 import { Info, ClipboardList, Folder, AlertTriangle } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
@@ -82,8 +85,6 @@ const ClientDetailPage: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
-  const [selectedFormat, setSelectedFormat] = useState<'docx' | 'pdf'>('docx');
   const [generatingDocument, setGeneratingDocument] = useState(false);
   const [showDocumentFormModal, setShowDocumentFormModal] = useState(false);
   const [formTemplateId, setFormTemplateId] = useState<number | null>(null);
@@ -95,6 +96,19 @@ const ClientDetailPage: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingChanges, setPendingChanges] = useState<PendingChangeItem[]>([]);
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
+
+  // État pour le modal d'édition par section
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean;
+    sectionType: SectionType | null;
+    data: any;
+    isNew: boolean;
+  }>({
+    isOpen: false,
+    sectionType: null,
+    data: null,
+    isNew: false,
+  });
 
   // États pour les dialogues de confirmation
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -194,20 +208,6 @@ const ClientDetailPage: React.FC = () => {
     } finally {
       setFormLoading(false);
     }
-  };
-
-  const handleOpenDocumentForm = () => {
-    if (!selectedTemplateId) {
-      toast.error("Veuillez sélectionner un template");
-      return;
-    }
-
-    setFormTemplateId(selectedTemplateId);
-    setFormFormat(selectedFormat);
-    setShowGenerateModal(false);
-    setShowDocumentFormModal(true);
-    setSelectedTemplateId(null);
-    setSelectedFormat('docx');
   };
 
   const handleSaveForm = async (generateAfterSave: boolean) => {
@@ -417,6 +417,72 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
+  // Handler pour ouvrir le modal d'édition par section
+  const handleEditSection = (sectionType: SectionType, data?: any, isNew?: boolean) => {
+    setEditModal({
+      isOpen: true,
+      sectionType,
+      data: data || {},
+      isNew: isNew || false,
+    });
+  };
+
+  // Handler pour supprimer un élément (enfant, revenu, actif, etc.)
+  const handleDeleteItem = (type: 'enfant' | 'revenu' | 'conjoint' | 'actif' | 'bien' | 'passif' | 'epargne', itemId: number) => {
+    const typeLabels: Record<string, string> = {
+      enfant: 'enfant',
+      revenu: 'revenu',
+      conjoint: 'conjoint',
+      actif: 'actif financier',
+      bien: 'bien immobilier',
+      passif: 'passif',
+      epargne: 'épargne',
+    };
+
+    setConfirmDialog({
+      isOpen: true,
+      title: `Supprimer ${typeLabels[type]}`,
+      message: `Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          // Construire l'URL selon le type
+          let url = '';
+          switch (type) {
+            case 'enfant':
+              url = `/clients/${id}/enfants/${itemId}`;
+              break;
+            case 'revenu':
+              url = `/clients/${id}/revenus/${itemId}`;
+              break;
+            case 'conjoint':
+              url = `/clients/${id}/conjoint`;
+              break;
+            case 'actif':
+              url = `/clients/${id}/actifs-financiers/${itemId}`;
+              break;
+            case 'bien':
+              url = `/clients/${id}/biens-immobiliers/${itemId}`;
+              break;
+            case 'passif':
+              url = `/clients/${id}/passifs/${itemId}`;
+              break;
+            case 'epargne':
+              url = `/clients/${id}/autres-epargnes/${itemId}`;
+              break;
+          }
+
+          await api.delete(url);
+          toast.success(`${typeLabels[type].charAt(0).toUpperCase() + typeLabels[type].slice(1)} supprimé avec succès`);
+          fetchClient();
+        } catch (err) {
+          console.error(err);
+          toast.error(`Erreur lors de la suppression`);
+        }
+      },
+    });
+  };
+
   if (loading) return <div className="text-center mt-10">Chargement...</div>;
   if (!client) return <div className="text-center mt-10">Client introuvable.</div>;
 
@@ -503,6 +569,8 @@ const ClientDetailPage: React.FC = () => {
                     client={client}
                     formatDate={formatDate}
                     formatCurrency={formatCurrency}
+                    onEditSection={handleEditSection}
+                    onDeleteItem={handleDeleteItem}
                   />
                 ),
               },
@@ -535,254 +603,42 @@ const ClientDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal pour générer un document */}
+      {/* Modal pour générer un document - Nouveau design Vuexy */}
       {showGenerateModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          {/* Backdrop avec blur */}
-          <div
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-all duration-300"
-            onClick={() => {
-              setShowGenerateModal(false);
-              setSelectedTemplateId(null);
-              setSelectedFormat('docx');
-            }}
-          />
-
-          {/* Modale */}
-          <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto transform transition-all duration-300 animate-slideIn">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Sélectionner un template</h2>
-                <button
-                  onClick={() => {
-                    setShowGenerateModal(false);
-                    setSelectedTemplateId(null);
-                    setSelectedFormat('docx');
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {templates.map((template: any) => (
-                  <div
-                    key={template.id}
-                    onClick={() => setSelectedTemplateId(template.id)}
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedTemplateId === template.id
-                      ? 'border-indigo-600 bg-indigo-50'
-                      : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
-                      }`}
-                  >
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mt-1">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedTemplateId === template.id
-                          ? 'border-indigo-600 bg-indigo-600'
-                          : 'border-gray-300'
-                          }`}>
-                          {selectedTemplateId === template.id && (
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 12 12">
-                              <path d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z" />
-                            </svg>
-                          )}
-                        </div>
-                      </div>
-                      <div className="ml-3 flex-1">
-                        <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                        {template.description && (
-                          <p className="text-sm text-gray-600 mt-1">{template.description}</p>
-                        )}
-                        <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {template.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Sélecteur de format */}
-              <div className="mt-6 border-t border-gray-200 pt-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Format du document</label>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setSelectedFormat('docx')}
-                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
-                      selectedFormat === 'docx'
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="font-medium">DOCX</span>
-                    </div>
-                    <p className="text-xs mt-1">Modifiable avec Word</p>
-                  </button>
-                  <button
-                    onClick={() => setSelectedFormat('pdf')}
-                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
-                      selectedFormat === 'pdf'
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span className="font-medium">PDF</span>
-                    </div>
-                    <p className="text-xs mt-1">Prêt à imprimer</p>
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowGenerateModal(false);
-                    setSelectedTemplateId(null);
-                    setSelectedFormat('docx');
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleOpenDocumentForm}
-                  disabled={!selectedTemplateId || generatingDocument}
-                  className={`px-6 py-2 rounded-lg text-white transition-all ${!selectedTemplateId || generatingDocument
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                    }`}
-                >
-                  {generatingDocument ? 'Génération...' : 'Continuer'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TemplateSelectModal
+          templates={templates}
+          onClose={() => setShowGenerateModal(false)}
+          onConfirm={(templateId, format) => {
+            // Ouvrir le formulaire de document avec le template et format sélectionnés
+            setFormTemplateId(templateId);
+            setFormFormat(format);
+            setShowGenerateModal(false);
+            setShowDocumentFormModal(true);
+          }}
+          isLoading={generatingDocument}
+        />
       )}
 
       {showDocumentFormModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div
-            className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-all duration-300"
-            onClick={() => {
-              setShowDocumentFormModal(false);
-              setFormTemplateId(null);
-              setFormFields([]);
-              setFormValues({});
-              setFormError(null);
-            }}
-          />
-
-          <div className="relative bg-white rounded-xl shadow-2xl max-w-5xl w-full mx-4 max-h-[85vh] overflow-y-auto transform transition-all duration-300 animate-slideIn">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    {selectedFormTemplate?.name || 'Formulaire du document'}
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Renseignez les champs liés aux variables du template.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowDocumentFormModal(false);
-                    setFormTemplateId(null);
-                    setFormFields([]);
-                    setFormValues({});
-                    setFormError(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {formError && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
-                  {formError}
-                </div>
-              )}
-
-              {formLoading ? (
-                <div className="py-12 text-center text-gray-500">Chargement du formulaire...</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {formFields.map((field) => {
-                    const value = formValues[field.variable] ?? '';
-                    const useTextarea = value.length > 120 || field.label.length > 50;
-
-                    return (
-                      <div key={field.variable} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {field.label}
-                        </label>
-                        {useTextarea ? (
-                          <textarea
-                            value={value}
-                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.variable]: e.target.value }))}
-                            className="w-full min-h-[96px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-                            placeholder="Saisir une réponse"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            value={value}
-                            onChange={(e) => setFormValues((prev) => ({ ...prev, [field.variable]: e.target.value }))}
-                            className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-                            placeholder="Saisir une réponse"
-                          />
-                        )}
-                        <p className="text-xs text-gray-400 mt-2">{field.variable}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="mt-6 flex flex-wrap justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowDocumentFormModal(false);
-                    setFormTemplateId(null);
-                    setFormFields([]);
-                    setFormValues({});
-                    setFormError(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={() => handleSaveForm(false)}
-                  disabled={formSaving || formLoading}
-                  className="px-4 py-2 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
-                >
-                  Enregistrer
-                </button>
-                <button
-                  onClick={() => handleSaveForm(true)}
-                  disabled={formSaving || formLoading || generatingDocument}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                >
-                  {formSaving || generatingDocument ? 'Traitement...' : 'Enregistrer et générer'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DocumentFormModal
+          templateName={selectedFormTemplate?.name || 'Formulaire du document'}
+          fields={formFields}
+          values={formValues}
+          onChange={(variable, value) => setFormValues((prev) => ({ ...prev, [variable]: value }))}
+          onClose={() => {
+            setShowDocumentFormModal(false);
+            setFormTemplateId(null);
+            setFormFields([]);
+            setFormValues({});
+            setFormError(null);
+          }}
+          onSave={() => handleSaveForm(false)}
+          onSaveAndGenerate={() => handleSaveForm(true)}
+          isLoading={formLoading}
+          isSaving={formSaving}
+          isGenerating={generatingDocument}
+          error={formError}
+        />
       )}
 
       {/* Dialogue de confirmation */}
@@ -805,6 +661,21 @@ const ClientDetailPage: React.FC = () => {
             fetchClient(); // Refresh client data
             fetchPendingChanges(); // Refresh pending changes list
             toast.success("Modifications appliquées avec succès");
+          }}
+        />
+      )}
+
+      {/* Section Edit Modal */}
+      {editModal.isOpen && editModal.sectionType && (
+        <SectionEditModal
+          sectionType={editModal.sectionType}
+          initialData={editModal.data}
+          clientId={parseInt(id!, 10)}
+          isNew={editModal.isNew}
+          onClose={() => setEditModal({ isOpen: false, sectionType: null, data: null, isNew: false })}
+          onSaved={() => {
+            setEditModal({ isOpen: false, sectionType: null, data: null, isNew: false });
+            fetchClient();
           }}
         />
       )}

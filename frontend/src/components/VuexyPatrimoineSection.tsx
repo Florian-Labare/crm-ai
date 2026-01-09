@@ -7,12 +7,15 @@ import {
   Layers,
   LineChart,
   Coins,
+  Plus,
 } from 'lucide-react';
+import type { SectionType } from './SectionEditModal';
 
 interface PatrimoineSectionProps {
   client: any;
   formatDate: (date?: string) => string;
   formatCurrency: (amount?: number) => string;
+  onEditItem?: (type: SectionType, data?: any, isNew?: boolean) => void;
 }
 
 // Helper pour parser les détails BAE (format: "nature: montant" ou juste "nature")
@@ -89,7 +92,8 @@ const CollapsibleSection: React.FC<{
   color: 'info' | 'warning' | 'danger';
   children: React.ReactNode;
   defaultOpen?: boolean;
-}> = ({ title, icon, count, color, children, defaultOpen = true }) => {
+  onAdd?: () => void;
+}> = ({ title, icon, count, color, children, defaultOpen = true, onAdd }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const colorClasses = {
@@ -111,10 +115,12 @@ const CollapsibleSection: React.FC<{
     <div className="bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden">
       {/* Header */}
       <div
-        onClick={() => setIsOpen(!isOpen)}
-        className={`p-5 flex items-center justify-between cursor-pointer transition-colors hover:bg-[#F3F2F7] border-l-4 ${colorClasses[color].border}`}
+        className={`p-5 flex items-center justify-between border-l-4 ${colorClasses[color].border}`}
       >
-        <div className="flex items-center gap-4">
+        <div
+          className="flex items-center gap-4 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setIsOpen(!isOpen)}
+        >
           <div className={`w-11 h-11 rounded-lg flex items-center justify-center text-white ${colorClasses[color].iconBg}`}>
             {icon}
           </div>
@@ -126,12 +132,25 @@ const CollapsibleSection: React.FC<{
             </span>
           </div>
         </div>
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-            isOpen ? 'bg-[#E8E7FD] text-[#7367F0] rotate-180' : 'bg-[#F3F2F7] text-[#6E6B7B]'
-          }`}
-        >
-          <ChevronDown size={18} />
+        <div className="flex items-center gap-2">
+          {onAdd && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onAdd(); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-[#7367F0]/10 text-[#7367F0] hover:bg-[#7367F0] hover:text-white transition-all duration-200"
+              title="Ajouter"
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Ajouter</span>
+            </button>
+          )}
+          <div
+            onClick={() => setIsOpen(!isOpen)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 ${
+              isOpen ? 'bg-[#E8E7FD] text-[#7367F0] rotate-180' : 'bg-[#F3F2F7] text-[#6E6B7B]'
+            }`}
+          >
+            <ChevronDown size={18} />
+          </div>
         </div>
       </div>
 
@@ -220,6 +239,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
   client,
   formatDate,
   formatCurrency,
+  onEditItem,
 }) => {
   // Parser les détails BAE
   const baeActifsFinanciers = useMemo(() =>
@@ -396,12 +416,13 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
       {/* Contenu : sous-sections avec design cards */}
       <div className="p-6 bg-[#F8F8F8] space-y-5">
         {/* Sous-section : Actifs Financiers */}
-        {countActifsFinanciers > 0 && (
+        {(countActifsFinanciers > 0 || onEditItem) && (
           <CollapsibleSection
             title="Actifs Financiers"
             icon={<LineChart size={22} />}
             count={countActifsFinanciers}
             color="info"
+            onAdd={onEditItem ? () => onEditItem('actif', {}, true) : undefined}
           >
             <DataTable
               headers={[
@@ -456,12 +477,13 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
         )}
 
         {/* Sous-section : Biens Immobiliers */}
-        {countBiensImmo > 0 && (
+        {(countBiensImmo > 0 || onEditItem) && (
           <CollapsibleSection
             title="Biens Immobiliers & Pro"
             icon={<Home size={22} />}
             count={countBiensImmo}
             color="warning"
+            onAdd={onEditItem ? () => onEditItem('bien', {}, true) : undefined}
           >
             <DataTable
               headers={[
@@ -506,12 +528,13 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
         )}
 
         {/* Sous-section : Passifs & Emprunts */}
-        {countPassifs > 0 && (
+        {(countPassifs > 0 || onEditItem) && (
           <CollapsibleSection
             title="Passifs & Emprunts"
             icon={<CreditCard size={22} />}
             count={countPassifs}
             color="danger"
+            onAdd={onEditItem ? () => onEditItem('passif', {}, true) : undefined}
           >
             <DataTable
               headers={[
@@ -567,6 +590,55 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                 '',
               ]}
               footerBgColor="bg-[#FEF2F2]"
+            />
+          </CollapsibleSection>
+        )}
+
+        {/* Sous-section : Autres Épargnes */}
+        {(countAutresActifs > 0 || onEditItem) && (
+          <CollapsibleSection
+            title="Autres Épargnes"
+            icon={<Coins size={22} />}
+            count={countAutresActifs}
+            color="info"
+            onAdd={onEditItem ? () => onEditItem('epargne', {}, true) : undefined}
+          >
+            <DataTable
+              headers={[
+                { label: 'Nature', align: 'left' },
+                { label: 'Établissement', align: 'left' },
+                { label: 'Valeur', align: 'right' },
+                { label: 'Date', align: 'left' },
+              ]}
+              rows={[
+                // Données de la table autres_epargnes
+                ...(client.autres_epargnes || []).map((epargne: any) => [
+                  <strong className="text-[#5E5873]">{epargne.nature || '-'}</strong>,
+                  epargne.etablissement || <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#28C76F] font-semibold">
+                    {epargne.valeur ? formatCurrency(epargne.valeur) : '-'}
+                  </span>,
+                  epargne.date_ouverture
+                    ? formatDate(epargne.date_ouverture)
+                    : <span className="text-[#B9B9C3]">-</span>,
+                ]),
+                // Données de bae_epargne.actifs_autres_details
+                ...baeAutresActifs.map((item) => [
+                  <strong className="text-[#5E5873]">{item.nature}</strong>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                  <span className="text-[#28C76F] font-semibold">
+                    {item.montant ? formatCurrency(item.montant) : <span className="text-[#B9B9C3]">-</span>}
+                  </span>,
+                  <span className="text-[#B9B9C3]">-</span>,
+                ]),
+              ]}
+              footer={[
+                <strong className="text-[#5E5873]">Total :</strong>,
+                '',
+                <span className="text-[#28C76F] font-bold">{formatCurrency(totalAutresActifs)}</span>,
+                '',
+              ]}
+              footerBgColor="bg-[#E8FFFE]"
             />
           </CollapsibleSection>
         )}
