@@ -4,7 +4,12 @@ import api from '../api/apiClient';
 interface User {
   id: number;
   name: string;
+  firstname?: string;
   email: string;
+  current_team_id?: number;
+  current_team_name?: string;
+  team_role?: 'owner' | 'admin' | 'member' | 'viewer';
+  is_admin?: boolean;
 }
 
 interface AuthContextType {
@@ -14,6 +19,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string, password_confirmation: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,8 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const isAdmin = user?.is_admin ?? false;
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, loading, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

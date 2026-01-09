@@ -13,7 +13,8 @@ use App\Http\Controllers\RecordingController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpeakerCorrectionController;
 use App\Http\Controllers\PendingChangesController;
-use App\Http\Controllers\MeetingSummaryController;
+use App\Http\Controllers\ImportMappingController;
+use App\Http\Controllers\ImportSessionController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -102,10 +103,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/clients/{id}/export/pdf', [ExportController::class, 'exportPdf']);
     Route::get('/clients/{id}/export/word', [ExportController::class, 'exportWord']);
     Route::get('/clients/{id}/questionnaires/export/pdf', [ExportController::class, 'exportQuestionnairePdf']);
-
-    // Résumé de rendez-vous
-    Route::get('/clients/{client}/meeting-summary', [MeetingSummaryController::class, 'showLatest']);
-    Route::post('/clients/{client}/meeting-summary/regenerate', [MeetingSummaryController::class, 'regenerate']);
 
     // ============================================
     // 🔒 PENDING CHANGES - Système de merge avec validation
@@ -202,5 +199,30 @@ Route::middleware(['auth:sanctum'])->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    });
+
+    // ============================================
+    // 📥 IMPORT - Import de données clients
+    // ============================================
+    Route::prefix('import')->group(function () {
+        // Mappings de colonnes
+        Route::get('/mappings', [ImportMappingController::class, 'index']);
+        Route::post('/mappings', [ImportMappingController::class, 'store']);
+        Route::get('/mappings/fields', [ImportMappingController::class, 'availableFields']);
+        Route::get('/mappings/{mapping}', [ImportMappingController::class, 'show']);
+        Route::put('/mappings/{mapping}', [ImportMappingController::class, 'update']);
+        Route::delete('/mappings/{mapping}', [ImportMappingController::class, 'destroy']);
+
+        // Sessions d'import
+        Route::get('/sessions', [ImportSessionController::class, 'index']);
+        Route::post('/upload', [ImportSessionController::class, 'upload']);
+        Route::get('/sessions/{session}', [ImportSessionController::class, 'show']);
+        Route::post('/sessions/{session}/mapping', [ImportSessionController::class, 'setMapping']);
+        Route::get('/sessions/{session}/suggestions', [ImportSessionController::class, 'suggestMappings']);
+        Route::post('/sessions/{session}/start', [ImportSessionController::class, 'start']);
+        Route::get('/sessions/{session}/rows', [ImportSessionController::class, 'rows']);
+        Route::post('/sessions/{session}/rows/{row}/resolve', [ImportSessionController::class, 'resolveRow']);
+        Route::post('/sessions/{session}/import-valid', [ImportSessionController::class, 'importValid']);
+        Route::delete('/sessions/{session}', [ImportSessionController::class, 'destroy']);
     });
 });

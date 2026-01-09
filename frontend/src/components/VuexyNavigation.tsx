@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, UserPlus, Calendar, LogOut } from 'lucide-react';
+import { Home, UserPlus, Calendar, LogOut, Upload } from 'lucide-react';
 import { PendingChangesBadge } from './PendingChangesBadge';
 import { ReviewChangesModal } from './ReviewChangesModal';
 
 export const VuexyNavigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const isHomePage = location.pathname === '/';
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
@@ -59,6 +59,17 @@ export const VuexyNavigation: React.FC = () => {
               <UserPlus size={18} />
               Nouveau client
             </a>
+
+            {/* Import Button - Admin Only */}
+            {isAdmin && (
+              <a
+                href="/import"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#FF9F43] text-[#FF9F43] hover:bg-[#FF9F43] hover:text-white font-semibold transition-all duration-200"
+              >
+                <Upload size={18} />
+                Importer
+              </a>
+            )}
 
             {/* User Menu */}
             {user && (
