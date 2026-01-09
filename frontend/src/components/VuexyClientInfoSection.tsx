@@ -639,7 +639,18 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
               <tbody className="bg-white divide-y divide-[#EBE9F1]">
                 {client.revenus.map((revenu: any) => (
                   <tr key={revenu.id} className="hover:bg-[#F8F8F8] transition-colors group">
-                    <td className="px-4 py-3 text-sm text-[#5E5873] font-medium">{revenu.nature || <span className="text-[#B9B9C3] italic">Non renseigné</span>}</td>
+                    <td className="px-4 py-3 text-sm text-[#5E5873] font-medium">
+                        {revenu.nature ? (
+                          <>
+                            {revenu.nature}
+                            {revenu.nature.toLowerCase() === 'autre' && revenu.details && (
+                              <span className="text-[#6E6B7B] font-normal"> ({revenu.details})</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-[#B9B9C3] italic">Non renseigné</span>
+                        )}
+                      </td>
                     <td className="px-4 py-3 text-sm text-[#6E6B7B]">{revenu.periodicite || <span className="text-[#B9B9C3] italic">Non renseigné</span>}</td>
                     <td className="px-4 py-3 text-sm text-[#5E5873] text-right font-semibold">
                       {revenu.montant ? formatCurrency(revenu.montant) : <span className="text-[#B9B9C3] italic font-normal">Non renseigné</span>}

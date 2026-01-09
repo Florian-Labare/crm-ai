@@ -13,6 +13,7 @@ class ClientRevenuResource extends JsonResource
             'id' => $this->id,
             'client_id' => $this->client_id,
             'nature' => $this->nature,
+            'details' => $this->details,
             'periodicite' => $this->periodicite,
             'montant' => $this->montant,
             'created_at' => $this->created_at?->toISOString(),

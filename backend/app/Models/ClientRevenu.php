@@ -12,6 +12,7 @@ class ClientRevenu extends Model
     protected $fillable = [
         'client_id',
         'nature',
+        'details',
         'periodicite',
         'montant',
     ];

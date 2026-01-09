@@ -94,6 +94,7 @@ Retourne :
   "client_revenus": [
     {
       "nature": "salaire|pension|revenus_locatifs|dividendes|SCI|SCPI|BNC|BIC|autre",
+      "details": "précision si nature=autre",
       "periodicite": "mensuel|annuel|trimestriel",
       "montant": 3500.00
     }
@@ -110,7 +111,9 @@ Retourne :
   - "dividendes" : dividendes d'actions ou parts sociales
   - "BNC" : Bénéfices Non Commerciaux (professions libérales)
   - "BIC" : Bénéfices Industriels et Commerciaux
-  - "autre" : tout autre type de revenu
+  - "autre" : tout autre type de revenu non listé ci-dessus
+- "details" (string, optionnel) : Précision sur la nature du revenu, OBLIGATOIRE si nature="autre"
+  - Exemples : "rente viagère", "allocation chômage", "pension alimentaire", "fermage"
 - "periodicite" (string, optionnel) : Fréquence (mensuel, annuel, trimestriel)
 - "montant" (decimal, optionnel) : Montant
 
@@ -173,7 +176,15 @@ Exemple 9 - SCPI :
 "Mes parts de SCPI me versent 8000€ par an"
 → {"client_revenus": [{"nature": "SCPI", "periodicite": "annuel", "montant": 8000}]}
 
-Exemple 10 - Pas concerné :
+Exemple 10 - Revenu autre (rente viagère) :
+"Je touche une rente viagère de 500€ par mois"
+→ {"client_revenus": [{"nature": "autre", "details": "rente viagère", "periodicite": "mensuel", "montant": 500}]}
+
+Exemple 11 - Revenu autre (pension alimentaire) :
+"Je perçois 300€ de pension alimentaire chaque mois"
+→ {"client_revenus": [{"nature": "autre", "details": "pension alimentaire", "periodicite": "mensuel", "montant": 300}]}
+
+Exemple 12 - Pas concerné :
 "Je veux partir à la retraite à 62 ans"
 → {}
 PROMPT;
