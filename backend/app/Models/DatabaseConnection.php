@@ -175,8 +175,11 @@ class DatabaseConnection extends Model
     /**
      * Scope to team connections
      */
-    public function scopeForTeam($query, int $teamId)
+    public function scopeForTeam($query, ?int $teamId)
     {
+        if (!$teamId) {
+            return $query->whereRaw('1 = 0');
+        }
         return $query->where('team_id', $teamId);
     }
 }
