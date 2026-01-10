@@ -15,6 +15,7 @@ use App\Http\Controllers\SpeakerCorrectionController;
 use App\Http\Controllers\PendingChangesController;
 use App\Http\Controllers\ImportMappingController;
 use App\Http\Controllers\ImportSessionController;
+use App\Http\Controllers\DatabaseConnectionController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -224,5 +225,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/sessions/{session}/rows/{row}/resolve', [ImportSessionController::class, 'resolveRow']);
         Route::post('/sessions/{session}/import-valid', [ImportSessionController::class, 'importValid']);
         Route::delete('/sessions/{session}', [ImportSessionController::class, 'destroy']);
+
+        // RGPD Compliance endpoints
+        Route::get('/legal-bases', [ImportSessionController::class, 'legalBases']);
+        Route::post('/sessions/{session}/consent', [ImportSessionController::class, 'recordConsent']);
+        Route::get('/sessions/{session}/audit-trail', [ImportSessionController::class, 'auditTrail']);
+        Route::get('/sessions/{session}/imported-clients', [ImportSessionController::class, 'importedClients']);
+
+        // Connexions base de données externes
+        Route::get('/database-connections/drivers', [DatabaseConnectionController::class, 'drivers']);
+        Route::post('/database-connections/test', [DatabaseConnectionController::class, 'test']);
+        Route::get('/database-connections', [DatabaseConnectionController::class, 'index']);
+        Route::post('/database-connections', [DatabaseConnectionController::class, 'store']);
+        Route::get('/database-connections/{databaseConnection}', [DatabaseConnectionController::class, 'show']);
+        Route::put('/database-connections/{databaseConnection}', [DatabaseConnectionController::class, 'update']);
+        Route::delete('/database-connections/{databaseConnection}', [DatabaseConnectionController::class, 'destroy']);
+        Route::post('/database-connections/{databaseConnection}/test', [DatabaseConnectionController::class, 'test']);
+        Route::get('/database-connections/{databaseConnection}/tables', [DatabaseConnectionController::class, 'tables']);
+        Route::get('/database-connections/{databaseConnection}/tables/{table}/columns', [DatabaseConnectionController::class, 'columns']);
+        Route::post('/database-connections/{databaseConnection}/preview', [DatabaseConnectionController::class, 'preview']);
+        Route::post('/database-connections/{databaseConnection}/import', [DatabaseConnectionController::class, 'createImportSession']);
     });
 });

@@ -16,6 +16,7 @@ class ImportOrchestrationService
         private ImportMappingService $mappingService,
         private ImportValidationService $validator,
         private ImportDuplicateDetectionService $duplicateDetector,
+        private DatabaseConnectorService $databaseConnector,
         private EnfantSyncService $enfantSyncService
     ) {
     }
@@ -25,24 +26,12 @@ class ImportOrchestrationService
         $session->update(['status' => ImportSession::STATUS_ANALYZING]);
 
         try {
-            $filePath = storage_path('app/' . $session->file_path);
-
-            $columns = $this->parser->detectColumns($filePath);
-            $rowCount = $this->parser->getRowCount($filePath);
-            $suggestedMappings = $this->mappingService->suggestMappings($columns);
-
-            $session->update([
-                'detected_columns' => $columns,
-                'ai_suggested_mappings' => $suggestedMappings,
-                'total_rows' => $rowCount,
-                'status' => ImportSession::STATUS_MAPPING,
-            ]);
-
-            Log::info('Import file analyzed', [
-                'session_id' => $session->id,
-                'columns' => count($columns),
-                'rows' => $rowCount,
-            ]);
+            // Check if this is a database import or file import
+            if ($session->isDatabaseImport()) {
+                $this->analyzeDatabaseSource($session);
+            } else {
+                $this->analyzeFileSource($session);
+            }
         } catch (\Exception $e) {
             $session->update([
                 'status' => ImportSession::STATUS_FAILED,
@@ -58,6 +47,66 @@ class ImportOrchestrationService
         }
     }
 
+    private function analyzeFileSource(ImportSession $session): void
+    {
+        $filePath = storage_path('app/' . $session->file_path);
+
+        $columns = $this->parser->detectColumns($filePath);
+        $rowCount = $this->parser->getRowCount($filePath);
+        $suggestedMappings = $this->mappingService->suggestMappings($columns);
+
+        $session->update([
+            'detected_columns' => $columns,
+            'ai_suggested_mappings' => $suggestedMappings,
+            'total_rows' => $rowCount,
+            'status' => ImportSession::STATUS_MAPPING,
+        ]);
+
+        Log::info('Import file analyzed', [
+            'session_id' => $session->id,
+            'columns' => count($columns),
+            'rows' => $rowCount,
+        ]);
+    }
+
+    private function analyzeDatabaseSource(ImportSession $session): void
+    {
+        $connection = $session->databaseConnection;
+        if (!$connection) {
+            throw new \Exception('Connexion base de données non trouvée');
+        }
+
+        $config = $connection->getConnectionConfig();
+
+        // Get columns from table or query
+        if ($session->source_table) {
+            $columns = $this->databaseConnector->getTableColumns($config, $session->source_table);
+            $columnNames = array_map(fn($col) => $col['name'], $columns);
+            $rowCount = $this->databaseConnector->getTableRowCount($config, $session->source_table);
+        } else {
+            // For custom query, execute with limit to get columns
+            $sampleData = $this->databaseConnector->executeQuery($config, $session->source_query, 1);
+            $columnNames = !empty($sampleData) ? array_keys($sampleData[0]) : [];
+            $rowCount = 0; // Will be determined during processing
+        }
+
+        $suggestedMappings = $this->mappingService->suggestMappings($columnNames);
+
+        $session->update([
+            'detected_columns' => $columnNames,
+            'ai_suggested_mappings' => $suggestedMappings,
+            'total_rows' => $rowCount,
+            'status' => ImportSession::STATUS_MAPPING,
+        ]);
+
+        Log::info('Import database analyzed', [
+            'session_id' => $session->id,
+            'source' => $session->source_table ?? 'custom_query',
+            'columns' => count($columnNames),
+            'rows' => $rowCount,
+        ]);
+    }
+
     public function processSession(ImportSession $session): void
     {
         $session->update([
@@ -66,21 +115,87 @@ class ImportOrchestrationService
         ]);
 
         try {
-            $filePath = storage_path('app/' . $session->file_path);
             $mapping = $session->mapping;
 
             if (!$mapping) {
                 throw new \Exception('Aucun mapping configuré pour cette session');
             }
 
-            $columnMappings = $mapping->column_mappings;
-            $parsed = $this->parser->parseFile($filePath);
+            // Check if this is a database import or file import
+            if ($session->isDatabaseImport()) {
+                $this->processFromDatabase($session, $mapping->column_mappings);
+            } else {
+                $this->processFromFile($session, $mapping->column_mappings);
+            }
+        } catch (\Exception $e) {
+            $session->update([
+                'status' => ImportSession::STATUS_FAILED,
+                'errors_summary' => ['processing_error' => $e->getMessage()],
+            ]);
 
-            $rowNumber = 0;
-            foreach ($parsed['rows'] as $rawRow) {
+            throw $e;
+        }
+    }
+
+    private function processFromFile(ImportSession $session, array $columnMappings): void
+    {
+        $filePath = storage_path('app/' . $session->file_path);
+        $parsed = $this->parser->parseFile($filePath);
+
+        $rowNumber = 0;
+        foreach ($parsed['rows'] as $rawRow) {
+            $rowNumber++;
+
+            ImportRow::create([
+                'import_session_id' => $session->id,
+                'row_number' => $rowNumber,
+                'raw_data' => $rawRow,
+                'normalized_data' => null,
+                'status' => ImportRow::STATUS_PENDING,
+            ]);
+        }
+
+        $session->update(['total_rows' => $rowNumber]);
+
+        Log::info('Import rows created from file', [
+            'session_id' => $session->id,
+            'total_rows' => $rowNumber,
+        ]);
+    }
+
+    private function processFromDatabase(ImportSession $session, array $columnMappings): void
+    {
+        $connection = $session->databaseConnection;
+        if (!$connection) {
+            throw new \Exception('Connexion base de données non trouvée');
+        }
+
+        $config = $connection->getConnectionConfig();
+        $batchSize = 100;
+        $offset = 0;
+        $rowNumber = 0;
+
+        do {
+            if ($session->source_table) {
+                $result = $this->databaseConnector->fetchTableData(
+                    $config,
+                    $session->source_table,
+                    $offset,
+                    $batchSize
+                );
+                $rows = $result['rows'];
+                $hasMore = $result['has_more'];
+            } else {
+                // For custom queries, we need to add OFFSET/LIMIT manually
+                $query = rtrim($session->source_query, ';');
+                $query .= " LIMIT {$batchSize} OFFSET {$offset}";
+                $rows = $this->databaseConnector->executeQuery($config, $query, $batchSize + 1);
+                $hasMore = count($rows) > $batchSize;
+                $rows = array_slice($rows, 0, $batchSize);
+            }
+
+            foreach ($rows as $rawRow) {
                 $rowNumber++;
-
-                $mappedData = $this->mappingService->applyMapping($rawRow, $columnMappings);
 
                 ImportRow::create([
                     'import_session_id' => $session->id,
@@ -91,20 +206,15 @@ class ImportOrchestrationService
                 ]);
             }
 
-            $session->update(['total_rows' => $rowNumber]);
+            $offset += $batchSize;
+        } while ($hasMore && count($rows) === $batchSize);
 
-            Log::info('Import rows created', [
-                'session_id' => $session->id,
-                'total_rows' => $rowNumber,
-            ]);
-        } catch (\Exception $e) {
-            $session->update([
-                'status' => ImportSession::STATUS_FAILED,
-                'errors_summary' => ['processing_error' => $e->getMessage()],
-            ]);
+        $session->update(['total_rows' => $rowNumber]);
 
-            throw $e;
-        }
+        Log::info('Import rows created from database', [
+            'session_id' => $session->id,
+            'total_rows' => $rowNumber,
+        ]);
     }
 
     public function processBatch(ImportSession $session, int $offset, int $limit = 50): array

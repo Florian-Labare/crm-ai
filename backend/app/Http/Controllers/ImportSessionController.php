@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Jobs\AnalyzeImportFileJob;
 use App\Jobs\ProcessImportSessionJob;
+use App\Models\ImportAuditLog;
 use App\Models\ImportMapping;
 use App\Models\ImportRow;
 use App\Models\ImportSession;
 use App\Services\Import\ImportMappingService;
 use App\Services\Import\ImportOrchestrationService;
+use App\Services\Import\RgpdComplianceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +19,8 @@ class ImportSessionController extends Controller
 {
     public function __construct(
         private ImportOrchestrationService $orchestrator,
-        private ImportMappingService $mappingService
+        private ImportMappingService $mappingService,
+        private RgpdComplianceService $rgpdService
     ) {
     }
 
@@ -39,7 +42,7 @@ class ImportSessionController extends Controller
     public function upload(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:51200',
+            'file' => 'required|file|mimes:xlsx,xls,csv,json,xml,sql,txt|max:51200',
             'import_mapping_id' => 'nullable|exists:import_mappings,id',
         ]);
 
@@ -54,7 +57,24 @@ class ImportSessionController extends Controller
             'original_filename' => $file->getClientOriginalName(),
             'file_path' => $path,
             'status' => ImportSession::STATUS_PENDING,
+            'retention_until' => now()->addDays(90), // RGPD: 90 days retention
         ]);
+
+        // RGPD: Log the upload action
+        $this->rgpdService->logAction(
+            ImportAuditLog::ACTION_UPLOAD,
+            ImportAuditLog::RESOURCE_SESSION,
+            $session->id,
+            [
+                'import_session_id' => $session->id,
+                'metadata' => [
+                    'filename' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
+                    'mime_type' => $file->getMimeType(),
+                ],
+            ],
+            $request
+        );
 
         AnalyzeImportFileJob::dispatch($session);
 
@@ -134,7 +154,43 @@ class ImportSessionController extends Controller
         ]);
     }
 
-    public function start(ImportSession $session): JsonResponse
+    /**
+     * Record RGPD consent for import session
+     */
+    public function recordConsent(Request $request, ImportSession $session): JsonResponse
+    {
+        $validated = $request->validate([
+            'legal_basis' => 'required|in:consent,contract,legal_obligation,vital_interests,public_task,legitimate_interest',
+            'legal_basis_details' => 'required|string|max:1000',
+            'confirm_authorization' => 'required|accepted',
+        ]);
+
+        $this->rgpdService->recordConsent(
+            $session,
+            $validated['legal_basis'],
+            $validated['legal_basis_details'],
+            $request
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Consentement RGPD enregistré',
+            'data' => $session->fresh(),
+        ]);
+    }
+
+    /**
+     * Get legal basis options for RGPD consent
+     */
+    public function legalBases(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => ImportAuditLog::getLegalBasesLabels(),
+        ]);
+    }
+
+    public function start(Request $request, ImportSession $session): JsonResponse
     {
         if (!$session->import_mapping_id) {
             return response()->json([
@@ -149,6 +205,31 @@ class ImportSessionController extends Controller
                 'message' => 'L\'import ne peut pas être lancé dans cet état',
             ], 422);
         }
+
+        // RGPD: Require consent before starting import
+        if (!$session->hasRgpdConsent()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Consentement RGPD requis avant de lancer l\'import',
+                'requires_consent' => true,
+            ], 422);
+        }
+
+        // RGPD: Log the start action
+        $this->rgpdService->logAction(
+            ImportAuditLog::ACTION_IMPORT,
+            ImportAuditLog::RESOURCE_SESSION,
+            $session->id,
+            [
+                'import_session_id' => $session->id,
+                'legal_basis' => $session->legal_basis,
+                'consent_confirmed' => true,
+                'metadata' => [
+                    'total_rows' => $session->total_rows,
+                ],
+            ],
+            $request
+        );
 
         ProcessImportSessionJob::dispatch($session);
 
@@ -222,18 +303,41 @@ class ImportSessionController extends Controller
         ]);
     }
 
-    public function destroy(ImportSession $session): JsonResponse
+    public function destroy(Request $request, ImportSession $session): JsonResponse
     {
-        if (Storage::exists($session->file_path)) {
-            Storage::delete($session->file_path);
-        }
-
-        $session->rows()->delete();
-        $session->delete();
+        // RGPD: Use the compliance service to properly delete and log
+        $result = $this->rgpdService->deleteSessionData($session, $request);
 
         return response()->json([
             'success' => true,
             'message' => 'Session supprimée',
+            'data' => $result,
+        ]);
+    }
+
+    /**
+     * Get audit trail for a session
+     */
+    public function auditTrail(ImportSession $session): JsonResponse
+    {
+        $trail = $this->rgpdService->getSessionAuditTrail($session);
+
+        return response()->json([
+            'success' => true,
+            'data' => $trail,
+        ]);
+    }
+
+    /**
+     * Get clients imported from this session
+     */
+    public function importedClients(ImportSession $session): JsonResponse
+    {
+        $clients = $this->rgpdService->getClientsFromSession($session);
+
+        return response()->json([
+            'success' => true,
+            'data' => $clients,
         ]);
     }
 
@@ -265,6 +369,9 @@ class ImportSessionController extends Controller
         return match ($extension) {
             'csv' => 'csv',
             'xlsx', 'xls' => 'excel',
+            'json' => 'json',
+            'xml' => 'xml',
+            'sql', 'txt' => 'sql',
             default => 'excel',
         };
     }

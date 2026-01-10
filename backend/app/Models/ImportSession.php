@@ -19,9 +19,16 @@ class ImportSession extends Model
         'team_id',
         'user_id',
         'import_mapping_id',
+        'database_connection_id',
+        'source_table',
+        'source_query',
         'original_filename',
         'file_path',
         'status',
+        'rgpd_consent_given',
+        'legal_basis',
+        'legal_basis_details',
+        'consent_timestamp',
         'total_rows',
         'processed_rows',
         'success_count',
@@ -32,14 +39,18 @@ class ImportSession extends Model
         'errors_summary',
         'started_at',
         'completed_at',
+        'retention_until',
     ];
 
     protected $casts = [
         'detected_columns' => 'array',
         'ai_suggested_mappings' => 'array',
         'errors_summary' => 'array',
+        'rgpd_consent_given' => 'boolean',
+        'consent_timestamp' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'retention_until' => 'datetime',
     ];
 
     public function team(): BelongsTo
@@ -55,6 +66,11 @@ class ImportSession extends Model
     public function mapping(): BelongsTo
     {
         return $this->belongsTo(ImportMapping::class, 'import_mapping_id');
+    }
+
+    public function databaseConnection(): BelongsTo
+    {
+        return $this->belongsTo(DatabaseConnection::class);
     }
 
     public function rows(): HasMany
@@ -89,5 +105,35 @@ class ImportSession extends Model
     public function isFailed(): bool
     {
         return $this->status === self::STATUS_FAILED;
+    }
+
+    public function isDatabaseImport(): bool
+    {
+        return $this->database_connection_id !== null;
+    }
+
+    public function isFileImport(): bool
+    {
+        return $this->file_path !== null && $this->database_connection_id === null;
+    }
+
+    public function hasRgpdConsent(): bool
+    {
+        return $this->rgpd_consent_given && $this->legal_basis !== null;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->retention_until !== null && $this->retention_until->isPast();
+    }
+
+    public function importedClients(): HasMany
+    {
+        return $this->hasMany(Client::class, 'import_session_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(ImportAuditLog::class);
     }
 }
