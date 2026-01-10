@@ -60,6 +60,9 @@ export const ReviewChangesModal: React.FC<ReviewChangesModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, 'accept' | 'reject' | 'skip'>>({});
+  const [overrides, setOverrides] = useState<Record<string, any>>({});
+  const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
+  const [editModes, setEditModes] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
 
@@ -82,6 +85,9 @@ export const ReviewChangesModal: React.FC<ReviewChangesModalProps> = ({
         }
       });
       setDecisions(initialDecisions);
+      setOverrides({});
+      setOverrideInputs({});
+      setEditModes({});
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement');
     } finally {
@@ -93,11 +99,136 @@ export const ReviewChangesModal: React.FC<ReviewChangesModalProps> = ({
     setDecisions(prev => ({ ...prev, [field]: decision }));
   };
 
+  const setOverrideValue = (field: string, value: any) => {
+    setOverrides(prev => ({ ...prev, [field]: value }));
+    setDecisions(prev => ({ ...prev, [field]: 'accept' }));
+  };
+
+  const handleToggleEdit = (field: string, change: ChangeItem) => {
+    const next = !editModes[field];
+    setEditModes(prev => ({ ...prev, [field]: next }));
+    if (!next) {
+      setOverrides(prev => {
+        const updated = { ...prev };
+        delete updated[field];
+        return updated;
+      });
+      setOverrideInputs(prev => {
+        const updated = { ...prev };
+        delete updated[field];
+        return updated;
+      });
+      return;
+    }
+    if (typeof change.new_value === 'object' && change.new_value !== null) {
+      setOverrideInputs(prev => ({
+        ...prev,
+        [field]: JSON.stringify(change.new_value, null, 2),
+      }));
+    }
+  };
+
+  const coerceScalarValue = (rawValue: string, originalValue: any): any => {
+    if (typeof originalValue === 'number') {
+      const num = Number(rawValue);
+      return Number.isFinite(num) ? num : rawValue;
+    }
+    if (typeof originalValue === 'boolean') {
+      return rawValue === 'true';
+    }
+    return rawValue;
+  };
+
+  const parseOverrideInput = (field: string, raw: string): any | null => {
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      setError(`Le format JSON est invalide pour "${field}".`);
+      return null;
+    }
+  };
+
+  const cloneValue = (value: any): any => {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return value;
+    }
+  };
+
+  const ensureOverrideValue = (field: string, fallback: any) => {
+    if (Object.prototype.hasOwnProperty.call(overrides, field)) {
+      return overrides[field];
+    }
+    const nextValue = cloneValue(fallback);
+    setOverrides(prev => ({ ...prev, [field]: nextValue }));
+    return nextValue;
+  };
+
+  const updateOverrideValue = (field: string, nextValue: any) => {
+    setOverrides(prev => ({ ...prev, [field]: nextValue }));
+    setDecisions(prev => ({ ...prev, [field]: 'accept' }));
+  };
+
+  const updateArrayItem = (field: string, index: number, value: any, change: ChangeItem) => {
+    const base = ensureOverrideValue(field, change.new_value);
+    const next = Array.isArray(base) ? [...base] : [];
+    next[index] = value;
+    updateOverrideValue(field, next);
+  };
+
+  const removeArrayItem = (field: string, index: number, change: ChangeItem) => {
+    const base = ensureOverrideValue(field, change.new_value);
+    const next = Array.isArray(base) ? base.filter((_: any, idx: number) => idx !== index) : [];
+    updateOverrideValue(field, next);
+  };
+
+  const addArrayItem = (field: string, template: any, change: ChangeItem) => {
+    const base = ensureOverrideValue(field, change.new_value);
+    const next = Array.isArray(base) ? [...base] : [];
+    next.push(cloneValue(template));
+    updateOverrideValue(field, next);
+  };
+
+  const updateObjectField = (field: string, key: string, value: any, change: ChangeItem) => {
+    const base = ensureOverrideValue(field, change.new_value);
+    const next = { ...(typeof base === 'object' && base !== null ? base : {}) };
+    next[key] = value;
+    updateOverrideValue(field, next);
+  };
+
+  const isArrayOfObjects = (value: any): value is Record<string, any>[] =>
+    Array.isArray(value) && value.every(item => item && typeof item === 'object' && !Array.isArray(item));
+
+  const isArrayOfPrimitives = (value: any): boolean =>
+    Array.isArray(value) && value.every(item => item === null || typeof item !== 'object');
+
   const handleApply = async () => {
     try {
       setApplying(true);
       setError(null);
-      await api.post(`/pending-changes/${pendingChangeId}/apply`, { decisions });
+      const payloadOverrides: Record<string, any> = {};
+      let hasInvalidOverride = false;
+      Object.entries(overrides).forEach(([field, value]) => {
+        payloadOverrides[field] = value;
+      });
+
+      Object.entries(overrideInputs).forEach(([field, value]) => {
+        if (!editModes[field]) return;
+        const parsed = parseOverrideInput(field, value);
+        if (parsed === null) {
+          hasInvalidOverride = true;
+          return;
+        }
+        payloadOverrides[field] = parsed;
+      });
+
+      if (hasInvalidOverride) {
+        setApplying(false);
+        return;
+      }
+
+      await api.post(`/pending-changes/${pendingChangeId}/apply`, { decisions, overrides: payloadOverrides });
       onApplied();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erreur lors de l\'application');
@@ -159,6 +290,20 @@ export const ReviewChangesModal: React.FC<ReviewChangesModalProps> = ({
     return String(value);
   };
 
+  const getDisplayedNewValue = (field: string, change: ChangeItem): string => {
+    if (Object.prototype.hasOwnProperty.call(overrides, field)) {
+      const overrideValue = overrides[field];
+      if (typeof overrideValue === 'object' && overrideValue !== null) {
+        return 'Valeur personnalisée';
+      }
+      return formatValue(overrideValue);
+    }
+    if (editModes[field] && overrideInputs[field] && typeof change.new_value === 'object') {
+      return 'Valeur personnalisée';
+    }
+    return change.new_display || formatValue(change.new_value);
+  };
+
   const formatKeyLabel = (key: string): string => key.replace(/_/g, ' ');
 
   const getRelationalFields = (change: ChangeItem): string[] => {
@@ -189,9 +334,11 @@ export const ReviewChangesModal: React.FC<ReviewChangesModalProps> = ({
     return Object.keys(value);
   };
 
-  const getRelationalDetails = (change: ChangeItem): string[] => {
+  const getRelationalDetails = (change: ChangeItem, fieldKey: string): string[] => {
     const currentValue = change.current_value;
-    const newValue = change.new_value;
+    const newValue = Object.prototype.hasOwnProperty.call(overrides, fieldKey)
+      ? overrides[fieldKey]
+      : change.new_value;
 
     if (!newValue || typeof newValue !== 'object') {
       return [];
@@ -411,15 +558,137 @@ export const ReviewChangesModal: React.FC<ReviewChangesModalProps> = ({
                       <div>
                         <p className="text-xs text-[#6E6B7B] mb-1">Nouvelle valeur</p>
                         <p className="text-sm text-[#7367F0] font-medium">
-                          {change.new_display}
+                          {getDisplayedNewValue(field, change)}
                         </p>
+                        <button
+                          onClick={() => handleToggleEdit(field, change)}
+                          className="mt-2 inline-flex items-center text-xs font-semibold text-[#7367F0] hover:text-[#5E50EE]"
+                        >
+                          {editModes[field] ? 'Annuler la modification' : 'Modifier la valeur'}
+                        </button>
+                        {editModes[field] && (
+                          <div className="mt-2">
+                            {typeof change.new_value === 'boolean' ? (
+                              <select
+                                value={String(Object.prototype.hasOwnProperty.call(overrides, field) ? overrides[field] : change.new_value)}
+                                onChange={(e) => setOverrideValue(field, e.target.value === 'true')}
+                                className="w-full px-3 py-2 border border-[#EBE9F1] rounded-lg text-sm text-[#5E5873] bg-white focus:outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[rgba(115,103,240,0.1)]"
+                              >
+                                <option value="true">Oui</option>
+                                <option value="false">Non</option>
+                              </select>
+                            ) : typeof change.new_value === 'object' && change.new_value !== null ? (
+                              <div className="space-y-3">
+                                {isArrayOfObjects(ensureOverrideValue(field, change.new_value)) && (
+                                  <div className="space-y-3">
+                                    {ensureOverrideValue(field, change.new_value).map((item: Record<string, any>, index: number) => {
+                                      const allKeys = Array.from(
+                                        new Set([
+                                          ...Object.keys(item || {}),
+                                          ...getRelationalFields(change),
+                                        ])
+                                      );
+                                      return (
+                                        <div key={`${field}-row-${index}`} className="border border-[#EBE9F1] rounded-lg p-3 bg-white">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-[#6E6B7B]">
+                                              Élément {index + 1}
+                                            </span>
+                                            <button
+                                              onClick={() => removeArrayItem(field, index, change)}
+                                              className="text-xs font-semibold text-[#EA5455] hover:text-[#D94849]"
+                                            >
+                                              Supprimer
+                                            </button>
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {allKeys.map((key) => (
+                                              <label key={`${field}-${index}-${key}`} className="text-xs text-[#6E6B7B]">
+                                                {formatKeyLabel(key)}
+                                                <input
+                                                  type="text"
+                                                  value={item?.[key] ?? ''}
+                                                  onChange={(e) => {
+                                                    const nextItem = { ...(item || {}) };
+                                                    nextItem[key] = e.target.value;
+                                                    updateArrayItem(field, index, nextItem, change);
+                                                  }}
+                                                  className="mt-1 w-full px-3 py-2 border border-[#EBE9F1] rounded-lg text-sm text-[#5E5873] bg-white focus:outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[rgba(115,103,240,0.1)]"
+                                                />
+                                              </label>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    <button
+                                      onClick={() => addArrayItem(field, {}, change)}
+                                      className="text-xs font-semibold text-[#7367F0] hover:text-[#5E50EE]"
+                                    >
+                                      + Ajouter un élément
+                                    </button>
+                                  </div>
+                                )}
+                                {isArrayOfPrimitives(ensureOverrideValue(field, change.new_value)) && (
+                                  <div className="space-y-2">
+                                    {ensureOverrideValue(field, change.new_value).map((item: any, index: number) => (
+                                      <div key={`${field}-item-${index}`} className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={item ?? ''}
+                                          onChange={(e) => updateArrayItem(field, index, e.target.value, change)}
+                                          className="flex-1 px-3 py-2 border border-[#EBE9F1] rounded-lg text-sm text-[#5E5873] bg-white focus:outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[rgba(115,103,240,0.1)]"
+                                        />
+                                        <button
+                                          onClick={() => removeArrayItem(field, index, change)}
+                                          className="text-xs font-semibold text-[#EA5455] hover:text-[#D94849]"
+                                        >
+                                          Supprimer
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <button
+                                      onClick={() => addArrayItem(field, '', change)}
+                                      className="text-xs font-semibold text-[#7367F0] hover:text-[#5E50EE]"
+                                    >
+                                      + Ajouter un élément
+                                    </button>
+                                  </div>
+                                )}
+                                {!Array.isArray(ensureOverrideValue(field, change.new_value)) && (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {Object.keys(ensureOverrideValue(field, change.new_value) || {}).map((key) => (
+                                      <label key={`${field}-${key}`} className="text-xs text-[#6E6B7B]">
+                                        {formatKeyLabel(key)}
+                                        <input
+                                          type="text"
+                                          value={ensureOverrideValue(field, change.new_value)?.[key] ?? ''}
+                                          onChange={(e) => updateObjectField(field, key, e.target.value, change)}
+                                          className="mt-1 w-full px-3 py-2 border border-[#EBE9F1] rounded-lg text-sm text-[#5E5873] bg-white focus:outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[rgba(115,103,240,0.1)]"
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type={typeof change.new_value === 'number' ? 'number' : 'text'}
+                                value={String(Object.prototype.hasOwnProperty.call(overrides, field) ? overrides[field] : change.new_value ?? '')}
+                                onChange={(e) => setOverrideValue(field, coerceScalarValue(e.target.value, change.new_value))}
+                                className="w-full px-3 py-2 border border-[#EBE9F1] rounded-lg text-sm text-[#5E5873] bg-white focus:outline-none focus:border-[#7367F0] focus:ring-[3px] focus:ring-[rgba(115,103,240,0.1)]"
+                                placeholder="Saisir une valeur"
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {getRelationalDetails(change).length > 0 && (
-                      <div className="mt-3 text-xs text-[#6E6B7B]">
-                        <p className="font-semibold text-[#5E5873] mb-1">Détails</p>
-                        <ul className="space-y-1">
-                          {getRelationalDetails(change).map((detail, index) => (
+                      {getRelationalDetails(change, field).length > 0 && (
+                        <div className="mt-3 text-xs text-[#6E6B7B]">
+                          <p className="font-semibold text-[#5E5873] mb-1">Détails</p>
+                          <ul className="space-y-1">
+                          {getRelationalDetails(change, field).map((detail, index) => (
                             <li key={`${change.field}-detail-${index}`}>{detail}</li>
                           ))}
                         </ul>

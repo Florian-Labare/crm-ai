@@ -69,19 +69,23 @@ class ClientRevenusSyncService
      */
     private function findMatchingRevenu($existingRevenus, array $revenuData): ?ClientRevenu
     {
+        $nature = $this->normalizeString($revenuData['nature'] ?? null);
+        $details = $this->normalizeString($revenuData['details'] ?? null);
+        $isAutre = $nature === 'autre';
+
         // Match par nature et montant
         if (isset($revenuData['nature']) && isset($revenuData['montant'])) {
             $match = $existingRevenus->first(function ($revenu) use ($revenuData) {
                 return $this->normalizeString($revenu->nature) === $this->normalizeString($revenuData['nature'])
                     && abs($revenu->montant - $revenuData['montant']) < 0.01;
             });
-            if ($match) {
+            if ($match && (!$isAutre || $this->normalizeString($match->details ?? null) === $details)) {
                 return $match;
             }
         }
 
         // Match par nature seule (si unique)
-        if (isset($revenuData['nature'])) {
+        if (isset($revenuData['nature']) && !$isAutre) {
             $matches = $existingRevenus->filter(function ($revenu) use ($revenuData) {
                 return $this->normalizeString($revenu->nature) === $this->normalizeString($revenuData['nature']);
             });

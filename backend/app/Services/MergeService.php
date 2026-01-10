@@ -315,7 +315,8 @@ class MergeService
     public function applyChanges(
         ClientPendingChange $pendingChange,
         array $decisions,
-        int $reviewerId
+        int $reviewerId,
+        array $overrides = []
     ): array {
         $client = $pendingChange->client;
         $applied = [];
@@ -335,22 +336,26 @@ class MergeService
                 }
 
                 if ($decision === 'accept') {
+                    $overrideProvided = array_key_exists($field, $overrides);
+                    $overrideValue = $overrideProvided ? $this->normalizeOverrideValue($overrides[$field], $changeInfo['new_value'] ?? null) : null;
+
                     // Vérifier si c'est un champ relationnel
                     if ($changeInfo['is_relational'] ?? false) {
                         // Appliquer via les services de synchronisation
-                        $this->applyRelationalChange($client, $field, $relationalData[$field] ?? []);
+                        $relationalPayload = $overrideProvided ? (is_array($overrideValue) ? $overrideValue : []) : ($relationalData[$field] ?? []);
+                        $this->applyRelationalChange($client, $field, $relationalPayload);
                         $applied[$field] = [
                             'old' => $changeInfo['current_display'],
-                            'new' => $changeInfo['new_display'],
+                            'new' => $overrideProvided ? $overrideValue : $changeInfo['new_display'],
                             'type' => 'relational',
                         ];
                     } else {
                         // Appliquer le changement standard
                         $oldValue = $client->$field;
-                        $client->$field = $changeInfo['new_value'];
+                        $client->$field = $overrideProvided ? $overrideValue : $changeInfo['new_value'];
                         $applied[$field] = [
                             'old' => $oldValue,
-                            'new' => $changeInfo['new_value'],
+                            'new' => $overrideProvided ? $overrideValue : $changeInfo['new_value'],
                         ];
                     }
                 } elseif ($decision === 'reject') {
@@ -471,6 +476,32 @@ class MergeService
     }
 
     /**
+     * Normalise une valeur modifiée par l'utilisateur selon le type attendu.
+     */
+    private function normalizeOverrideValue(mixed $override, mixed $baseline): mixed
+    {
+        if (is_string($override)) {
+            $trimmed = trim($override);
+            if ((is_array($baseline) || is_object($baseline)) && $trimmed !== '') {
+                $decoded = json_decode($trimmed, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return $decoded;
+                }
+            }
+
+            if (is_numeric($baseline)) {
+                return str_contains($trimmed, '.') ? (float) $trimmed : (int) $trimmed;
+            }
+
+            if (is_bool($baseline)) {
+                return filter_var($trimmed, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            }
+        }
+
+        return $override;
+    }
+
+    /**
      * Rejette tous les changements
      */
     public function rejectAll(
@@ -525,7 +556,7 @@ class MergeService
             }
         }
 
-        return $this->applyChanges($pendingChange, $decisions, $reviewerId);
+        return $this->applyChanges($pendingChange, $decisions, $reviewerId, []);
     }
 
     /**

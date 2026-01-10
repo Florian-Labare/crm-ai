@@ -112,13 +112,15 @@ class PendingChangesController extends Controller
         $request->validate([
             'decisions' => 'required|array',
             'decisions.*' => 'in:accept,reject,skip',
+            'overrides' => 'nullable|array',
         ]);
 
         try {
             $result = $this->mergeService->applyChanges(
                 $pendingChange,
                 $request->input('decisions'),
-                auth()->id()
+                auth()->id(),
+                $request->input('overrides', [])
             );
 
             Log::info("✅ [PENDING CHANGES] Changements appliqués", [
@@ -174,7 +176,7 @@ class PendingChangesController extends Controller
         }
 
         try {
-            $result = $this->mergeService->applyChanges($pendingChange, $decisions, auth()->id());
+            $result = $this->mergeService->applyChanges($pendingChange, $decisions, auth()->id(), []);
 
             return response()->json([
                 'success' => true,

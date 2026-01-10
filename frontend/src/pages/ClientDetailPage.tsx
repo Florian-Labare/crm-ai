@@ -13,7 +13,8 @@ import { ReviewChangesModal } from "../components/ReviewChangesModal";
 import { TemplateSelectModal } from "../components/TemplateSelectModal";
 import { DocumentFormModal } from "../components/DocumentFormModal";
 import { SectionEditModal, type SectionType } from "../components/SectionEditModal";
-import { Info, ClipboardList, Folder, AlertTriangle, FileText } from "lucide-react";
+import { LongRecorder } from "../components/LongRecorder";
+import { Info, ClipboardList, Folder, AlertTriangle, FileText, X, Mic } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
 
@@ -135,6 +136,9 @@ const ClientDetailPage: React.FC = () => {
     data: null,
     isNew: false,
   });
+
+  // État pour le modal d'enregistrement vocal
+  const [recordingModalOpen, setRecordingModalOpen] = useState(false);
 
   // États pour les dialogues de confirmation
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -610,6 +614,19 @@ const ClientDetailPage: React.FC = () => {
             onExportQuestionnairePDF={handleExportQuestionnairePdf}
           />
 
+          {/* Bouton Enregistrer une conversation */}
+          {activeTab === "info" && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setRecordingModalOpen(true)}
+                className="bg-gradient-to-r from-[#7367F0] to-[#9055FD] hover:from-[#5E50EE] hover:to-[#7E3FF2] text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+              >
+                <Mic size={20} />
+                Enregistrer une conversation
+              </button>
+            </div>
+          )}
+
           {/* Pending Changes Banner */}
           {pendingChanges.length > 0 && (
             <div className="bg-gradient-to-r from-[#FF9F43]/10 to-[#FF9F43]/5 border border-[#FF9F43]/30 rounded-xl p-4">
@@ -940,6 +957,66 @@ const ClientDetailPage: React.FC = () => {
             fetchClient();
           }}
         />
+      )}
+
+      {/* Recording Modal */}
+      {recordingModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+          style={{ backgroundColor: 'rgba(94, 88, 115, 0.4)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setRecordingModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-[800px] max-h-[90vh] flex flex-col animate-modalSlideIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 md:p-8 border-b border-[#EBE9F1] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#7367F0]/10 flex items-center justify-center text-[#7367F0]">
+                  <Mic size={20} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#5E5873]">Enregistrement vocal</h2>
+                  <p className="text-sm text-[#6E6B7B]">Les informations seront extraites automatiquement</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRecordingModalOpen(false)}
+                className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#F3F2F7] text-[#6E6B7B] hover:bg-[#EA5455] hover:text-white transition-all duration-200 hover:rotate-90"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 md:p-8 overflow-y-auto flex-1 custom-scrollbar">
+              <LongRecorder
+                clientId={parseInt(id!, 10)}
+                onTranscriptionComplete={() => {
+                  toast.success("Fiche client mise à jour avec succès !");
+                  setRecordingModalOpen(false);
+                  fetchClient();
+                  fetchPendingChanges();
+                }}
+              />
+            </div>
+          </div>
+          <style>{`
+            @keyframes modalSlideIn {
+              from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.98);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+
+            .animate-modalSlideIn {
+              animation: modalSlideIn 0.3s ease-out;
+            }
+          `}</style>
+        </div>
       )}
     </>
   );

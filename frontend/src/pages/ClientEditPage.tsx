@@ -4,8 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
-import { LongRecorder } from "../components/LongRecorder";
-import { Mic, Coins, CreditCard, TrendingUp, Home, Gem, Heart, Shield, Users, Wallet } from "lucide-react";
+import { Coins, CreditCard, TrendingUp, Home, Gem, Heart, Shield, Users, Wallet } from "lucide-react";
 import type {
   ClientRevenu,
   ClientPassif,
@@ -592,46 +591,8 @@ export default function ClientEditPage() {
             <div>
               <h1 className="text-3xl font-bold text-[#5E5873]">Éditer le client</h1>
               <p className="text-[#6E6B7B] mt-1">
-                Mise à jour vocale ou manuelle des informations
+                Modification manuelle des informations
               </p>
-            </div>
-          </div>
-
-          {/* Mise à jour vocale */}
-          <div className="vx-card mb-6 border-l-4 border-[#7367F0]">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 bg-gradient-to-br from-[#7367F0] to-[#9055FD] rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-                  <Mic size={28} className="text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-[#5E5873] mb-1">
-                  Mise à jour vocale
-                </h3>
-                <p className="text-sm text-[#6E6B7B] mb-4">
-                  Enregistrez une conversation pour mettre à jour automatiquement la fiche client
-                </p>
-                <LongRecorder
-                  clientId={parseInt(id!)}
-                  onTranscriptionComplete={() => {
-                    toast.success("✅ Fiche client mise à jour avec succès !");
-                    setTimeout(() => navigate(`/clients/${id}`), 1500);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Séparateur OR */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t-2 border-[#EBE9F1]"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-[#F8F8F8] px-4 py-1 text-sm font-semibold text-[#B9B9C3] rounded-full border-2 border-[#EBE9F1]">
-                OU
-              </span>
             </div>
           </div>
 

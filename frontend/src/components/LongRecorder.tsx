@@ -352,10 +352,22 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
           </p>
         )}
         {isProcessing && (
-          <p className="text-sm text-[#00CFE8] flex items-center justify-center gap-2">
-            <Loader2 className="animate-spin" size={16} />
-            {processingStatus || 'Finalisation et transcription en cours...'}
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-[#00CFE8] flex items-center justify-center gap-2">
+              <Loader2 className="animate-spin" size={16} />
+              {processingStatus || 'Finalisation et transcription en cours...'}
+            </p>
+            <div className="bg-[#FF9F43]/10 border border-[#FF9F43]/30 rounded-lg p-4 text-left">
+              <p className="text-sm text-[#5E5873] leading-relaxed">
+                <span className="font-semibold text-[#FF9F43]">Information :</span> Notre outil s'appuie sur un modèle de transcription OpenAI.
+                Il peut, dans certains cas, interpréter incorrectement des mots, des noms ou des dates — ou proposer certaines informations dans une section qui n'est pas la bonne.
+              </p>
+              <p className="text-sm text-[#5E5873] mt-2 leading-relaxed">
+                C'est pourquoi les données passent systématiquement par un <span className="font-semibold">contrôle avant enregistrement</span>,
+                et vous disposez toujours du dernier mot : <span className="text-[#28C76F] font-semibold">valider</span>, <span className="text-[#00CFE8] font-semibold">corriger</span> ou <span className="text-[#EA5455] font-semibold">supprimer</span>.
+              </p>
+            </div>
+          </div>
         )}
         {isRecording && (
           <div className="text-xs text-[#B9B9C3] mt-2">
