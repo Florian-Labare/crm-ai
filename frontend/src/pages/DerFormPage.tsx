@@ -87,22 +87,23 @@ const DerFormPage: React.FC = () => {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Chargé de clientèle */}
-              <div>
-                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                  Chargé de clientèle
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User size={18} className="text-[#B9B9C3]" />
-                  </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Section Responsable */}
+              <div className="border-l-4 border-[#7367F0] pl-4">
+                <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4 flex items-center">
+                  <User className="w-4 h-4 mr-2 text-[#7367F0]" />
+                  Responsable
+                </h4>
+                <div>
+                  <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                    Chargé de clientèle <span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="charge_clientele_id"
                     value={formData.charge_clientele_id}
                     onChange={handleChange}
                     required
-                    className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all bg-white"
+                    className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all bg-white"
                   >
                     <option value="">Sélectionner un chargé de clientèle</option>
                     {mias.map((mia) => (
@@ -114,108 +115,111 @@ const DerFormPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Civilité */}
-              <div>
-                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                  Monsieur/Madame <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="civilite"
-                  value={formData.civilite}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all bg-white"
-                >
-                  <option value="">Sélectionner</option>
-                  <option value="Monsieur">Monsieur</option>
-                  <option value="Madame">Madame</option>
-                </select>
-              </div>
-
-              {/* Nom */}
-              <div>
-                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                  Nom <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
-                  placeholder="Dupont"
-                />
-              </div>
-
-              {/* Prénom */}
-              <div>
-                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                  Prénom <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="prenom"
-                  value={formData.prenom}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
-                  placeholder="Jean"
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                  Adresse mail <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail size={18} className="text-[#B9B9C3]" />
+              {/* Section Identité Client */}
+              <div className="border-l-4 border-[#00CFE8] pl-4">
+                <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-[#00CFE8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Identité du client
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Civilité <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="civilite"
+                      value={formData.civilite}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all bg-white"
+                    >
+                      <option value="">Sélectionner</option>
+                      <option value="Monsieur">Monsieur</option>
+                      <option value="Madame">Madame</option>
+                    </select>
                   </div>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
-                    placeholder="exemple@email.com"
-                  />
-                </div>
-              </div>
-
-              {/* Lieu du rdv */}
-              <div>
-                <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                  Lieu du rdv <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <MapPin size={18} className="text-[#B9B9C3]" />
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Nom <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="nom"
+                      value={formData.nom}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                      placeholder="Dupont"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    name="lieu_rdv"
-                    value={formData.lieu_rdv}
-                    onChange={handleChange}
-                    required
-                    className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
-                    placeholder="10 rue de la République, Paris"
-                  />
-                </div>
-              </div>
-
-              {/* Date et Heure du rdv */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                    Date du rdv <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Calendar size={18} className="text-[#B9B9C3]" />
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Prénom <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="prenom"
+                      value={formData.prenom}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                      placeholder="Jean"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Adresse mail <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail size={16} className="text-[#B9B9C3]" />
+                      </div>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                        placeholder="exemple@email.com"
+                      />
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Rendez-vous */}
+              <div className="border-l-4 border-[#28C76F] pl-4">
+                <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4 flex items-center">
+                  <Calendar className="w-4 h-4 mr-2 text-[#28C76F]" />
+                  Rendez-vous
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Lieu du rdv <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPin size={16} className="text-[#B9B9C3]" />
+                      </div>
+                      <input
+                        type="text"
+                        name="lieu_rdv"
+                        value={formData.lieu_rdv}
+                        onChange={handleChange}
+                        required
+                        className="w-full pl-10 pr-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-all"
+                        placeholder="10 rue de la République, Paris"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Date du rdv <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="date"
                       name="date_rdv"
@@ -223,26 +227,20 @@ const DerFormPage: React.FC = () => {
                       onChange={handleChange}
                       required
                       min={new Date().toISOString().split("T")[0]}
-                      className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all"
+                      className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#5E5873] mb-2">
-                    Heure du rdv <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Clock size={18} className="text-[#B9B9C3]" />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[#5E5873] mb-1">
+                      Heure du rdv <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="time"
                       name="heure_rdv"
                       value={formData.heure_rdv}
                       onChange={handleChange}
                       required
-                      className="w-full pl-10 pr-4 py-3 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all"
+                      className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] transition-all"
                     />
                   </div>
                 </div>
