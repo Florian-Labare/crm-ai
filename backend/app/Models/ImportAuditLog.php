@@ -93,8 +93,10 @@ class ImportAuditLog extends Model
     ): self {
         $user = $request?->user() ?? auth()->user();
 
+        $consentConfirmed = $options['consent_confirmed'] ?? false;
+
         return self::create([
-            'team_id' => $user?->current_team_id ?? $options['team_id'] ?? null,
+            'team_id' => $user?->currentTeam()?->id ?? $options['team_id'] ?? null,
             'user_id' => $user?->id ?? $options['user_id'] ?? null,
             'import_session_id' => $options['import_session_id'] ?? null,
             'database_connection_id' => $options['database_connection_id'] ?? null,
@@ -103,8 +105,8 @@ class ImportAuditLog extends Model
             'resource_id' => $resourceId,
             'legal_basis' => $options['legal_basis'] ?? null,
             'legal_basis_details' => $options['legal_basis_details'] ?? null,
-            'consent_confirmed' => $options['consent_confirmed'] ?? false,
-            'consent_timestamp' => $options['consent_confirmed'] ? now() : null,
+            'consent_confirmed' => $consentConfirmed,
+            'consent_timestamp' => $consentConfirmed ? now() : null,
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
             'metadata' => $options['metadata'] ?? null,

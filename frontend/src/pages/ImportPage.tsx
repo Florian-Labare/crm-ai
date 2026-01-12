@@ -126,11 +126,23 @@ const ImportPage: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<ImportSession | null>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
   const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
-  const [availableFields, setAvailableFields] = useState<{ client: string[]; conjoint: string[]; enfant: string[] }>({
-    client: [],
-    conjoint: [],
-    enfant: [],
-  });
+  const [availableFields, setAvailableFields] = useState<Record<string, string[]>>({});
+
+  // Labels français pour les tables
+  const tableLabels: Record<string, string> = {
+    client: "Client",
+    conjoint: "Conjoint",
+    enfant: "Enfants",
+    sante_souhaits: "Santé / Mutuelle",
+    bae_prevoyance: "Prévoyance",
+    bae_retraite: "Retraite",
+    bae_epargne: "Épargne",
+    client_revenu: "Revenus",
+    client_actif_financier: "Actifs Financiers",
+    client_bien_immobilier: "Biens Immobiliers",
+    client_passif: "Passifs / Emprunts",
+    client_autre_epargne: "Autres Épargnes",
+  };
 
   // Database connection state
   const [activeTab, setActiveTab] = useState<"files" | "database">("files");
@@ -450,7 +462,7 @@ const ImportPage: React.FC = () => {
     }
   };
 
-  const allFields = [...availableFields.client, ...availableFields.conjoint, ...availableFields.enfant];
+  const allFields = Object.values(availableFields).flat();
 
   if (loading) {
     return (
@@ -681,27 +693,17 @@ const ImportPage: React.FC = () => {
                                 className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:outline-none focus:border-[#7367F0] focus:ring-1 focus:ring-[#7367F0]"
                               >
                                 <option value="">-- Ignorer --</option>
-                                <optgroup label="Client">
-                                  {availableFields.client.map((field) => (
-                                    <option key={field} value={field}>
-                                      {field}
-                                    </option>
+                                {Object.entries(availableFields)
+                                  .filter(([table]) => !table.startsWith("_"))
+                                  .map(([table, fields]) => (
+                                    <optgroup key={table} label={tableLabels[table] || table}>
+                                      {(fields as string[]).map((field) => (
+                                        <option key={field} value={field}>
+                                          {field}
+                                        </option>
+                                      ))}
+                                    </optgroup>
                                   ))}
-                                </optgroup>
-                                <optgroup label="Conjoint">
-                                  {availableFields.conjoint.map((field) => (
-                                    <option key={field} value={field}>
-                                      {field}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                                <optgroup label="Enfant">
-                                  {availableFields.enfant.map((field) => (
-                                    <option key={field} value={field}>
-                                      {field}
-                                    </option>
-                                  ))}
-                                </optgroup>
                               </select>
                             </div>
                             {selectedSession.ai_suggested_mappings?.[column]?.confidence && (

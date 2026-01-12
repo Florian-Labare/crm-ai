@@ -26,7 +26,7 @@ class ImportSessionController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $teamId = $request->user()->current_team_id;
+        $teamId = $request->user()->currentTeam()?->id;
 
         $sessions = ImportSession::where('team_id', $teamId)
             ->with('user:id,name', 'mapping:id,name')
@@ -51,7 +51,7 @@ class ImportSessionController extends Controller
         $path = $file->storeAs('imports', $filename);
 
         $session = ImportSession::create([
-            'team_id' => $request->user()->current_team_id,
+            'team_id' => $request->user()->currentTeam()?->id,
             'user_id' => $request->user()->id,
             'import_mapping_id' => $validated['import_mapping_id'] ?? null,
             'original_filename' => $file->getClientOriginalName(),
@@ -130,7 +130,7 @@ class ImportSessionController extends Controller
 
             if (!empty($validated['save_as_template']) && !empty($validated['template_name'])) {
                 $mapping = $this->mappingService->createMapping(
-                    $request->user()->current_team_id,
+                    $request->user()->currentTeam()?->id,
                     $validated['template_name'],
                     $this->detectSourceType($session->original_filename),
                     $validated['column_mappings']
@@ -138,7 +138,7 @@ class ImportSessionController extends Controller
                 $session->update(['import_mapping_id' => $mapping->id]);
             } else {
                 $mapping = $this->mappingService->createMapping(
-                    $request->user()->current_team_id,
+                    $request->user()->currentTeam()?->id,
                     'Import ' . now()->format('Y-m-d H:i'),
                     $this->detectSourceType($session->original_filename),
                     $validated['column_mappings']

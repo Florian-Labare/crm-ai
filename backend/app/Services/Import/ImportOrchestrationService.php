@@ -2,12 +2,22 @@
 
 namespace App\Services\Import;
 
+use App\Models\BaeEpargne;
+use App\Models\BaePrevoyance;
+use App\Models\BaeRetraite;
 use App\Models\Client;
+use App\Models\ClientActifFinancier;
+use App\Models\ClientAutreEpargne;
+use App\Models\ClientBienImmobilier;
+use App\Models\ClientPassif;
+use App\Models\ClientRevenu;
 use App\Models\ImportRow;
 use App\Models\ImportSession;
+use App\Models\SanteSouhait;
 use App\Services\EnfantSyncService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ImportOrchestrationService
 {
@@ -49,7 +59,7 @@ class ImportOrchestrationService
 
     private function analyzeFileSource(ImportSession $session): void
     {
-        $filePath = storage_path('app/' . $session->file_path);
+        $filePath = Storage::path($session->file_path);
 
         $columns = $this->parser->detectColumns($filePath);
         $rowCount = $this->parser->getRowCount($filePath);
@@ -139,7 +149,7 @@ class ImportOrchestrationService
 
     private function processFromFile(ImportSession $session, array $columnMappings): void
     {
-        $filePath = storage_path('app/' . $session->file_path);
+        $filePath = Storage::path($session->file_path);
         $parsed = $this->parser->parseFile($filePath);
 
         $rowNumber = 0;
@@ -226,11 +236,15 @@ class ImportOrchestrationService
 
         $columnMappings = $mapping->column_mappings;
 
+        // Query by row_number range instead of skip/take on pending rows
+        // This ensures consistent batch processing even as rows change status
+        $startRow = $offset + 1; // row_number is 1-indexed
+        $endRow = $offset + $limit;
+
         $rows = ImportRow::where('import_session_id', $session->id)
             ->where('status', ImportRow::STATUS_PENDING)
+            ->whereBetween('row_number', [$startRow, $endRow])
             ->orderBy('row_number')
-            ->skip($offset)
-            ->take($limit)
             ->get();
 
         $results = [
@@ -316,12 +330,59 @@ class ImportOrchestrationService
             }
 
             if ($client) {
+                // Conjoint
                 if (isset($data['conjoint']) && !empty($data['conjoint'])) {
                     $this->createOrUpdateConjoint($client, $data['conjoint']);
                 }
 
+                // Enfants
                 if (isset($data['enfants']) && !empty($data['enfants'])) {
-                    $this->enfantSyncService->sync($client, $data['enfants']);
+                    $this->enfantSyncService->syncEnfants($client, $data['enfants']);
+                }
+
+                // Santé / Mutuelle
+                if (isset($data['_sante_souhaits']) && !empty($data['_sante_souhaits'])) {
+                    $this->createOrUpdateSanteSouhait($client, $data['_sante_souhaits']);
+                }
+
+                // Prévoyance
+                if (isset($data['_bae_prevoyance']) && !empty($data['_bae_prevoyance'])) {
+                    $this->createOrUpdateBaePrevoyance($client, $data['_bae_prevoyance']);
+                }
+
+                // Retraite
+                if (isset($data['_bae_retraite']) && !empty($data['_bae_retraite'])) {
+                    $this->createOrUpdateBaeRetraite($client, $data['_bae_retraite']);
+                }
+
+                // Épargne globale
+                if (isset($data['_bae_epargne']) && !empty($data['_bae_epargne'])) {
+                    $this->createOrUpdateBaeEpargne($client, $data['_bae_epargne']);
+                }
+
+                // Revenus (multiple)
+                if (isset($data['_client_revenu']) && !empty($data['_client_revenu'])) {
+                    $this->createClientRevenu($client, $data['_client_revenu']);
+                }
+
+                // Actifs financiers (multiple)
+                if (isset($data['_client_actif_financier']) && !empty($data['_client_actif_financier'])) {
+                    $this->createClientActifFinancier($client, $data['_client_actif_financier']);
+                }
+
+                // Biens immobiliers (multiple)
+                if (isset($data['_client_bien_immobilier']) && !empty($data['_client_bien_immobilier'])) {
+                    $this->createClientBienImmobilier($client, $data['_client_bien_immobilier']);
+                }
+
+                // Passifs / Emprunts (multiple)
+                if (isset($data['_client_passif']) && !empty($data['_client_passif'])) {
+                    $this->createClientPassif($client, $data['_client_passif']);
+                }
+
+                // Autres épargnes (multiple)
+                if (isset($data['_client_autre_epargne']) && !empty($data['_client_autre_epargne'])) {
+                    $this->createClientAutreEpargne($client, $data['_client_autre_epargne']);
                 }
 
                 $row->update([
@@ -385,25 +446,47 @@ class ImportOrchestrationService
     private function createClient(array $data, int $teamId, int $userId): Client
     {
         $clientData = array_filter([
+            // Required fields
             'team_id' => $teamId,
             'user_id' => $userId,
             'nom' => $data['nom'] ?? null,
             'prenom' => $data['prenom'] ?? null,
-            'email' => $data['email'] ?? null,
-            'telephone' => $data['telephone'] ?? null,
+
+            // Identity fields
+            'civilite' => $data['civilite'] ?? null,
+            'nom_jeune_fille' => $data['nom_jeune_fille'] ?? null,
+
+            // Birth information
             'date_naissance' => $data['date_naissance'] ?? null,
             'lieu_naissance' => $data['lieu_naissance'] ?? null,
             'nationalite' => $data['nationalite'] ?? null,
+
+            // Contact information
+            'email' => $data['email'] ?? null,
+            'telephone' => $data['telephone'] ?? null,
             'adresse' => $data['adresse'] ?? null,
             'code_postal' => $data['code_postal'] ?? null,
             'ville' => $data['ville'] ?? null,
-            'civilite' => $data['civilite'] ?? null,
+            'residence_fiscale' => $data['residence_fiscale'] ?? null,
+
+            // Family situation
             'situation_matrimoniale' => $data['situation_matrimoniale'] ?? null,
+            'date_situation_matrimoniale' => $data['date_situation_matrimoniale'] ?? null,
+
+            // Professional information
             'profession' => $data['profession'] ?? null,
             'situation_actuelle' => $data['situation_actuelle'] ?? null,
+            'date_evenement_professionnel' => $data['date_evenement_professionnel'] ?? null,
             'revenus_annuels' => $data['revenus_annuels'] ?? null,
-            'fumeur' => $data['fumeur'] ?? null,
             'chef_entreprise' => $data['chef_entreprise'] ?? null,
+            'risques_professionnels' => $data['risques_professionnels'] ?? null,
+            'details_risques_professionnels' => $data['details_risques_professionnels'] ?? null,
+
+            // Health / Lifestyle
+            'fumeur' => $data['fumeur'] ?? null,
+            'activites_sportives' => $data['activites_sportives'] ?? null,
+            'niveau_activites_sportives' => $data['niveau_activites_sportives'] ?? null,
+            'details_activites_sportives' => $data['details_activites_sportives'] ?? null,
         ], fn($v) => $v !== null);
 
         return Client::create($clientData);
@@ -415,8 +498,18 @@ class ImportOrchestrationService
 
         $updateData = [];
         $fieldsToMerge = [
-            'email', 'telephone', 'adresse', 'code_postal', 'ville',
-            'profession', 'situation_actuelle', 'revenus_annuels',
+            // Contact
+            'email', 'telephone', 'adresse', 'code_postal', 'ville', 'residence_fiscale',
+            // Identity
+            'nom_jeune_fille', 'lieu_naissance', 'nationalite',
+            // Family
+            'situation_matrimoniale', 'date_situation_matrimoniale',
+            // Professional
+            'profession', 'situation_actuelle', 'date_evenement_professionnel',
+            'revenus_annuels', 'chef_entreprise',
+            'risques_professionnels', 'details_risques_professionnels',
+            // Health / Lifestyle
+            'fumeur', 'activites_sportives', 'niveau_activites_sportives', 'details_activites_sportives',
         ];
 
         foreach ($fieldsToMerge as $field) {
@@ -438,12 +531,42 @@ class ImportOrchestrationService
 
         $data = array_filter([
             'client_id' => $client->id,
+
+            // Identity
             'nom' => $conjointData['nom'] ?? null,
+            'nom_jeune_fille' => $conjointData['nom_jeune_fille'] ?? null,
             'prenom' => $conjointData['prenom'] ?? null,
+
+            // Birth information
             'date_naissance' => $conjointData['date_naissance'] ?? null,
-            'profession' => $conjointData['profession'] ?? null,
-            'email' => $conjointData['email'] ?? null,
+            'lieu_naissance' => $conjointData['lieu_naissance'] ?? null,
+            'nationalite' => $conjointData['nationalite'] ?? null,
+
+            // Contact
             'telephone' => $conjointData['telephone'] ?? null,
+            'email' => $conjointData['email'] ?? null,
+            'adresse' => $conjointData['adresse'] ?? null,
+            'code_postal' => $conjointData['code_postal'] ?? null,
+            'ville' => $conjointData['ville'] ?? null,
+
+            // Professional
+            'profession' => $conjointData['profession'] ?? null,
+            'situation_professionnelle' => $conjointData['situation_professionnelle'] ?? null,
+            'situation_chomage' => $conjointData['situation_chomage'] ?? null,
+            'statut' => $conjointData['statut'] ?? null,
+            'chef_entreprise' => $conjointData['chef_entreprise'] ?? null,
+            'travailleur_independant' => $conjointData['travailleur_independant'] ?? null,
+            'situation_actuelle_statut' => $conjointData['situation_actuelle_statut'] ?? null,
+            'date_evenement_professionnel' => $conjointData['date_evenement_professionnel'] ?? null,
+            'risques_professionnels' => $conjointData['risques_professionnels'] ?? null,
+            'details_risques_professionnels' => $conjointData['details_risques_professionnels'] ?? null,
+
+            // Health / Lifestyle
+            'fumeur' => $conjointData['fumeur'] ?? null,
+            'activites_sportives' => $conjointData['activites_sportives'] ?? null,
+            'niveau_activite_sportive' => $conjointData['niveau_activite_sportive'] ?? null,
+            'details_activites_sportives' => $conjointData['details_activites_sportives'] ?? null,
+            'km_parcourus_annuels' => $conjointData['km_parcourus_annuels'] ?? null,
         ], fn($v) => $v !== null);
 
         if ($conjoint) {
@@ -451,5 +574,233 @@ class ImportOrchestrationService
         } else {
             $client->conjoint()->create($data);
         }
+    }
+
+    private function createOrUpdateSanteSouhait(Client $client, array $santeData): void
+    {
+        $santeSouhait = $client->santeSouhait;
+
+        $data = array_filter([
+            'client_id' => $client->id,
+            'contrat_en_place' => $santeData['contrat_en_place'] ?? null,
+            'budget_mensuel_maximum' => $santeData['budget_mensuel_maximum'] ?? null,
+            'niveau_hospitalisation' => $santeData['niveau_hospitalisation'] ?? null,
+            'niveau_chambre_particuliere' => $santeData['niveau_chambre_particuliere'] ?? null,
+            'niveau_medecin_generaliste' => $santeData['niveau_medecin_generaliste'] ?? null,
+            'niveau_analyses_imagerie' => $santeData['niveau_analyses_imagerie'] ?? null,
+            'niveau_auxiliaires_medicaux' => $santeData['niveau_auxiliaires_medicaux'] ?? null,
+            'niveau_pharmacie' => $santeData['niveau_pharmacie'] ?? null,
+            'niveau_dentaire' => $santeData['niveau_dentaire'] ?? null,
+            'niveau_optique' => $santeData['niveau_optique'] ?? null,
+            'niveau_protheses_auditives' => $santeData['niveau_protheses_auditives'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return; // Seulement client_id, pas de données utiles
+        }
+
+        if ($santeSouhait) {
+            $santeSouhait->update($data);
+        } else {
+            $client->santeSouhait()->create($data);
+        }
+    }
+
+    private function createOrUpdateBaePrevoyance(Client $client, array $prevoyanceData): void
+    {
+        $baePrevoyance = $client->baePrevoyance;
+
+        $data = array_filter([
+            'client_id' => $client->id,
+            'contrat_en_place' => $prevoyanceData['contrat_en_place'] ?? null,
+            'date_effet' => $prevoyanceData['date_effet'] ?? null,
+            'cotisations' => $prevoyanceData['cotisations'] ?? null,
+            'souhaite_couverture_invalidite' => $prevoyanceData['souhaite_couverture_invalidite'] ?? null,
+            'revenu_a_garantir' => $prevoyanceData['revenu_a_garantir'] ?? null,
+            'souhaite_couvrir_charges_professionnelles' => $prevoyanceData['souhaite_couvrir_charges_professionnelles'] ?? null,
+            'montant_annuel_charges_professionnelles' => $prevoyanceData['montant_annuel_charges_professionnelles'] ?? null,
+            'garantir_totalite_charges_professionnelles' => $prevoyanceData['garantir_totalite_charges_professionnelles'] ?? null,
+            'montant_charges_professionnelles_a_garantir' => $prevoyanceData['montant_charges_professionnelles_a_garantir'] ?? null,
+            'duree_indemnisation_souhaitee' => $prevoyanceData['duree_indemnisation_souhaitee'] ?? null,
+            'capital_deces_souhaite' => $prevoyanceData['capital_deces_souhaite'] ?? null,
+            'garanties_obseques' => $prevoyanceData['garanties_obseques'] ?? null,
+            'rente_enfants' => $prevoyanceData['rente_enfants'] ?? null,
+            'rente_conjoint' => $prevoyanceData['rente_conjoint'] ?? null,
+            'payeur' => $prevoyanceData['payeur'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        if ($baePrevoyance) {
+            $baePrevoyance->update($data);
+        } else {
+            $client->baePrevoyance()->create($data);
+        }
+    }
+
+    private function createOrUpdateBaeRetraite(Client $client, array $retraiteData): void
+    {
+        $baeRetraite = $client->baeRetraite;
+
+        $data = array_filter([
+            'client_id' => $client->id,
+            'revenus_annuels' => $retraiteData['revenus_annuels'] ?? null,
+            'revenus_annuels_foyer' => $retraiteData['revenus_annuels_foyer'] ?? null,
+            'impot_revenu' => $retraiteData['impot_revenu'] ?? null,
+            'nombre_parts_fiscales' => $retraiteData['nombre_parts_fiscales'] ?? null,
+            'tmi' => $retraiteData['tmi'] ?? null,
+            'impot_paye_n_1' => $retraiteData['impot_paye_n_1'] ?? null,
+            'age_depart_retraite' => $retraiteData['age_depart_retraite'] ?? null,
+            'age_depart_retraite_conjoint' => $retraiteData['age_depart_retraite_conjoint'] ?? null,
+            'pourcentage_revenu_a_maintenir' => $retraiteData['pourcentage_revenu_a_maintenir'] ?? null,
+            'contrat_en_place' => $retraiteData['contrat_en_place'] ?? null,
+            'bilan_retraite_disponible' => $retraiteData['bilan_retraite_disponible'] ?? null,
+            'complementaire_retraite_mise_en_place' => $retraiteData['complementaire_retraite_mise_en_place'] ?? null,
+            'designation_etablissement' => $retraiteData['designation_etablissement'] ?? null,
+            'cotisations_annuelles' => $retraiteData['cotisations_annuelles'] ?? null,
+            'titulaire' => $retraiteData['titulaire'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        if ($baeRetraite) {
+            $baeRetraite->update($data);
+        } else {
+            $client->baeRetraite()->create($data);
+        }
+    }
+
+    private function createOrUpdateBaeEpargne(Client $client, array $epargneData): void
+    {
+        $baeEpargne = $client->baeEpargne;
+
+        $data = array_filter([
+            'client_id' => $client->id,
+            'epargne_disponible' => $epargneData['epargne_disponible'] ?? null,
+            'montant_epargne_disponible' => $epargneData['montant_epargne_disponible'] ?? null,
+            'donation_realisee' => $epargneData['donation_realisee'] ?? null,
+            'donation_forme' => $epargneData['donation_forme'] ?? null,
+            'donation_date' => $epargneData['donation_date'] ?? null,
+            'donation_montant' => $epargneData['donation_montant'] ?? null,
+            'donation_beneficiaires' => $epargneData['donation_beneficiaires'] ?? null,
+            'capacite_epargne_estimee' => $epargneData['capacite_epargne_estimee'] ?? null,
+            'actifs_financiers_pourcentage' => $epargneData['actifs_financiers_pourcentage'] ?? null,
+            'actifs_financiers_total' => $epargneData['actifs_financiers_total'] ?? null,
+            'actifs_financiers_details' => $epargneData['actifs_financiers_details'] ?? null,
+            'actifs_immo_pourcentage' => $epargneData['actifs_immo_pourcentage'] ?? null,
+            'actifs_immo_total' => $epargneData['actifs_immo_total'] ?? null,
+            'actifs_immo_details' => $epargneData['actifs_immo_details'] ?? null,
+            'actifs_autres_pourcentage' => $epargneData['actifs_autres_pourcentage'] ?? null,
+            'actifs_autres_total' => $epargneData['actifs_autres_total'] ?? null,
+            'actifs_autres_details' => $epargneData['actifs_autres_details'] ?? null,
+            'passifs_total_emprunts' => $epargneData['passifs_total_emprunts'] ?? null,
+            'passifs_details' => $epargneData['passifs_details'] ?? null,
+            'charges_totales' => $epargneData['charges_totales'] ?? null,
+            'charges_details' => $epargneData['charges_details'] ?? null,
+            'situation_financiere_revenus_charges' => $epargneData['situation_financiere_revenus_charges'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        if ($baeEpargne) {
+            $baeEpargne->update($data);
+        } else {
+            $client->baeEpargne()->create($data);
+        }
+    }
+
+    private function createClientRevenu(Client $client, array $revenuData): void
+    {
+        $data = array_filter([
+            'client_id' => $client->id,
+            'nature' => $revenuData['nature'] ?? null,
+            'details' => $revenuData['details'] ?? null,
+            'periodicite' => $revenuData['periodicite'] ?? null,
+            'montant' => $revenuData['montant'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        $client->revenus()->create($data);
+    }
+
+    private function createClientActifFinancier(Client $client, array $actifData): void
+    {
+        $data = array_filter([
+            'client_id' => $client->id,
+            'nature' => $actifData['nature'] ?? null,
+            'etablissement' => $actifData['etablissement'] ?? null,
+            'detenteur' => $actifData['detenteur'] ?? null,
+            'date_ouverture_souscription' => $actifData['date_ouverture_souscription'] ?? null,
+            'valeur_actuelle' => $actifData['valeur_actuelle'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        $client->actifsFinanciers()->create($data);
+    }
+
+    private function createClientBienImmobilier(Client $client, array $bienData): void
+    {
+        $data = array_filter([
+            'client_id' => $client->id,
+            'designation' => $bienData['designation'] ?? null,
+            'detenteur' => $bienData['detenteur'] ?? null,
+            'forme_propriete' => $bienData['forme_propriete'] ?? null,
+            'valeur_actuelle_estimee' => $bienData['valeur_actuelle_estimee'] ?? null,
+            'annee_acquisition' => $bienData['annee_acquisition'] ?? null,
+            'valeur_acquisition' => $bienData['valeur_acquisition'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        $client->biensImmobiliers()->create($data);
+    }
+
+    private function createClientPassif(Client $client, array $passifData): void
+    {
+        $data = array_filter([
+            'client_id' => $client->id,
+            'nature' => $passifData['nature'] ?? null,
+            'preteur' => $passifData['preteur'] ?? null,
+            'periodicite' => $passifData['periodicite'] ?? null,
+            'montant_remboursement' => $passifData['montant_remboursement'] ?? null,
+            'capital_restant_du' => $passifData['capital_restant_du'] ?? null,
+            'duree_restante' => $passifData['duree_restante'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        $client->passifs()->create($data);
+    }
+
+    private function createClientAutreEpargne(Client $client, array $epargneData): void
+    {
+        $data = array_filter([
+            'client_id' => $client->id,
+            'designation' => $epargneData['designation'] ?? null,
+            'detenteur' => $epargneData['detenteur'] ?? null,
+            'valeur' => $epargneData['valeur'] ?? null,
+        ], fn($v) => $v !== null);
+
+        if (count($data) <= 1) {
+            return;
+        }
+
+        $client->autresEpargnes()->create($data);
     }
 }

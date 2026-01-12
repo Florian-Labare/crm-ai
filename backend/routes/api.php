@@ -70,6 +70,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/clients/{client}/autres-epargnes/{autreEpargne}', [ClientController::class, 'updateAutreEpargne']);
     Route::delete('/clients/{client}/autres-epargnes/{autreEpargne}', [ClientController::class, 'deleteAutreEpargne']);
 
+    // Charges
+    Route::post('/clients/{client}/charges', [ClientController::class, 'storeCharge']);
+    Route::put('/clients/{client}/charges/{charge}', [ClientController::class, 'updateCharge']);
+    Route::delete('/clients/{client}/charges/{charge}', [ClientController::class, 'deleteCharge']);
+
     // Conjoint
     Route::post('/clients/{client}/conjoint', [ClientController::class, 'storeConjoint']);
     Route::put('/clients/{client}/conjoint', [ClientController::class, 'updateConjoint']);

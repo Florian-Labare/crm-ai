@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImportMapping;
+use App\Services\Import\ImportFieldsService;
 use App\Services\Import\ImportMappingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,13 +11,14 @@ use Illuminate\Http\Request;
 class ImportMappingController extends Controller
 {
     public function __construct(
-        private ImportMappingService $mappingService
+        private ImportMappingService $mappingService,
+        private ImportFieldsService $fieldsService
     ) {
     }
 
     public function index(Request $request): JsonResponse
     {
-        $teamId = $request->user()->current_team_id;
+        $teamId = $request->user()->currentTeam()?->id;
 
         $mappings = $this->mappingService->getTeamMappings($teamId);
 
@@ -45,7 +47,7 @@ class ImportMappingController extends Controller
         }
 
         $mapping = $this->mappingService->createMapping(
-            $request->user()->current_team_id,
+            $request->user()->currentTeam()?->id,
             $validated['name'],
             $validated['source_type'],
             $validated['column_mappings'],
@@ -108,9 +110,24 @@ class ImportMappingController extends Controller
 
     public function availableFields(): JsonResponse
     {
+        // Format legacy pour compatibilité frontend actuel
+        $legacyFields = $this->mappingService->getAvailableTargetFields();
+
+        // Format enrichi avec labels français et groupes
+        $grouped = $this->fieldsService->getGroupedFieldsForSelect();
+        $flat = $this->fieldsService->getFlatFieldsList();
+
+        // Fusion: format legacy + données enrichies
+        $data = $legacyFields;
+        $data['_enhanced'] = [
+            'grouped' => $grouped,
+            'flat' => $flat,
+            'total_fields' => count($flat),
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => $this->mappingService->getAvailableTargetFields(),
+            'data' => $data,
         ]);
     }
 }

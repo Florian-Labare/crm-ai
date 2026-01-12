@@ -9,37 +9,50 @@ class Conjoint extends Model
 {
     protected $fillable = [
         'client_id',
+        // Identité
         'nom',
         'nom_jeune_fille',
         'prenom',
-        'date_naissance',
-        'lieu_naissance',
+        'datedenaissance',
+        'lieudenaissance',
         'nationalite',
+        // Coordonnées
+        'telephone',
+        'email',
+        'adresse',
+        'code_postal',
+        'ville',
+        // Professionnel
         'profession',
         'situation_professionnelle',
         'situation_chomage',
         'statut',
         'chef_entreprise',
         'travailleur_independant',
+        'mandataire_social',
         'situation_actuelle_statut',
-        'niveau_activite_sportive',
-        'details_activites_sportives',
         'date_evenement_professionnel',
         'risques_professionnels',
         'details_risques_professionnels',
-        'telephone',
-        'adresse',
-        'code_postal',
-        'ville',
+        'revenus_annuels',
+        // Mode de vie
         'fumeur',
+        'activites_sportives',
+        'niveau_activite_sportive',
+        'details_activites_sportives',
         'km_parcourus_annuels',
     ];
 
     protected $casts = [
+        'datedenaissance' => 'date',
+        'date_evenement_professionnel' => 'date',
         'risques_professionnels' => 'boolean',
         'chef_entreprise' => 'boolean',
         'travailleur_independant' => 'boolean',
+        'mandataire_social' => 'boolean',
         'fumeur' => 'boolean',
+        'activites_sportives' => 'boolean',
+        'revenus_annuels' => 'decimal:2',
     ];
 
     public function client(): BelongsTo

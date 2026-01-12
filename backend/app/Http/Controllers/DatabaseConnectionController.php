@@ -22,7 +22,7 @@ class DatabaseConnectionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $teamId = $request->user()->current_team_id;
+        $teamId = $request->user()->currentTeam()?->id;
 
         $connections = DatabaseConnection::forTeam($teamId)
             ->with('creator:id,name')
@@ -80,7 +80,7 @@ class DatabaseConnectionController extends Controller
         ]);
 
         $connection = DatabaseConnection::create([
-            'team_id' => $request->user()->current_team_id,
+            'team_id' => $request->user()->currentTeam()?->id,
             'created_by' => $request->user()->id,
             'name' => $validated['name'],
             'driver' => $validated['driver'],
@@ -340,7 +340,7 @@ class DatabaseConnectionController extends Controller
             }
 
             $session = ImportSession::create([
-                'team_id' => $request->user()->current_team_id,
+                'team_id' => $request->user()->currentTeam()?->id,
                 'user_id' => $request->user()->id,
                 'database_connection_id' => $databaseConnection->id,
                 'source_table' => $validated['table'] ?? null,
