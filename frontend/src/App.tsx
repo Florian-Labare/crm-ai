@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { VuexyNavigation } from "./components/VuexyNavigation";
+import { VuexySidebar } from "./components/VuexySidebar";
 import HomePage from "./pages/HomePage";
 import ClientDetailPage from "./pages/ClientDetailPage";
 import ClientEditPage from "./pages/ClientEditPage";
@@ -25,22 +26,25 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-[#F8F8F8] flex flex-col">
-          <VuexyNavigation />
-          <main className="flex-1">
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-              <Route path="/der/new" element={<ProtectedRoute><DerFormPage /></ProtectedRoute>} />
-              <Route path="/clients/new" element={<ProtectedRoute><ClientForm /></ProtectedRoute>} />
-              <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailPage /></ProtectedRoute>} />
-              <Route path="/clients/:id/edit" element={<ProtectedRoute><ClientEditPage /></ProtectedRoute>} />
-              <Route path="/clients/:clientId/questionnaire-risque" element={<ProtectedRoute><RiskQuestionnaire /></ProtectedRoute>} />
-              <Route path="/import" element={<ProtectedRoute><ImportPage /></ProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </main>
+        <div className="min-h-screen bg-[#F8F8F8] flex">
+          <VuexySidebar />
+          <div className="flex-1 flex flex-col">
+            <VuexyNavigation />
+            <main className="flex-1">
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+                <Route path="/der/new" element={<ProtectedRoute><DerFormPage /></ProtectedRoute>} />
+                <Route path="/clients/new" element={<ProtectedRoute><ClientForm /></ProtectedRoute>} />
+                <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailPage /></ProtectedRoute>} />
+                <Route path="/clients/:id/edit" element={<ProtectedRoute><ClientEditPage /></ProtectedRoute>} />
+                <Route path="/clients/:clientId/questionnaire-risque" element={<ProtectedRoute><RiskQuestionnaire /></ProtectedRoute>} />
+                <Route path="/import" element={<ProtectedRoute><ImportPage /></ProtectedRoute>} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </main>
+          </div>
         </div>
       </AuthProvider>
     </Router>

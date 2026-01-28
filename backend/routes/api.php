@@ -16,6 +16,8 @@ use App\Http\Controllers\PendingChangesController;
 use App\Http\Controllers\ImportMappingController;
 use App\Http\Controllers\ImportSessionController;
 use App\Http\Controllers\DatabaseConnectionController;
+use App\Http\Controllers\MeetingSummaryController;
+use App\Http\Controllers\ClientComplianceController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -146,6 +148,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/documents/{documentId}/download', [DocumentController::class, 'downloadDocument']);
     Route::post('/documents/{documentId}/send-email', [DocumentController::class, 'sendDocumentByEmail']);
     Route::delete('/documents/{documentId}', [DocumentController::class, 'deleteDocument']);
+
+    // Compliance / Documents réglementaires signés
+    Route::get('/clients/{client}/compliance/status', [ClientComplianceController::class, 'status']);
+    Route::post('/clients/{client}/compliance/upload', [ClientComplianceController::class, 'upload']);
+    Route::post('/clients/{client}/compliance/{document}/validate', [ClientComplianceController::class, 'validate']);
+    Route::post('/clients/{client}/compliance/{document}/reject', [ClientComplianceController::class, 'reject']);
+    Route::get('/clients/{client}/compliance/{document}/download', [ClientComplianceController::class, 'download']);
+    Route::delete('/clients/{client}/compliance/{document}', [ClientComplianceController::class, 'destroy']);
+
+    // Résumé de rendez-vous (audio)
+    Route::get('/clients/{client}/meeting-summary', [MeetingSummaryController::class, 'showLatest']);
+    Route::post('/clients/{client}/meeting-summary/regenerate', [MeetingSummaryController::class, 'regenerate']);
 
     // Envoi audio et traitement IA - avec rate limiting
     Route::post('/audio/upload', [AudioController::class, 'upload'])

@@ -118,6 +118,11 @@ class Client extends Model
         return $this->hasOne(BaeEpargne::class);
     }
 
+    public function complianceDocuments(): HasMany
+    {
+        return $this->hasMany(ClientComplianceDocument::class);
+    }
+
     public function questionnaireRisque(): HasOne
     {
         return $this->hasOne(QuestionnaireRisque::class);

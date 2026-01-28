@@ -13,8 +13,8 @@ class Conjoint extends Model
         'nom',
         'nom_jeune_fille',
         'prenom',
-        'datedenaissance',
-        'lieudenaissance',
+        'date_naissance',
+        'lieu_naissance',
         'nationalite',
         // Coordonnées
         'telephone',
@@ -44,7 +44,7 @@ class Conjoint extends Model
     ];
 
     protected $casts = [
-        'datedenaissance' => 'date',
+        'date_naissance' => 'date',
         'date_evenement_professionnel' => 'date',
         'risques_professionnels' => 'boolean',
         'chef_entreprise' => 'boolean',

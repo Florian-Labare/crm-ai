@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
-import { Calendar, User, Mail, MapPin, Clock } from "lucide-react";
+import { Calendar, User, Mail, MapPin } from "lucide-react";
 
 interface MIA {
   id: number;

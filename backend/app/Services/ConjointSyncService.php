@@ -24,6 +24,7 @@ class ConjointSyncService
     {
         Log::info("💑 [CONJOINT] Synchronisation du conjoint pour le client #{$client->id}", [
             'has_conjoint_data' => !empty($conjointData),
+            'keys' => array_keys($conjointData),
         ]);
 
         // Si aucune donnée de conjoint, on ne fait rien
@@ -40,6 +41,10 @@ class ConjointSyncService
             Log::info('💑 [CONJOINT] Données de conjoint vides après filtrage');
             return;
         }
+
+        Log::info("💑 [CONJOINT] Données à synchroniser", [
+            'fields' => array_keys($conjointData),
+        ]);
 
         // Vérifier si le client a déjà un conjoint
         $existingConjoint = $client->conjoint;

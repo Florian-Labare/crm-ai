@@ -582,17 +582,17 @@ class ImportOrchestrationService
 
         $data = array_filter([
             'client_id' => $client->id,
-            'contrat_en_place' => $santeData['contrat_en_place'] ?? null,
-            'budget_mensuel_maximum' => $santeData['budget_mensuel_maximum'] ?? null,
-            'niveau_hospitalisation' => $santeData['niveau_hospitalisation'] ?? null,
-            'niveau_chambre_particuliere' => $santeData['niveau_chambre_particuliere'] ?? null,
-            'niveau_medecin_generaliste' => $santeData['niveau_medecin_generaliste'] ?? null,
-            'niveau_analyses_imagerie' => $santeData['niveau_analyses_imagerie'] ?? null,
-            'niveau_auxiliaires_medicaux' => $santeData['niveau_auxiliaires_medicaux'] ?? null,
-            'niveau_pharmacie' => $santeData['niveau_pharmacie'] ?? null,
-            'niveau_dentaire' => $santeData['niveau_dentaire'] ?? null,
-            'niveau_optique' => $santeData['niveau_optique'] ?? null,
-            'niveau_protheses_auditives' => $santeData['niveau_protheses_auditives'] ?? null,
+            'contrat_en_place' => $this->normalizeImportValue($santeData['contrat_en_place'] ?? null),
+            'budget_mensuel_maximum' => $this->normalizeImportValue($santeData['budget_mensuel_maximum'] ?? null),
+            'niveau_hospitalisation' => $this->normalizeImportValue($santeData['niveau_hospitalisation'] ?? null),
+            'niveau_chambre_particuliere' => $this->normalizeImportValue($santeData['niveau_chambre_particuliere'] ?? null),
+            'niveau_medecin_generaliste' => $this->normalizeImportValue($santeData['niveau_medecin_generaliste'] ?? null),
+            'niveau_analyses_imagerie' => $this->normalizeImportValue($santeData['niveau_analyses_imagerie'] ?? null),
+            'niveau_auxiliaires_medicaux' => $this->normalizeImportValue($santeData['niveau_auxiliaires_medicaux'] ?? null),
+            'niveau_pharmacie' => $this->normalizeImportValue($santeData['niveau_pharmacie'] ?? null),
+            'niveau_dentaire' => $this->normalizeImportValue($santeData['niveau_dentaire'] ?? null),
+            'niveau_optique' => $this->normalizeImportValue($santeData['niveau_optique'] ?? null),
+            'niveau_protheses_auditives' => $this->normalizeImportValue($santeData['niveau_protheses_auditives'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -606,27 +606,117 @@ class ImportOrchestrationService
         }
     }
 
+    private function normalizeImportValue(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        return $value;
+    }
+
+    private function normalizeNumericImportValue(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_bool($value)) {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        // Éviter d'insérer des dates dans des champs numériques
+        if (preg_match('/\b\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}\b/', $trimmed)) {
+            return null;
+        }
+
+        $normalized = str_replace([' ', "\u{A0}"], '', $trimmed);
+        $normalized = str_replace('%', '', $normalized);
+        $normalized = str_replace(',', '.', $normalized);
+        $normalized = preg_replace('/[^0-9\.\-]/', '', $normalized);
+
+        if ($normalized === '' || $normalized === '-' || $normalized === '.') {
+            return null;
+        }
+
+        if (!is_numeric($normalized)) {
+            return null;
+        }
+
+        return (float) $normalized;
+    }
+
+    private function normalizeIntegerImportValue(mixed $value): ?int
+    {
+        $numeric = $this->normalizeNumericImportValue($value);
+        if ($numeric === null) {
+            return null;
+        }
+
+        return (int) round($numeric);
+    }
+
+    private function normalizeDateImportValue(mixed $value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $formats = ['d/m/Y', 'd.m.Y', 'd-m-Y', 'Y-m-d'];
+        foreach ($formats as $format) {
+            $date = \Carbon\Carbon::createFromFormat($format, $trimmed);
+            if ($date !== false) {
+                return $date->format('Y-m-d');
+            }
+        }
+
+        return null;
+    }
+
     private function createOrUpdateBaePrevoyance(Client $client, array $prevoyanceData): void
     {
         $baePrevoyance = $client->baePrevoyance;
 
         $data = array_filter([
             'client_id' => $client->id,
-            'contrat_en_place' => $prevoyanceData['contrat_en_place'] ?? null,
-            'date_effet' => $prevoyanceData['date_effet'] ?? null,
-            'cotisations' => $prevoyanceData['cotisations'] ?? null,
-            'souhaite_couverture_invalidite' => $prevoyanceData['souhaite_couverture_invalidite'] ?? null,
-            'revenu_a_garantir' => $prevoyanceData['revenu_a_garantir'] ?? null,
-            'souhaite_couvrir_charges_professionnelles' => $prevoyanceData['souhaite_couvrir_charges_professionnelles'] ?? null,
-            'montant_annuel_charges_professionnelles' => $prevoyanceData['montant_annuel_charges_professionnelles'] ?? null,
-            'garantir_totalite_charges_professionnelles' => $prevoyanceData['garantir_totalite_charges_professionnelles'] ?? null,
-            'montant_charges_professionnelles_a_garantir' => $prevoyanceData['montant_charges_professionnelles_a_garantir'] ?? null,
-            'duree_indemnisation_souhaitee' => $prevoyanceData['duree_indemnisation_souhaitee'] ?? null,
-            'capital_deces_souhaite' => $prevoyanceData['capital_deces_souhaite'] ?? null,
-            'garanties_obseques' => $prevoyanceData['garanties_obseques'] ?? null,
-            'rente_enfants' => $prevoyanceData['rente_enfants'] ?? null,
-            'rente_conjoint' => $prevoyanceData['rente_conjoint'] ?? null,
-            'payeur' => $prevoyanceData['payeur'] ?? null,
+            'contrat_en_place' => $this->normalizeImportValue($prevoyanceData['contrat_en_place'] ?? null),
+            'date_effet' => $this->normalizeDateImportValue($prevoyanceData['date_effet'] ?? null),
+            'cotisations' => $this->normalizeNumericImportValue($prevoyanceData['cotisations'] ?? null),
+            'souhaite_couverture_invalidite' => $this->normalizeImportValue($prevoyanceData['souhaite_couverture_invalidite'] ?? null),
+            'revenu_a_garantir' => $this->normalizeNumericImportValue($prevoyanceData['revenu_a_garantir'] ?? null),
+            'souhaite_couvrir_charges_professionnelles' => $this->normalizeImportValue($prevoyanceData['souhaite_couvrir_charges_professionnelles'] ?? null),
+            'montant_annuel_charges_professionnelles' => $this->normalizeNumericImportValue($prevoyanceData['montant_annuel_charges_professionnelles'] ?? null),
+            'garantir_totalite_charges_professionnelles' => $this->normalizeImportValue($prevoyanceData['garantir_totalite_charges_professionnelles'] ?? null),
+            'montant_charges_professionnelles_a_garantir' => $this->normalizeNumericImportValue($prevoyanceData['montant_charges_professionnelles_a_garantir'] ?? null),
+            'duree_indemnisation_souhaitee' => $this->normalizeImportValue($prevoyanceData['duree_indemnisation_souhaitee'] ?? null),
+            'capital_deces_souhaite' => $this->normalizeNumericImportValue($prevoyanceData['capital_deces_souhaite'] ?? null),
+            'garanties_obseques' => $this->normalizeNumericImportValue($prevoyanceData['garanties_obseques'] ?? null),
+            'rente_enfants' => $this->normalizeNumericImportValue($prevoyanceData['rente_enfants'] ?? null),
+            'rente_conjoint' => $this->normalizeNumericImportValue($prevoyanceData['rente_conjoint'] ?? null),
+            'payeur' => $this->normalizeImportValue($prevoyanceData['payeur'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -646,21 +736,21 @@ class ImportOrchestrationService
 
         $data = array_filter([
             'client_id' => $client->id,
-            'revenus_annuels' => $retraiteData['revenus_annuels'] ?? null,
-            'revenus_annuels_foyer' => $retraiteData['revenus_annuels_foyer'] ?? null,
-            'impot_revenu' => $retraiteData['impot_revenu'] ?? null,
-            'nombre_parts_fiscales' => $retraiteData['nombre_parts_fiscales'] ?? null,
-            'tmi' => $retraiteData['tmi'] ?? null,
-            'impot_paye_n_1' => $retraiteData['impot_paye_n_1'] ?? null,
-            'age_depart_retraite' => $retraiteData['age_depart_retraite'] ?? null,
-            'age_depart_retraite_conjoint' => $retraiteData['age_depart_retraite_conjoint'] ?? null,
-            'pourcentage_revenu_a_maintenir' => $retraiteData['pourcentage_revenu_a_maintenir'] ?? null,
-            'contrat_en_place' => $retraiteData['contrat_en_place'] ?? null,
-            'bilan_retraite_disponible' => $retraiteData['bilan_retraite_disponible'] ?? null,
-            'complementaire_retraite_mise_en_place' => $retraiteData['complementaire_retraite_mise_en_place'] ?? null,
-            'designation_etablissement' => $retraiteData['designation_etablissement'] ?? null,
-            'cotisations_annuelles' => $retraiteData['cotisations_annuelles'] ?? null,
-            'titulaire' => $retraiteData['titulaire'] ?? null,
+            'revenus_annuels' => $this->normalizeNumericImportValue($retraiteData['revenus_annuels'] ?? null),
+            'revenus_annuels_foyer' => $this->normalizeNumericImportValue($retraiteData['revenus_annuels_foyer'] ?? null),
+            'impot_revenu' => $this->normalizeNumericImportValue($retraiteData['impot_revenu'] ?? null),
+            'nombre_parts_fiscales' => $this->normalizeNumericImportValue($retraiteData['nombre_parts_fiscales'] ?? null),
+            'tmi' => $this->normalizeImportValue($retraiteData['tmi'] ?? null),
+            'impot_paye_n_1' => $this->normalizeNumericImportValue($retraiteData['impot_paye_n_1'] ?? null),
+            'age_depart_retraite' => $this->normalizeIntegerImportValue($retraiteData['age_depart_retraite'] ?? null),
+            'age_depart_retraite_conjoint' => $this->normalizeIntegerImportValue($retraiteData['age_depart_retraite_conjoint'] ?? null),
+            'pourcentage_revenu_a_maintenir' => $this->normalizeNumericImportValue($retraiteData['pourcentage_revenu_a_maintenir'] ?? null),
+            'contrat_en_place' => $this->normalizeImportValue($retraiteData['contrat_en_place'] ?? null),
+            'bilan_retraite_disponible' => $this->normalizeImportValue($retraiteData['bilan_retraite_disponible'] ?? null),
+            'complementaire_retraite_mise_en_place' => $this->normalizeImportValue($retraiteData['complementaire_retraite_mise_en_place'] ?? null),
+            'designation_etablissement' => $this->normalizeImportValue($retraiteData['designation_etablissement'] ?? null),
+            'cotisations_annuelles' => $this->normalizeNumericImportValue($retraiteData['cotisations_annuelles'] ?? null),
+            'titulaire' => $this->normalizeImportValue($retraiteData['titulaire'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -680,28 +770,28 @@ class ImportOrchestrationService
 
         $data = array_filter([
             'client_id' => $client->id,
-            'epargne_disponible' => $epargneData['epargne_disponible'] ?? null,
-            'montant_epargne_disponible' => $epargneData['montant_epargne_disponible'] ?? null,
-            'donation_realisee' => $epargneData['donation_realisee'] ?? null,
-            'donation_forme' => $epargneData['donation_forme'] ?? null,
-            'donation_date' => $epargneData['donation_date'] ?? null,
-            'donation_montant' => $epargneData['donation_montant'] ?? null,
-            'donation_beneficiaires' => $epargneData['donation_beneficiaires'] ?? null,
-            'capacite_epargne_estimee' => $epargneData['capacite_epargne_estimee'] ?? null,
-            'actifs_financiers_pourcentage' => $epargneData['actifs_financiers_pourcentage'] ?? null,
-            'actifs_financiers_total' => $epargneData['actifs_financiers_total'] ?? null,
-            'actifs_financiers_details' => $epargneData['actifs_financiers_details'] ?? null,
-            'actifs_immo_pourcentage' => $epargneData['actifs_immo_pourcentage'] ?? null,
-            'actifs_immo_total' => $epargneData['actifs_immo_total'] ?? null,
-            'actifs_immo_details' => $epargneData['actifs_immo_details'] ?? null,
-            'actifs_autres_pourcentage' => $epargneData['actifs_autres_pourcentage'] ?? null,
-            'actifs_autres_total' => $epargneData['actifs_autres_total'] ?? null,
-            'actifs_autres_details' => $epargneData['actifs_autres_details'] ?? null,
-            'passifs_total_emprunts' => $epargneData['passifs_total_emprunts'] ?? null,
-            'passifs_details' => $epargneData['passifs_details'] ?? null,
-            'charges_totales' => $epargneData['charges_totales'] ?? null,
-            'charges_details' => $epargneData['charges_details'] ?? null,
-            'situation_financiere_revenus_charges' => $epargneData['situation_financiere_revenus_charges'] ?? null,
+            'epargne_disponible' => $this->normalizeImportValue($epargneData['epargne_disponible'] ?? null),
+            'montant_epargne_disponible' => $this->normalizeNumericImportValue($epargneData['montant_epargne_disponible'] ?? null),
+            'donation_realisee' => $this->normalizeImportValue($epargneData['donation_realisee'] ?? null),
+            'donation_forme' => $this->normalizeImportValue($epargneData['donation_forme'] ?? null),
+            'donation_date' => $this->normalizeDateImportValue($epargneData['donation_date'] ?? null),
+            'donation_montant' => $this->normalizeNumericImportValue($epargneData['donation_montant'] ?? null),
+            'donation_beneficiaires' => $this->normalizeImportValue($epargneData['donation_beneficiaires'] ?? null),
+            'capacite_epargne_estimee' => $this->normalizeNumericImportValue($epargneData['capacite_epargne_estimee'] ?? null),
+            'actifs_financiers_pourcentage' => $this->normalizeNumericImportValue($epargneData['actifs_financiers_pourcentage'] ?? null),
+            'actifs_financiers_total' => $this->normalizeNumericImportValue($epargneData['actifs_financiers_total'] ?? null),
+            'actifs_financiers_details' => $this->normalizeImportValue($epargneData['actifs_financiers_details'] ?? null),
+            'actifs_immo_pourcentage' => $this->normalizeNumericImportValue($epargneData['actifs_immo_pourcentage'] ?? null),
+            'actifs_immo_total' => $this->normalizeNumericImportValue($epargneData['actifs_immo_total'] ?? null),
+            'actifs_immo_details' => $this->normalizeImportValue($epargneData['actifs_immo_details'] ?? null),
+            'actifs_autres_pourcentage' => $this->normalizeNumericImportValue($epargneData['actifs_autres_pourcentage'] ?? null),
+            'actifs_autres_total' => $this->normalizeNumericImportValue($epargneData['actifs_autres_total'] ?? null),
+            'actifs_autres_details' => $this->normalizeImportValue($epargneData['actifs_autres_details'] ?? null),
+            'passifs_total_emprunts' => $this->normalizeNumericImportValue($epargneData['passifs_total_emprunts'] ?? null),
+            'passifs_details' => $this->normalizeImportValue($epargneData['passifs_details'] ?? null),
+            'charges_totales' => $this->normalizeNumericImportValue($epargneData['charges_totales'] ?? null),
+            'charges_details' => $this->normalizeImportValue($epargneData['charges_details'] ?? null),
+            'situation_financiere_revenus_charges' => $this->normalizeImportValue($epargneData['situation_financiere_revenus_charges'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -719,10 +809,10 @@ class ImportOrchestrationService
     {
         $data = array_filter([
             'client_id' => $client->id,
-            'nature' => $revenuData['nature'] ?? null,
-            'details' => $revenuData['details'] ?? null,
-            'periodicite' => $revenuData['periodicite'] ?? null,
-            'montant' => $revenuData['montant'] ?? null,
+            'nature' => $this->normalizeImportValue($revenuData['nature'] ?? null),
+            'details' => $this->normalizeImportValue($revenuData['details'] ?? null),
+            'periodicite' => $this->normalizeImportValue($revenuData['periodicite'] ?? null),
+            'montant' => $this->normalizeNumericImportValue($revenuData['montant'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -736,11 +826,11 @@ class ImportOrchestrationService
     {
         $data = array_filter([
             'client_id' => $client->id,
-            'nature' => $actifData['nature'] ?? null,
-            'etablissement' => $actifData['etablissement'] ?? null,
-            'detenteur' => $actifData['detenteur'] ?? null,
-            'date_ouverture_souscription' => $actifData['date_ouverture_souscription'] ?? null,
-            'valeur_actuelle' => $actifData['valeur_actuelle'] ?? null,
+            'nature' => $this->normalizeImportValue($actifData['nature'] ?? null),
+            'etablissement' => $this->normalizeImportValue($actifData['etablissement'] ?? null),
+            'detenteur' => $this->normalizeImportValue($actifData['detenteur'] ?? null),
+            'date_ouverture_souscription' => $this->normalizeDateImportValue($actifData['date_ouverture_souscription'] ?? null),
+            'valeur_actuelle' => $this->normalizeNumericImportValue($actifData['valeur_actuelle'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -754,12 +844,12 @@ class ImportOrchestrationService
     {
         $data = array_filter([
             'client_id' => $client->id,
-            'designation' => $bienData['designation'] ?? null,
-            'detenteur' => $bienData['detenteur'] ?? null,
-            'forme_propriete' => $bienData['forme_propriete'] ?? null,
-            'valeur_actuelle_estimee' => $bienData['valeur_actuelle_estimee'] ?? null,
-            'annee_acquisition' => $bienData['annee_acquisition'] ?? null,
-            'valeur_acquisition' => $bienData['valeur_acquisition'] ?? null,
+            'designation' => $this->normalizeImportValue($bienData['designation'] ?? null),
+            'detenteur' => $this->normalizeImportValue($bienData['detenteur'] ?? null),
+            'forme_propriete' => $this->normalizeImportValue($bienData['forme_propriete'] ?? null),
+            'valeur_actuelle_estimee' => $this->normalizeNumericImportValue($bienData['valeur_actuelle_estimee'] ?? null),
+            'annee_acquisition' => $this->normalizeIntegerImportValue($bienData['annee_acquisition'] ?? null),
+            'valeur_acquisition' => $this->normalizeNumericImportValue($bienData['valeur_acquisition'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -773,12 +863,12 @@ class ImportOrchestrationService
     {
         $data = array_filter([
             'client_id' => $client->id,
-            'nature' => $passifData['nature'] ?? null,
-            'preteur' => $passifData['preteur'] ?? null,
-            'periodicite' => $passifData['periodicite'] ?? null,
-            'montant_remboursement' => $passifData['montant_remboursement'] ?? null,
-            'capital_restant_du' => $passifData['capital_restant_du'] ?? null,
-            'duree_restante' => $passifData['duree_restante'] ?? null,
+            'nature' => $this->normalizeImportValue($passifData['nature'] ?? null),
+            'preteur' => $this->normalizeImportValue($passifData['preteur'] ?? null),
+            'periodicite' => $this->normalizeImportValue($passifData['periodicite'] ?? null),
+            'montant_remboursement' => $this->normalizeNumericImportValue($passifData['montant_remboursement'] ?? null),
+            'capital_restant_du' => $this->normalizeNumericImportValue($passifData['capital_restant_du'] ?? null),
+            'duree_restante' => $this->normalizeIntegerImportValue($passifData['duree_restante'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {
@@ -792,9 +882,9 @@ class ImportOrchestrationService
     {
         $data = array_filter([
             'client_id' => $client->id,
-            'designation' => $epargneData['designation'] ?? null,
-            'detenteur' => $epargneData['detenteur'] ?? null,
-            'valeur' => $epargneData['valeur'] ?? null,
+            'designation' => $this->normalizeImportValue($epargneData['designation'] ?? null),
+            'detenteur' => $this->normalizeImportValue($epargneData['detenteur'] ?? null),
+            'valeur' => $this->normalizeNumericImportValue($epargneData['valeur'] ?? null),
         ], fn($v) => $v !== null);
 
         if (count($data) <= 1) {

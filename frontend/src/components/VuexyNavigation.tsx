@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, UserPlus, Calendar, LogOut, Upload } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { PendingChangesBadge } from './PendingChangesBadge';
 import { ReviewChangesModal } from './ReviewChangesModal';
 
 export const VuexyNavigation: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const isHomePage = location.pathname === '/';
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
@@ -34,68 +34,30 @@ export const VuexyNavigation: React.FC = () => {
             </span>
           </a>
 
-          {/* Navigation */}
-          <nav className="flex items-center space-x-4">
-            <a
-              href="/"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[#5E5873] hover:bg-[#F3F2F7] hover:text-[#7367F0] font-semibold transition-all duration-200"
-            >
-              <Home size={18} />
-              Accueil
-            </a>
+          {/* User Menu */}
+          {user && (
+            <div className="flex items-center gap-4">
+              {/* Pending Changes Badge */}
+              <PendingChangesBadge
+                onSelectChange={(id) => setSelectedPendingChangeId(id)}
+              />
 
-            <a
-              href="/der/new"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#7367F0] to-[#9055FD] hover:from-[#5E50EE] hover:to-[#7E3FF2] text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-            >
-              <Calendar size={18} />
-              Nouveau rendez-vous
-            </a>
-
-            <a
-              href="/clients/new"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#7367F0] text-[#7367F0] hover:bg-[#7367F0] hover:text-white font-semibold transition-all duration-200"
-            >
-              <UserPlus size={18} />
-              Nouveau client
-            </a>
-
-            {/* Import Button - Admin Only */}
-            {isAdmin && (
-              <a
-                href="/import"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#FF9F43] text-[#FF9F43] hover:bg-[#FF9F43] hover:text-white font-semibold transition-all duration-200"
-              >
-                <Upload size={18} />
-                Importer
-              </a>
-            )}
-
-            {/* User Menu */}
-            {user && (
-              <div className="flex items-center gap-4 pl-4 ml-4 border-l border-[#EBE9F1]">
-                {/* Pending Changes Badge */}
-                <PendingChangesBadge
-                  onSelectChange={(id) => setSelectedPendingChangeId(id)}
-                />
-
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F3F2F7]">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-sm font-semibold">
-                    {user.name?.charAt(0).toUpperCase() || 'U'}
-                  </div>
-                  <span className="text-sm font-semibold text-[#5E5873]">{user.name}</span>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#F3F2F7]">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-sm font-semibold">
+                  {user.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[#EA5455] hover:bg-[#EA5455]/10 font-semibold transition-all duration-200"
-                >
-                  <LogOut size={18} />
-                  Déconnexion
-                </button>
+                <span className="text-sm font-semibold text-[#5E5873]">{user.name}</span>
               </div>
-            )}
-          </nav>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[#EA5455] hover:bg-[#EA5455]/10 font-semibold transition-all duration-200"
+              >
+                <LogOut size={18} />
+                Déconnexion
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

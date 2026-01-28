@@ -16,10 +16,17 @@ class ClientActifsFinanciersSyncService
      */
     public function syncActifsFinanciers(Client $client, array $actifsData): void
     {
+        $originalCount = count($actifsData);
+
+        // 🔀 ÉTAPE 1: Nettoyer et dédupliquer les données entrantes
         $actifsData = $this->sanitizeIncomingActifs($actifsData);
 
+        // 🔀 ÉTAPE 2: Dédupliquer par nature (fusionner les entrées du même type)
+        $actifsData = $this->deduplicateByNature($actifsData);
+
         Log::info("📈 [ACTIFS FINANCIERS] Synchronisation des actifs financiers pour le client #{$client->id}", [
-            'nombre_actifs_recus' => count($actifsData),
+            'nombre_actifs_recus_original' => $originalCount,
+            'nombre_actifs_apres_dedup' => count($actifsData),
         ]);
 
         // Charger les actifs existants
@@ -94,6 +101,75 @@ class ClientActifsFinanciersSyncService
         }
 
         return null;
+    }
+
+    /**
+     * Déduplique les actifs par nature en fusionnant les infos complémentaires
+     *
+     * GPT peut retourner plusieurs objets pour le même actif :
+     * - Un avec l'établissement
+     * - Un autre avec la valeur
+     * Cette méthode les fusionne en un seul objet complet
+     */
+    private function deduplicateByNature(array $actifs): array
+    {
+        if (count($actifs) <= 1) {
+            return $actifs;
+        }
+
+        $merged = [];
+
+        foreach ($actifs as $actif) {
+            $actif = $this->filterEmptyValues($actif);
+            if (empty($actif) || empty($actif['nature'])) {
+                continue;
+            }
+
+            $nature = $this->normalizeString($actif['nature']);
+            $etablissement = isset($actif['etablissement']) ? $this->normalizeString($actif['etablissement']) : null;
+
+            // Chercher une entrée existante avec la même nature
+            $found = false;
+            foreach ($merged as $existingKey => &$existing) {
+                $existingNature = $this->normalizeString($existing['nature'] ?? '');
+                $existingEtab = isset($existing['etablissement']) ? $this->normalizeString($existing['etablissement']) : null;
+
+                // Match si même nature ET (même établissement OU l'un des deux n'a pas d'établissement)
+                if ($existingNature === $nature) {
+                    if ($etablissement === $existingEtab || !$etablissement || !$existingEtab) {
+                        // Fusionner : garder les infos non vides de chaque côté
+                        foreach ($actif as $field => $value) {
+                            if (!empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
+                                $existing[$field] = $value;
+                            }
+                        }
+                        // Si le nouveau a un établissement et l'existant non, utiliser le nouveau
+                        if (!empty($actif['etablissement']) && empty($existing['etablissement'])) {
+                            $existing['etablissement'] = $actif['etablissement'];
+                        }
+                        $found = true;
+                        Log::info("📈 [ACTIFS FINANCIERS] 🔀 Fusion d'actifs de même nature", [
+                            'nature' => $nature,
+                            'etablissement' => $existing['etablissement'] ?? 'non spécifié',
+                        ]);
+                        break;
+                    }
+                }
+            }
+
+            if (!$found) {
+                $key = $nature . ($etablissement ? '_' . $etablissement : '');
+                $merged[$key] = $actif;
+            }
+        }
+
+        $result = array_values($merged);
+
+        if (count($result) < count($actifs)) {
+            Log::info("📈 [ACTIFS FINANCIERS] 🔀 Déduplication par nature: " . count($actifs) . " → " . count($result) . " actif(s)");
+        }
+
+        return $result;
     }
 
     private function sanitizeIncomingActifs(array $actifsData): array

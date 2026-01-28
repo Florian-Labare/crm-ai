@@ -16,20 +16,15 @@ import {
   Trash2,
   Eye,
   Users,
-  ArrowRight,
   Database,
-  FileJson,
-  FileCode,
-  File,
   Plus,
-  Settings,
   TestTube,
   Link,
   Shield,
   FileCheck,
-  History,
   Lock,
 } from "lucide-react";
+import { SmartMappingForm } from "../components/SmartMappingForm";
 
 interface ImportSession {
   id: number;
@@ -50,6 +45,15 @@ interface ImportSession {
   legal_basis_details?: string;
   consent_timestamp?: string;
   retention_until?: string;
+}
+
+interface EnhancedFieldOption {
+  value: string;
+  label: string;
+  group: string;
+  table: string;
+  field: string;
+  index?: number | null;
 }
 
 interface SessionStats {
@@ -77,10 +81,6 @@ interface DatabaseConnection {
   created_by: string;
 }
 
-interface DatabaseTable {
-  name: string;
-  columns?: { name: string; type: string }[];
-}
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   pending: { label: "En attente", color: "bg-gray-100 text-gray-600", icon: <RefreshCw size={14} /> },
@@ -119,7 +119,7 @@ const LEGAL_BASES: Record<string, string> = {
 
 const ImportPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [sessions, setSessions] = useState<ImportSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -127,22 +127,7 @@ const ImportPage: React.FC = () => {
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
   const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
   const [availableFields, setAvailableFields] = useState<Record<string, string[]>>({});
-
-  // Labels français pour les tables
-  const tableLabels: Record<string, string> = {
-    client: "Client",
-    conjoint: "Conjoint",
-    enfant: "Enfants",
-    sante_souhaits: "Santé / Mutuelle",
-    bae_prevoyance: "Prévoyance",
-    bae_retraite: "Retraite",
-    bae_epargne: "Épargne",
-    client_revenu: "Revenus",
-    client_actif_financier: "Actifs Financiers",
-    client_bien_immobilier: "Biens Immobiliers",
-    client_passif: "Passifs / Emprunts",
-    client_autre_epargne: "Autres Épargnes",
-  };
+  const [enhancedFields, setEnhancedFields] = useState<EnhancedFieldOption[]>([]);
 
   // Database connection state
   const [activeTab, setActiveTab] = useState<"files" | "database">("files");
@@ -196,7 +181,13 @@ const ImportPage: React.FC = () => {
   const fetchAvailableFields = useCallback(async () => {
     try {
       const response = await api.get("/import/mappings/fields");
-      setAvailableFields(response.data.data);
+      const data = response.data.data;
+      setAvailableFields(data);
+
+      // Stocker les champs enrichis pour le SmartMappingForm
+      if (data._enhanced?.flat) {
+        setEnhancedFields(data._enhanced.flat);
+      }
     } catch (error) {
       console.error("Error fetching fields:", error);
     }
@@ -462,8 +453,6 @@ const ImportPage: React.FC = () => {
     }
   };
 
-  const allFields = Object.values(availableFields).flat();
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#F8F8F8]">
@@ -671,58 +660,28 @@ const ImportPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Mapping Configuration */}
+                  {/* Mapping Configuration - Smart Form */}
                   {selectedSession.status === "mapping" && selectedSession.detected_columns && (
                     <div className="vx-card">
-                      <h3 className="text-lg font-semibold text-[#5E5873] mb-4">
-                        Configuration du mapping
-                      </h3>
-                      <p className="text-sm text-[#6E6B7B] mb-4">
-                        Associez les colonnes de votre fichier aux champs du système
-                      </p>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {selectedSession.detected_columns.map((column) => (
-                          <div key={column} className="flex items-center gap-4">
-                            <div className="flex-1">
-                              <label className="block text-sm font-medium text-[#5E5873] mb-1">
-                                {column}
-                              </label>
-                              <select
-                                value={columnMappings[column] || ""}
-                                onChange={(e) => handleMappingChange(column, e.target.value)}
-                                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:outline-none focus:border-[#7367F0] focus:ring-1 focus:ring-[#7367F0]"
-                              >
-                                <option value="">-- Ignorer --</option>
-                                {Object.entries(availableFields)
-                                  .filter(([table]) => !table.startsWith("_"))
-                                  .map(([table, fields]) => (
-                                    <optgroup key={table} label={tableLabels[table] || table}>
-                                      {(fields as string[]).map((field) => (
-                                        <option key={field} value={field}>
-                                          {field}
-                                        </option>
-                                      ))}
-                                    </optgroup>
-                                  ))}
-                              </select>
-                            </div>
-                            {selectedSession.ai_suggested_mappings?.[column]?.confidence && (
-                              <span className="text-xs text-[#28C76F]">
-                                {(selectedSession.ai_suggested_mappings[column].confidence * 100).toFixed(0)}%
-                              </span>
-                            )}
-                          </div>
-                        ))}
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold text-[#5E5873]">
+                          Configuration du mapping
+                        </h3>
+                        <p className="text-sm text-[#6E6B7B] mt-1">
+                          Associez les colonnes de votre fichier "{selectedSession.original_filename}" aux champs du système.
+                          Utilisez la recherche pour trouver rapidement le bon champ.
+                        </p>
                       </div>
-                      <div className="mt-6 flex justify-end">
-                        <button
-                          onClick={submitMapping}
-                          className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#7367F0] to-[#9055FD] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#7367F0]/30 transition-all duration-200"
-                        >
-                          <ArrowRight size={18} />
-                          Valider le mapping
-                        </button>
-                      </div>
+
+                      <SmartMappingForm
+                        columns={selectedSession.detected_columns || []}
+                        availableFields={availableFields}
+                        enhancedFields={enhancedFields}
+                        aiSuggestions={selectedSession.ai_suggested_mappings || {}}
+                        columnMappings={columnMappings}
+                        onMappingChange={handleMappingChange}
+                        onSubmit={submitMapping}
+                      />
                     </div>
                   )}
 

@@ -87,6 +87,9 @@ class ImportSessionController extends Controller
 
     public function show(ImportSession $session): JsonResponse
     {
+        // Augmenter la limite mémoire pour le chargement des stats
+        ini_set('memory_limit', '512M');
+
         $session->load('user:id,name', 'mapping');
 
         $stats = $this->orchestrator->getSessionStats($session);
@@ -102,6 +105,9 @@ class ImportSessionController extends Controller
 
     public function setMapping(Request $request, ImportSession $session): JsonResponse
     {
+        // Augmenter la limite mémoire pour les opérations de mapping
+        ini_set('memory_limit', '512M');
+
         if ($session->status !== ImportSession::STATUS_MAPPING) {
             return response()->json([
                 'success' => false,
@@ -343,6 +349,9 @@ class ImportSessionController extends Controller
 
     public function suggestMappings(ImportSession $session): JsonResponse
     {
+        // Augmenter la limite mémoire pour les suggestions
+        ini_set('memory_limit', '512M');
+
         if (empty($session->detected_columns)) {
             return response()->json([
                 'success' => false,

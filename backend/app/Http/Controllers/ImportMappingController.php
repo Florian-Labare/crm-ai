@@ -110,17 +110,18 @@ class ImportMappingController extends Controller
 
     public function availableFields(): JsonResponse
     {
+        // Augmenter temporairement la limite mémoire pour cette opération
+        ini_set('memory_limit', '512M');
+
         // Format legacy pour compatibilité frontend actuel
         $legacyFields = $this->mappingService->getAvailableTargetFields();
 
-        // Format enrichi avec labels français et groupes
-        $grouped = $this->fieldsService->getGroupedFieldsForSelect();
-        $flat = $this->fieldsService->getFlatFieldsList();
+        // Format enrichi avec labels français et groupes - depuis le DATABASE_SCHEMA pour cohérence
+        $flat = $this->mappingService->getEnhancedFieldsList();
 
         // Fusion: format legacy + données enrichies
         $data = $legacyFields;
         $data['_enhanced'] = [
-            'grouped' => $grouped,
             'flat' => $flat,
             'total_fields' => count($flat),
         ];

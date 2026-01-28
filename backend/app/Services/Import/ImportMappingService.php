@@ -1141,6 +1141,123 @@ class ImportMappingService
         return $result;
     }
 
+    /**
+     * Retourne les champs avec labels français pour le frontend
+     * Utilise le cache pour éviter les problèmes de mémoire
+     */
+    public function getEnhancedFieldsList(): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember('import_enhanced_fields', 3600, function () {
+            return $this->buildEnhancedFieldsList();
+        });
+    }
+
+    /**
+     * Construit la liste des champs enrichis
+     */
+    private function buildEnhancedFieldsList(): array
+    {
+        $tableLabels = [
+            'client' => 'Client',
+            'conjoint' => 'Conjoint',
+            'enfant' => 'Enfants',
+            'sante_souhaits' => 'Santé / Mutuelle',
+            'bae_prevoyance' => 'Prévoyance',
+            'bae_retraite' => 'Retraite',
+            'bae_epargne' => 'Épargne',
+            'client_revenu' => 'Revenus',
+            'client_actif_financier' => 'Actifs Financiers',
+            'client_bien_immobilier' => 'Biens Immobiliers',
+            'client_passif' => 'Passifs / Emprunts',
+            'client_autre_epargne' => 'Autres Épargnes',
+            'entreprise' => 'Entreprise',
+            'questionnaire_risque' => 'Questionnaire Risque',
+        ];
+
+        $result = [];
+
+        foreach (self::DATABASE_SCHEMA as $table => $fields) {
+            $groupLabel = $tableLabels[$table] ?? ucfirst(str_replace('_', ' ', $table));
+
+            foreach ($fields as $fieldKey => $fieldConfig) {
+                // Extraire l'index si présent (enfant1_nom -> index=1)
+                $index = null;
+                if (preg_match('/(\d+)_/', $fieldKey, $matches)) {
+                    $index = (int) $matches[1];
+                }
+
+                // Générer un label lisible à partir du nom de champ
+                $label = $this->generateFieldLabel($fieldKey, $index);
+
+                $result[] = [
+                    'value' => $fieldKey,
+                    'label' => $label,
+                    'group' => $groupLabel,
+                    'table' => $table,
+                    'index' => $index,
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Génère un label français lisible pour un champ
+     */
+    private function generateFieldLabel(string $fieldKey, ?int $index = null): string
+    {
+        // Labels manuels pour les champs courants
+        static $labels = [
+            'civilite' => 'Civilité', 'nom' => 'Nom', 'prenom' => 'Prénom',
+            'date_naissance' => 'Date de naissance', 'lieu_naissance' => 'Lieu de naissance',
+            'nationalite' => 'Nationalité', 'adresse' => 'Adresse', 'code_postal' => 'Code postal',
+            'ville' => 'Ville', 'telephone' => 'Téléphone', 'email' => 'Email',
+            'profession' => 'Profession', 'statut' => 'Statut', 'revenus_annuels' => 'Revenus annuels',
+            'fumeur' => 'Fumeur', 'activites_sportives' => 'Activités sportives',
+            'chef_entreprise' => "Chef d'entreprise", 'travailleur_independant' => 'Travailleur indépendant',
+            'situation_matrimoniale' => 'Situation matrimoniale', 'residence_fiscale' => 'Résidence fiscale',
+            'nom_jeune_fille' => 'Nom de jeune fille', 'mandataire_social' => 'Mandataire social',
+            'nature' => 'Nature', 'periodicite' => 'Périodicité', 'montant' => 'Montant',
+            'details' => 'Détails', 'etablissement' => 'Établissement', 'detenteur' => 'Détenteur',
+            'valeur_actuelle' => 'Valeur actuelle', 'designation' => 'Désignation',
+            'forme_propriete' => 'Forme de propriété', 'preteur' => 'Prêteur',
+            'capital_restant_du' => 'Capital restant dû', 'duree_restante' => 'Durée restante',
+            'fiscalement_a_charge' => 'Fiscalement à charge', 'garde_alternee' => 'Garde alternée',
+            'contrat_en_place' => 'Contrat en place', 'budget_mensuel_maximum' => 'Budget mensuel max',
+            'niveau_hospitalisation' => 'Niveau hospitalisation', 'niveau_dentaire' => 'Niveau dentaire',
+            'niveau_optique' => 'Niveau optique', 'age_depart_retraite' => 'Âge départ retraite',
+            'tmi' => 'TMI', 'nombre_parts_fiscales' => 'Nombre parts fiscales',
+            'valeur' => 'Valeur', 'nom_prenom' => 'Nom et Prénom', 'nombre_enfants' => "Nombre d'enfants",
+        ];
+
+        // Enlever le préfixe indexé (enfant1_, revenu2_, etc.)
+        $cleanKey = preg_replace('/^([a-z_]+)\d+_/', '', $fieldKey);
+
+        // Enlever le préfixe de table (conjoint_, sante_, etc.)
+        $shortKey = preg_replace('/^(conjoint|sante|prevoyance|retraite|epargne|actif|bien_immo|passif|autre_epargne|entreprise|risque)_/', '', $cleanKey);
+
+        // Chercher un label
+        $label = $labels[$fieldKey] ?? $labels[$cleanKey] ?? $labels[$shortKey] ?? null;
+
+        if (!$label) {
+            // Générer automatiquement: snake_case -> Title Case
+            $label = ucfirst(str_replace('_', ' ', $shortKey));
+        }
+
+        // Ajouter le préfixe pour les champs conjoint
+        if (str_starts_with($fieldKey, 'conjoint_')) {
+            $label .= ' (conjoint)';
+        }
+
+        // Ajouter l'index
+        if ($index !== null) {
+            $label .= " #{$index}";
+        }
+
+        return $label;
+    }
+
     public function validateMapping(array $columnMappings): array
     {
         $errors = [];
