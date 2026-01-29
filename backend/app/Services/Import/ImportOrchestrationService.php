@@ -59,7 +59,7 @@ class ImportOrchestrationService
 
     private function analyzeFileSource(ImportSession $session): void
     {
-        $filePath = Storage::path($session->file_path);
+        $filePath = $this->getLocalFilePath($session);
 
         $columns = $this->parser->detectColumns($filePath);
         $rowCount = $this->parser->getRowCount($filePath);
@@ -149,7 +149,7 @@ class ImportOrchestrationService
 
     private function processFromFile(ImportSession $session, array $columnMappings): void
     {
-        $filePath = Storage::path($session->file_path);
+        $filePath = $this->getLocalFilePath($session);
         $parsed = $this->parser->parseFile($filePath);
 
         $rowNumber = 0;
@@ -225,6 +225,37 @@ class ImportOrchestrationService
             'session_id' => $session->id,
             'total_rows' => $rowNumber,
         ]);
+    }
+
+    /**
+     * Télécharge le fichier depuis S3 vers temp local si nécessaire
+     * et retourne le chemin local pour traitement
+     */
+    private function getLocalFilePath(ImportSession $session): string
+    {
+        $tempPath = Storage::disk('temp')->path('imports/' . basename($session->file_path));
+
+        // Si le fichier temp existe déjà, le réutiliser
+        if (file_exists($tempPath)) {
+            return $tempPath;
+        }
+
+        // Créer le dossier temp si nécessaire
+        $tempDir = dirname($tempPath);
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        // Télécharger depuis S3 vers temp
+        $content = Storage::get($session->file_path);
+        file_put_contents($tempPath, $content);
+
+        Log::info('Import file downloaded to temp for processing', [
+            'session_id' => $session->id,
+            'temp_path' => $tempPath,
+        ]);
+
+        return $tempPath;
     }
 
     public function processBatch(ImportSession $session, int $offset, int $limit = 50): array

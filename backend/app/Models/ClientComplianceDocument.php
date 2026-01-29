@@ -41,6 +41,9 @@ class ClientComplianceDocument extends Model
         'passeport' => 'Passeport',
         'titre_sejour' => 'Titre de séjour',
 
+        // Documents bancaires
+        'rib' => 'RIB',
+
         // Documents fiscaux
         'avis_imposition' => "Avis d'imposition",
         'avis_imposition_n1' => "Avis d'imposition N-1",
@@ -80,6 +83,7 @@ class ClientComplianceDocument extends Model
      */
     public const CATEGORIES = [
         'identity' => 'Identité',
+        'banking' => 'Bancaire',
         'fiscal' => 'Fiscal',
         'regulatory' => 'Réglementaire',
     ];

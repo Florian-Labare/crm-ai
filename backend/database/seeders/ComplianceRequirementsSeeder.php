@@ -30,6 +30,14 @@ class ComplianceRequirementsSeeder extends Seeder
                 'is_mandatory' => true,
                 'priority' => 2,
             ],
+            [
+                'besoin' => 'global',
+                'document_type' => 'rib',
+                'document_label' => 'RIB',
+                'category' => 'banking',
+                'is_mandatory' => true,
+                'priority' => 3,
+            ],
 
             // Prévoyance
             [

@@ -104,12 +104,12 @@ class PurgeOldAudioRecords extends Command
      */
     private function processRecord(AudioRecord $record, bool $dryRun, bool $includeTranscriptions): void
     {
-        // 1. Supprimer le fichier audio
-        if ($record->path && Storage::disk('public')->exists($record->path)) {
-            $size = Storage::disk('public')->size($record->path);
+        // 1. Supprimer le fichier audio (depuis S3)
+        if ($record->path && Storage::exists($record->path)) {
+            $size = Storage::size($record->path);
 
             if (!$dryRun) {
-                Storage::disk('public')->delete($record->path);
+                Storage::delete($record->path);
 
                 // Mettre à jour le record pour indiquer que le fichier a été supprimé
                 $record->update([

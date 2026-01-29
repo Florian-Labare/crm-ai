@@ -162,6 +162,41 @@ services:
       - "--api-port=3000"
       - "--log-level=info"
 
+  # --- MINIO (S3-compatible storage for local development) ---
+  minio:
+    image: minio/minio:latest
+    container_name: minio_storage
+    restart: unless-stopped
+    ports:
+      - "9000:9000"      # S3 API
+      - "9001:9001"      # Console UI
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # --- MINIO SETUP (Create bucket on first run) ---
+  minio-setup:
+    image: minio/mc:latest
+    container_name: minio_setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb local/crm-ai-bucket --ignore-existing;
+      mc anonymous set download local/crm-ai-bucket/public;
+      exit 0;
+      "
+
   # --- FRONTEND (Vite/React/Vue/Autre) ---
   frontend:
     build:
@@ -185,3 +220,4 @@ services:
 volumes:
   mariadb_data:
   redis_data:
+  minio_data:

@@ -10,6 +10,7 @@ import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone, LogOut,
 import { VuexyStatCard } from "../components/VuexyStatCard";
 import { PendingChangesBadge } from "../components/PendingChangesBadge";
 import { ReviewChangesModal } from "../components/ReviewChangesModal";
+import { ComplianceBadge } from "../components/ComplianceBadge";
 import { useAuth } from "../contexts/AuthContext";
 
 interface ExtendedClient extends Client {
@@ -49,6 +50,7 @@ const HomePage: React.FC = () => {
     profession: true,
     situation: true,
     besoins: true,
+    dossier: true,
     created: false,
   });
 
@@ -807,6 +809,7 @@ const HomePage: React.FC = () => {
                           { key: "profession", label: "Profession" },
                           { key: "situation", label: "Situation" },
                           { key: "besoins", label: "Besoins" },
+                          { key: "dossier", label: "Dossier" },
                           { key: "created", label: "Créé le" },
                         ].map((item) => (
                           <label
@@ -861,6 +864,11 @@ const HomePage: React.FC = () => {
                       {visibleColumns.besoins && (
                         <th className="px-6 py-4 text-left text-xs font-semibold text-[#5E5873] uppercase tracking-wider">
                           Besoins
+                        </th>
+                      )}
+                      {visibleColumns.dossier && (
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#5E5873] uppercase tracking-wider">
+                          Dossier
                         </th>
                       )}
                       {visibleColumns.created && (
@@ -954,6 +962,13 @@ const HomePage: React.FC = () => {
                                 Aucun
                               </span>
                             )}
+                          </td>
+                        )}
+
+                        {/* Dossier (Compliance) */}
+                        {visibleColumns.dossier && (
+                          <td className="px-6 py-4">
+                            <ComplianceBadge clientId={client.id} variant="badge" />
                           </td>
                         )}
 

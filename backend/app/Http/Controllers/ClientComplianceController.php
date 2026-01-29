@@ -13,6 +13,75 @@ use Illuminate\Support\Facades\Log;
 class ClientComplianceController extends Controller
 {
     /**
+     * Retourne un badge simplifié (feu tricolore) pour le statut compliance
+     * Rouge = Documents manquants, Orange = En attente de validation, Vert = Complet
+     */
+    public function badge(Client $client): JsonResponse
+    {
+        // Documents globaux obligatoires (CNI, Avis imposition, RIB)
+        $globalRequirements = ComplianceRequirement::where('besoin', 'global')
+            ->where('is_mandatory', true)
+            ->pluck('document_type')
+            ->toArray();
+
+        // Documents fournis et validés
+        $validDocuments = $client->complianceDocuments()
+            ->where('status', 'validated')
+            ->whereIn('document_type', $globalRequirements)
+            ->pluck('document_type')
+            ->toArray();
+
+        // Documents en attente
+        $pendingDocuments = $client->complianceDocuments()
+            ->where('status', 'pending')
+            ->whereIn('document_type', $globalRequirements)
+            ->pluck('document_type')
+            ->toArray();
+
+        $totalRequired = count($globalRequirements);
+        $validCount = count(array_intersect($globalRequirements, $validDocuments));
+        $pendingCount = count(array_intersect($globalRequirements, $pendingDocuments));
+        $missingCount = $totalRequired - $validCount - $pendingCount;
+
+        // Déterminer la couleur du feu
+        $color = 'red'; // Par défaut rouge
+        $label = 'Incomplet';
+
+        if ($validCount === $totalRequired) {
+            $color = 'green';
+            $label = 'Complet';
+        } elseif ($pendingCount > 0 && $missingCount === 0) {
+            $color = 'orange';
+            $label = 'En attente';
+        } elseif ($validCount > 0 || $pendingCount > 0) {
+            $color = 'orange';
+            $label = 'Partiel';
+        }
+
+        // Liste des documents manquants
+        $allProvided = array_unique(array_merge($validDocuments, $pendingDocuments));
+        $missing = array_diff($globalRequirements, $allProvided);
+        $missingLabels = [];
+        foreach ($missing as $type) {
+            $missingLabels[] = ClientComplianceDocument::DOCUMENT_LABELS[$type] ?? $type;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'color' => $color,
+                'label' => $label,
+                'score' => $totalRequired > 0 ? round(($validCount / $totalRequired) * 100) : 0,
+                'valid_count' => $validCount,
+                'pending_count' => $pendingCount,
+                'missing_count' => $missingCount,
+                'total_required' => $totalRequired,
+                'missing_documents' => $missingLabels,
+            ],
+        ]);
+    }
+
+    /**
      * Retourne le statut de compliance d'un client avec les documents requis et fournis
      */
     public function status(Client $client): JsonResponse
@@ -93,6 +162,7 @@ class ClientComplianceController extends Controller
         $groupedByCategory = collect($checklistItems)->groupBy('category')->map(function ($items, $category) {
             $labels = [
                 'identity' => 'Documents d\'identité',
+                'banking' => 'Documents bancaires',
                 'fiscal' => 'Documents fiscaux',
                 'regulatory' => 'Documents réglementaires',
             ];
@@ -138,8 +208,8 @@ class ClientComplianceController extends Controller
             // Déterminer la catégorie
             $category = $this->getCategoryForDocumentType($documentType);
 
-            // Stocker le fichier
-            $path = $file->store("compliance/{$client->id}", 'public');
+            // Stocker le fichier sur S3 (disk par défaut)
+            $path = $file->store("compliance/{$client->id}");
 
             // Créer l'enregistrement
             $document = ClientComplianceDocument::create([
@@ -249,11 +319,11 @@ class ClientComplianceController extends Controller
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
 
-        if (!Storage::disk('public')->exists($document->file_path)) {
+        if (!Storage::exists($document->file_path)) {
             return response()->json(['success' => false, 'message' => 'Fichier non trouvé'], 404);
         }
 
-        return Storage::disk('public')->download($document->file_path, $document->file_name);
+        return Storage::download($document->file_path, $document->file_name);
     }
 
     /**
@@ -266,9 +336,9 @@ class ClientComplianceController extends Controller
         }
 
         try {
-            // Supprimer le fichier
-            if (Storage::disk('public')->exists($document->file_path)) {
-                Storage::disk('public')->delete($document->file_path);
+            // Supprimer le fichier sur S3
+            if (Storage::exists($document->file_path)) {
+                Storage::delete($document->file_path);
             }
 
             $document->delete();
@@ -336,10 +406,14 @@ class ClientComplianceController extends Controller
     private function getCategoryForDocumentType(string $documentType): string
     {
         $identityTypes = ['cni', 'passeport', 'titre_sejour'];
+        $bankingTypes = ['rib'];
         $fiscalTypes = ['avis_imposition', 'avis_imposition_n1', 'avis_imposition_n2'];
 
         if (in_array($documentType, $identityTypes)) {
             return 'identity';
+        }
+        if (in_array($documentType, $bankingTypes)) {
+            return 'banking';
         }
         if (in_array($documentType, $fiscalTypes)) {
             return 'fiscal';

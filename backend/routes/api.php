@@ -151,6 +151,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Compliance / Documents réglementaires signés
     Route::get('/clients/{client}/compliance/status', [ClientComplianceController::class, 'status']);
+    Route::get('/clients/{client}/compliance/badge', [ClientComplianceController::class, 'badge']);
     Route::post('/clients/{client}/compliance/upload', [ClientComplianceController::class, 'upload']);
     Route::post('/clients/{client}/compliance/{document}/validate', [ClientComplianceController::class, 'validate']);
     Route::post('/clients/{client}/compliance/{document}/reject', [ClientComplianceController::class, 'reject']);

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DISK', 'local'),
+    'default' => env('FILESYSTEM_DISK', 's3'),
 
     /*
     |--------------------------------------------------------------------------
@@ -30,6 +30,7 @@ return [
 
     'disks' => [
 
+        // Fichiers privés locaux
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
@@ -38,6 +39,28 @@ return [
             'report' => false,
         ],
 
+        // Fichiers temporaires (ffmpeg, diarization) - TOUJOURS local
+        'temp' => [
+            'driver' => 'local',
+            'root' => storage_path('app/temp'),
+            'throw' => false,
+        ],
+
+        // Templates de documents - local (root = app car les chemins en base incluent 'templates/')
+        'templates' => [
+            'driver' => 'local',
+            'root' => storage_path('app'),
+            'throw' => false,
+        ],
+
+        // Chunks d'enregistrement - local pour ffmpeg
+        'recordings' => [
+            'driver' => 'local',
+            'root' => storage_path('app/recordings'),
+            'throw' => false,
+        ],
+
+        // Disk public legacy (pour compatibilité locale)
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
@@ -47,6 +70,7 @@ return [
             'report' => false,
         ],
 
+        // S3 (MinIO en local, AWS en prod)
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -56,6 +80,7 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],

@@ -61,10 +61,10 @@ class ClientObserver
         $freedBytes = 0;
 
         foreach ($audioRecords as $record) {
-            // Supprimer le fichier audio
-            if ($record->path && Storage::disk('public')->exists($record->path)) {
-                $size = Storage::disk('public')->size($record->path);
-                Storage::disk('public')->delete($record->path);
+            // Supprimer le fichier audio (depuis S3)
+            if ($record->path && Storage::exists($record->path)) {
+                $size = Storage::size($record->path);
+                Storage::delete($record->path);
                 $freedBytes += $size;
             }
 
