@@ -34,6 +34,7 @@ export interface Client {
   actifs_financiers?: ClientActifFinancier[];
   biens_immobiliers?: ClientBienImmobilier[];
   autres_epargnes?: ClientAutreEpargne[];
+  charges?: ClientCharge[];
 
   created_at: string; // Format ISO
   updated_at: string; // Format ISO
@@ -178,6 +179,16 @@ export interface ClientAutreEpargne {
   designation?: string | null;
   detenteur?: string | null;
   valeur?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClientCharge {
+  id: number;
+  client_id: number;
+  nature?: string | null;
+  periodicite?: string | null;
+  montant?: number | null;
   created_at: string;
   updated_at: string;
 }

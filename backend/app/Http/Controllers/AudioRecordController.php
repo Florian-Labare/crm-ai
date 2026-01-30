@@ -63,9 +63,9 @@ class AudioRecordController extends Controller
         // Supprimer les logs de diarisation associés
         DiarizationLog::where('audio_record_id', $record->id)->delete();
 
-        // Supprimer le fichier audio du stockage
-        if ($record->path && Storage::disk('public')->exists($record->path)) {
-            Storage::disk('public')->delete($record->path);
+        // Supprimer le fichier audio du stockage (S3)
+        if ($record->path && Storage::exists($record->path)) {
+            Storage::delete($record->path);
         }
 
         // Supprimer les fichiers temporaires éventuels

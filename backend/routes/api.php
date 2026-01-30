@@ -13,7 +13,11 @@ use App\Http\Controllers\RecordingController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\SpeakerCorrectionController;
 use App\Http\Controllers\PendingChangesController;
+use App\Http\Controllers\ImportMappingController;
+use App\Http\Controllers\ImportSessionController;
+use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\MeetingSummaryController;
+use App\Http\Controllers\ClientComplianceController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -68,6 +72,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/clients/{client}/autres-epargnes/{autreEpargne}', [ClientController::class, 'updateAutreEpargne']);
     Route::delete('/clients/{client}/autres-epargnes/{autreEpargne}', [ClientController::class, 'deleteAutreEpargne']);
 
+    // Charges
+    Route::post('/clients/{client}/charges', [ClientController::class, 'storeCharge']);
+    Route::put('/clients/{client}/charges/{charge}', [ClientController::class, 'updateCharge']);
+    Route::delete('/clients/{client}/charges/{charge}', [ClientController::class, 'deleteCharge']);
+
     // Conjoint
     Route::post('/clients/{client}/conjoint', [ClientController::class, 'storeConjoint']);
     Route::put('/clients/{client}/conjoint', [ClientController::class, 'updateConjoint']);
@@ -102,10 +111,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/clients/{id}/export/pdf', [ExportController::class, 'exportPdf']);
     Route::get('/clients/{id}/export/word', [ExportController::class, 'exportWord']);
     Route::get('/clients/{id}/questionnaires/export/pdf', [ExportController::class, 'exportQuestionnairePdf']);
-
-    // Résumé de rendez-vous
-    Route::get('/clients/{client}/meeting-summary', [MeetingSummaryController::class, 'showLatest']);
-    Route::post('/clients/{client}/meeting-summary/regenerate', [MeetingSummaryController::class, 'regenerate']);
 
     // ============================================
     // 🔒 PENDING CHANGES - Système de merge avec validation
@@ -143,6 +148,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/documents/{documentId}/download', [DocumentController::class, 'downloadDocument']);
     Route::post('/documents/{documentId}/send-email', [DocumentController::class, 'sendDocumentByEmail']);
     Route::delete('/documents/{documentId}', [DocumentController::class, 'deleteDocument']);
+
+    // Compliance / Documents réglementaires signés
+    Route::get('/clients/{client}/compliance/status', [ClientComplianceController::class, 'status']);
+    Route::get('/clients/{client}/compliance/badge', [ClientComplianceController::class, 'badge']);
+    Route::post('/clients/{client}/compliance/upload', [ClientComplianceController::class, 'upload']);
+    Route::post('/clients/{client}/compliance/{document}/validate', [ClientComplianceController::class, 'validate']);
+    Route::post('/clients/{client}/compliance/{document}/reject', [ClientComplianceController::class, 'reject']);
+    Route::get('/clients/{client}/compliance/{document}/download', [ClientComplianceController::class, 'download']);
+    Route::delete('/clients/{client}/compliance/{document}', [ClientComplianceController::class, 'destroy']);
+
+    // Résumé de rendez-vous (audio)
+    Route::get('/clients/{client}/meeting-summary', [MeetingSummaryController::class, 'showLatest']);
+    Route::post('/clients/{client}/meeting-summary/regenerate', [MeetingSummaryController::class, 'regenerate']);
 
     // Envoi audio et traitement IA - avec rate limiting
     Route::post('/audio/upload', [AudioController::class, 'upload'])
@@ -202,5 +220,50 @@ Route::middleware(['auth:sanctum'])->group(function () {
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    });
+
+    // ============================================
+    // 📥 IMPORT - Import de données clients
+    // ============================================
+    Route::prefix('import')->group(function () {
+        // Mappings de colonnes
+        Route::get('/mappings', [ImportMappingController::class, 'index']);
+        Route::post('/mappings', [ImportMappingController::class, 'store']);
+        Route::get('/mappings/fields', [ImportMappingController::class, 'availableFields']);
+        Route::get('/mappings/{mapping}', [ImportMappingController::class, 'show']);
+        Route::put('/mappings/{mapping}', [ImportMappingController::class, 'update']);
+        Route::delete('/mappings/{mapping}', [ImportMappingController::class, 'destroy']);
+
+        // Sessions d'import
+        Route::get('/sessions', [ImportSessionController::class, 'index']);
+        Route::post('/upload', [ImportSessionController::class, 'upload']);
+        Route::get('/sessions/{session}', [ImportSessionController::class, 'show']);
+        Route::post('/sessions/{session}/mapping', [ImportSessionController::class, 'setMapping']);
+        Route::get('/sessions/{session}/suggestions', [ImportSessionController::class, 'suggestMappings']);
+        Route::post('/sessions/{session}/start', [ImportSessionController::class, 'start']);
+        Route::get('/sessions/{session}/rows', [ImportSessionController::class, 'rows']);
+        Route::post('/sessions/{session}/rows/{row}/resolve', [ImportSessionController::class, 'resolveRow']);
+        Route::post('/sessions/{session}/import-valid', [ImportSessionController::class, 'importValid']);
+        Route::delete('/sessions/{session}', [ImportSessionController::class, 'destroy']);
+
+        // RGPD Compliance endpoints
+        Route::get('/legal-bases', [ImportSessionController::class, 'legalBases']);
+        Route::post('/sessions/{session}/consent', [ImportSessionController::class, 'recordConsent']);
+        Route::get('/sessions/{session}/audit-trail', [ImportSessionController::class, 'auditTrail']);
+        Route::get('/sessions/{session}/imported-clients', [ImportSessionController::class, 'importedClients']);
+
+        // Connexions base de données externes
+        Route::get('/database-connections/drivers', [DatabaseConnectionController::class, 'drivers']);
+        Route::post('/database-connections/test', [DatabaseConnectionController::class, 'test']);
+        Route::get('/database-connections', [DatabaseConnectionController::class, 'index']);
+        Route::post('/database-connections', [DatabaseConnectionController::class, 'store']);
+        Route::get('/database-connections/{databaseConnection}', [DatabaseConnectionController::class, 'show']);
+        Route::put('/database-connections/{databaseConnection}', [DatabaseConnectionController::class, 'update']);
+        Route::delete('/database-connections/{databaseConnection}', [DatabaseConnectionController::class, 'destroy']);
+        Route::post('/database-connections/{databaseConnection}/test', [DatabaseConnectionController::class, 'test']);
+        Route::get('/database-connections/{databaseConnection}/tables', [DatabaseConnectionController::class, 'tables']);
+        Route::get('/database-connections/{databaseConnection}/tables/{table}/columns', [DatabaseConnectionController::class, 'columns']);
+        Route::post('/database-connections/{databaseConnection}/preview', [DatabaseConnectionController::class, 'preview']);
+        Route::post('/database-connections/{databaseConnection}/import', [DatabaseConnectionController::class, 'createImportSession']);
     });
 });

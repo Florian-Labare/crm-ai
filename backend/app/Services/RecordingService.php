@@ -55,9 +55,9 @@ class RecordingService
             throw new \Exception("Cette session n'appartient pas à l'utilisateur connecté");
         }
 
-        // Stocker le fichier audio
+        // Stocker le fichier audio sur le disk recordings (local)
         $filename = "{$sessionId}_part_{$partIndex}.webm";
-        $path = $audio->storeAs("recordings/{$sessionId}", $filename);
+        $path = $audio->storeAs("{$sessionId}", $filename, 'recordings');
 
         Log::info("✅ [RECORDING] Chunk #{$partIndex} stocké : {$path}");
 
@@ -178,17 +178,17 @@ class RecordingService
     }
 
     /**
-     * Récupère les chunks dans l'ordre
+     * Récupère les chunks dans l'ordre (depuis le disk recordings local)
      */
     private function getChunksInOrder(string $sessionId, int $totalChunks): array
     {
         $chunks = [];
         for ($i = 0; $i < $totalChunks; $i++) {
             $filename = "{$sessionId}_part_{$i}.webm";
-            $path = "recordings/{$sessionId}/{$filename}";
+            $path = "{$sessionId}/{$filename}";
 
-            if (Storage::exists($path)) {
-                $chunks[$i] = Storage::path($path);
+            if (Storage::disk('recordings')->exists($path)) {
+                $chunks[$i] = Storage::disk('recordings')->path($path);
             } else {
                 Log::warning("⚠️ [RECORDING] Chunk manquant : {$filename}");
             }
@@ -355,14 +355,14 @@ class RecordingService
     }
 
     /**
-     * Nettoie les chunks après finalisation
+     * Nettoie les chunks après finalisation (disk recordings local)
      */
     private function cleanupChunks(string $sessionId): void
     {
-        $directory = "recordings/{$sessionId}";
+        $directory = $sessionId;
 
-        if (Storage::exists($directory)) {
-            Storage::deleteDirectory($directory);
+        if (Storage::disk('recordings')->exists($directory)) {
+            Storage::disk('recordings')->deleteDirectory($directory);
             Log::info("🗑️ [RECORDING] Chunks supprimés pour la session {$sessionId}");
         }
     }

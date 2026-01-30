@@ -4,6 +4,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ComplianceBadge } from "../components/ComplianceBadge";
 
 interface Client {
   id: number;
@@ -101,7 +102,7 @@ const ClientsPage: React.FC = () => {
             >
               <div
                 onClick={() => navigate(`/clients/${client.id}`)}
-                className="cursor-pointer"
+                className="cursor-pointer flex-1"
               >
                 <p className="font-semibold text-gray-800">
                   {client.prenom} {client.nom.toUpperCase()}
@@ -110,6 +111,12 @@ const ClientsPage: React.FC = () => {
                   {client.profession || "Profession non renseignée"}
                 </p>
               </div>
+
+              <ComplianceBadge
+                clientId={client.id}
+                variant="badge"
+                className="mr-4"
+              />
 
               <button
                 onClick={(e) => {

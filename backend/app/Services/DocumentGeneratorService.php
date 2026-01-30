@@ -29,9 +29,8 @@ class DocumentGeneratorService
         string $format = 'docx',
         array $overrides = []
     ): GeneratedDocument {
-        // Charger le template depuis le storage
-        // Utiliser storage_path directement car les templates sont dans storage/app/templates/
-        $templatePath = storage_path('app/' . $template->file_path);
+        // Charger le template depuis le disk templates (local)
+        $templatePath = Storage::disk('templates')->path($template->file_path);
 
         if (! file_exists($templatePath)) {
             throw new \Exception("Template file not found: {$templatePath}");
@@ -86,19 +85,32 @@ class DocumentGeneratorService
         // Générer un nom de fichier unique (toujours en .docx d'abord)
         $fileName = $this->generateFileName($client, $template, 'docx');
 
-        // S'assurer que le dossier de sortie existe sur le disque par défaut
-        // (ex: storage/app/private/documents si le disque "private" est celui par défaut)
-        Storage::makeDirectory('documents');
+        // Générer localement dans le dossier temp, puis uploader vers S3
+        $tempDir = Storage::disk('temp')->path('documents');
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
 
-        $outputPath = Storage::path("documents/{$fileName}");
+        $tempOutputPath = $tempDir . '/' . $fileName;
 
-        // Sauvegarder le document généré
-        $templateProcessor->saveAs($outputPath);
+        // Sauvegarder le document généré localement
+        $templateProcessor->saveAs($tempOutputPath);
 
         // Si le format demandé est PDF, convertir le DOCX en PDF
+        $finalTempPath = $tempOutputPath;
         if ($format === 'pdf') {
-            $outputPath = $this->convertToPdf($outputPath);
+            $finalTempPath = $this->convertToPdf($tempOutputPath);
             $fileName = str_replace('.docx', '.pdf', $fileName);
+        }
+
+        // Uploader vers S3
+        $s3Path = "documents/{$fileName}";
+        Storage::put($s3Path, file_get_contents($finalTempPath));
+
+        // Nettoyer le fichier temporaire
+        @unlink($finalTempPath);
+        if ($format === 'pdf' && file_exists($tempOutputPath)) {
+            @unlink($tempOutputPath); // Le DOCX original si PDF généré
         }
 
         // Créer l'entrée en base de données
@@ -106,7 +118,7 @@ class DocumentGeneratorService
             'client_id' => $client->id,
             'user_id' => $userId,
             'document_template_id' => $template->id,
-            'file_path' => "documents/{$fileName}",
+            'file_path' => $s3Path,
             'format' => $format,
         ]);
 

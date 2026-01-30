@@ -47,6 +47,7 @@ class ClientController extends Controller
             'actifsFinanciers',
             'biensImmobiliers',
             'autresEpargnes',
+            'charges',
         ])
             ->findOrFail($id);
 
@@ -389,6 +390,50 @@ class ClientController extends Controller
 
         $epargneModel = $client->autresEpargnes()->findOrFail($autreEpargne);
         $epargneModel->delete();
+
+        return response()->json(null, 204);
+    }
+
+    // ===== CHARGES =====
+
+    public function storeCharge(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'nature' => 'nullable|string|max:255',
+            'periodicite' => 'nullable|string|max:255',
+            'montant' => 'nullable|numeric|min:0',
+        ]);
+
+        $charge = $client->charges()->create($validated);
+
+        return response()->json($charge, 201);
+    }
+
+    public function updateCharge(Request $request, Client $client, int $charge): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $chargeModel = $client->charges()->findOrFail($charge);
+
+        $validated = $request->validate([
+            'nature' => 'nullable|string|max:255',
+            'periodicite' => 'nullable|string|max:255',
+            'montant' => 'nullable|numeric|min:0',
+        ]);
+
+        $chargeModel->update($validated);
+
+        return response()->json($chargeModel);
+    }
+
+    public function deleteCharge(Client $client, int $charge): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $chargeModel = $client->charges()->findOrFail($charge);
+        $chargeModel->delete();
 
         return response()->json(null, 204);
     }

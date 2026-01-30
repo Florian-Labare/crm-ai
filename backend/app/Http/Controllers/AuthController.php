@@ -90,7 +90,20 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+        $currentTeam = $user->currentTeam();
+        $teamRole = $currentTeam ? $user->roleInTeam($currentTeam) : null;
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'firstname' => $user->firstname,
+            'email' => $user->email,
+            'current_team_id' => $currentTeam?->id,
+            'current_team_name' => $currentTeam?->name,
+            'team_role' => $teamRole,
+            'is_admin' => $currentTeam ? $user->isTeamAdmin($currentTeam) : false,
+        ]);
     }
 
     /**

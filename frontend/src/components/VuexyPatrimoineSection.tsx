@@ -346,11 +346,6 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
   onDeleteBaeDetail,
 }) => {
   // Parser les détails BAE
-  const baeActifsFinanciers = useMemo(() =>
-    parseBaeDetails(client.bae_epargne?.actifs_financiers_details),
-    [client.bae_epargne?.actifs_financiers_details]
-  );
-
   const baeActifsImmo = useMemo(() =>
     parseBaeDetails(client.bae_epargne?.actifs_immo_details),
     [client.bae_epargne?.actifs_immo_details]
@@ -361,18 +356,13 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
       ? client.bae_epargne.actifs_immo_details
       : [];
     return raw
-      .map((item: unknown, index: number) => {
-        const parsed = parseBaeDetailItem(item);
+      .map((el: unknown, index: number) => {
+        const parsed = parseBaeDetailItem(el);
         if (!parsed) return null;
         return { ...parsed, baeIndex: index };
       })
-      .filter((item): item is { nature: string; montant: number | null; baeIndex: number } => Boolean(item?.nature));
+      .filter((el: { nature: string; montant: number | null; baeIndex: number } | null): el is { nature: string; montant: number | null; baeIndex: number } => Boolean(el?.nature));
   }, [client.bae_epargne?.actifs_immo_details]);
-
-  const baeAutresActifs = useMemo(() =>
-    parseBaeDetails(client.bae_epargne?.actifs_autres_details),
-    [client.bae_epargne?.actifs_autres_details]
-  );
 
   const baePassifs = useMemo(() =>
     parseBaeDetails(client.bae_epargne?.passifs_details),
@@ -384,12 +374,12 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
       ? client.bae_epargne.passifs_details
       : [];
     return raw
-      .map((item: unknown, index: number) => {
-        const parsed = parseBaeDetailItem(item);
+      .map((el: unknown, index: number) => {
+        const parsed = parseBaeDetailItem(el);
         if (!parsed) return null;
         return { ...parsed, baeIndex: index };
       })
-      .filter((item): item is { nature: string; montant: number | null; baeIndex: number } => Boolean(item?.nature));
+      .filter((el: { nature: string; montant: number | null; baeIndex: number } | null): el is { nature: string; montant: number | null; baeIndex: number } => Boolean(el?.nature));
   }, [client.bae_epargne?.passifs_details]);
 
   const { actifsFinanciersDisplay, autresActifsDisplay } = useMemo(() => {
@@ -795,7 +785,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                     : []),
                 ]),
                 // Données de bae_epargne.actifs_immo_details
-                ...baeActifsImmoDisplay.map((item) => [
+                ...baeActifsImmoDisplay.map((item: { nature: string; montant: number | null; baeIndex: number }) => [
                   <strong className="text-[#5E5873]">{item.nature}</strong>,
                   <span className="text-[#B9B9C3]">-</span>,
                   <span className="text-[#28C76F] font-semibold">
@@ -897,7 +887,7 @@ export const VuexyPatrimoineSection: React.FC<PatrimoineSectionProps> = ({
                     : []),
                 ]),
                 // Données de bae_epargne.passifs_details
-                ...baePassifsDisplay.map((item) => [
+                ...baePassifsDisplay.map((item: { nature: string; montant: number | null; baeIndex: number }) => [
                   <div className="flex items-center gap-2">
                     <strong className="text-[#5E5873]">{item.nature}</strong>
                     {item.nature.toLowerCase().includes('immobilier') && (

@@ -20,6 +20,11 @@ class SanteSouhait extends Model
         'niveau_dentaire',
         'niveau_optique',
         'niveau_protheses_auditives',
+        'souhaite_medecine_douce',
+        'souhaite_cures_thermales',
+        'souhaite_autres_protheses',
+        'souhaite_protection_juridique',
+        'souhaite_protection_juridique_conjoint',
     ];
 
     protected $casts = [
@@ -33,6 +38,11 @@ class SanteSouhait extends Model
         'niveau_dentaire' => 'integer',
         'niveau_optique' => 'integer',
         'niveau_protheses_auditives' => 'integer',
+        'souhaite_medecine_douce' => 'boolean',
+        'souhaite_cures_thermales' => 'boolean',
+        'souhaite_autres_protheses' => 'boolean',
+        'souhaite_protection_juridique' => 'boolean',
+        'souhaite_protection_juridique_conjoint' => 'boolean',
     ];
 
     public function client(): BelongsTo

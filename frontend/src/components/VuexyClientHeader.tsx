@@ -1,5 +1,6 @@
 import React from 'react';
 import { Edit, FileText, FileDown, Trash2, Hash, Clock, CheckCircle } from 'lucide-react';
+import { ComplianceBadge } from './ComplianceBadge';
 
 interface VuexyClientHeaderProps {
   client: any;
@@ -66,6 +67,7 @@ export const VuexyClientHeader: React.FC<VuexyClientHeaderProps> = ({
                 <CheckCircle size={14} />
                 Actif
               </span>
+              <ComplianceBadge clientId={client.id} variant="badge" />
             </div>
           </div>
         </div>

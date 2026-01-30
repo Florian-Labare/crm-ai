@@ -6,10 +6,11 @@ import api from "../api/apiClient";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { extractCollection } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
-import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone, LogOut } from "lucide-react";
+import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone, LogOut, Upload } from "lucide-react";
 import { VuexyStatCard } from "../components/VuexyStatCard";
 import { PendingChangesBadge } from "../components/PendingChangesBadge";
 import { ReviewChangesModal } from "../components/ReviewChangesModal";
+import { ComplianceBadge } from "../components/ComplianceBadge";
 import { useAuth } from "../contexts/AuthContext";
 
 interface ExtendedClient extends Client {
@@ -29,7 +30,7 @@ const HomePage: React.FC = () => {
     avecBesoins: 0,
   });
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState("");
   const [besoinFilter, setBesoinFilter] = useState("all");
@@ -49,6 +50,7 @@ const HomePage: React.FC = () => {
     profession: true,
     situation: true,
     besoins: true,
+    dossier: true,
     created: false,
   });
 
@@ -513,6 +515,17 @@ const HomePage: React.FC = () => {
               {/* User Menu & Pending Changes */}
               {user && (
                 <div className="flex items-center gap-4">
+                  {/* Import Button - Admin Only */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => navigate("/import")}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#FF9F43] text-[#FF9F43] hover:bg-[#FF9F43] hover:text-white font-semibold transition-all duration-200"
+                    >
+                      <Upload size={18} />
+                      Importer
+                    </button>
+                  )}
+
                   {/* Pending Changes Badge */}
                   <PendingChangesBadge
                     onSelectChange={(id) => setSelectedPendingChangeId(id)}
@@ -796,6 +809,7 @@ const HomePage: React.FC = () => {
                           { key: "profession", label: "Profession" },
                           { key: "situation", label: "Situation" },
                           { key: "besoins", label: "Besoins" },
+                          { key: "dossier", label: "Dossier" },
                           { key: "created", label: "Créé le" },
                         ].map((item) => (
                           <label
@@ -850,6 +864,11 @@ const HomePage: React.FC = () => {
                       {visibleColumns.besoins && (
                         <th className="px-6 py-4 text-left text-xs font-semibold text-[#5E5873] uppercase tracking-wider">
                           Besoins
+                        </th>
+                      )}
+                      {visibleColumns.dossier && (
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-[#5E5873] uppercase tracking-wider">
+                          Dossier
                         </th>
                       )}
                       {visibleColumns.created && (
@@ -943,6 +962,13 @@ const HomePage: React.FC = () => {
                                 Aucun
                               </span>
                             )}
+                          </td>
+                        )}
+
+                        {/* Dossier (Compliance) */}
+                        {visibleColumns.dossier && (
+                          <td className="px-6 py-4">
+                            <ComplianceBadge clientId={client.id} variant="badge" />
                           </td>
                         )}
 

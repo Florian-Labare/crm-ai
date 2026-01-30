@@ -14,7 +14,8 @@ import { TemplateSelectModal } from "../components/TemplateSelectModal";
 import { DocumentFormModal } from "../components/DocumentFormModal";
 import { SectionEditModal, type SectionType } from "../components/SectionEditModal";
 import { LongRecorder } from "../components/LongRecorder";
-import { Info, ClipboardList, Folder, AlertTriangle, FileText, X, Mic } from "lucide-react";
+import { VuexyReglementaireSection } from "../components/VuexyReglementaireSection";
+import { Info, ClipboardList, Folder, AlertTriangle, FileText, X, Mic, Shield } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
 
@@ -105,7 +106,7 @@ const ClientDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [client, setClient] = useState<ExtendedClient | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents" | "summary">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents" | "reglementaire" | "summary">("info");
   const [documents, setDocuments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -667,7 +668,7 @@ const ClientDetailPage: React.FC = () => {
           {/* Vuexy Tabs */}
           <VuexyTabs
             defaultTab={activeTab}
-            onTabChange={(tabId) => setActiveTab(tabId as "info" | "questionnaires" | "documents" | "summary")}
+            onTabChange={(tabId) => setActiveTab(tabId as "info" | "questionnaires" | "documents" | "reglementaire" | "summary")}
             tabs={[
               {
                 id: "info",
@@ -705,6 +706,17 @@ const ClientDetailPage: React.FC = () => {
                     onDownload={handleDownloadDocument}
                     onSendEmail={handleSendDocumentByEmail}
                     onDelete={handleDeleteDocument}
+                  />
+                ),
+              },
+              {
+                id: "reglementaire",
+                label: "Réglementaire",
+                icon: <Shield size={18} />,
+                content: (
+                  <VuexyReglementaireSection
+                    clientId={parseInt(id!, 10)}
+                    clientBesoins={client.besoins || []}
                   />
                 ),
               },

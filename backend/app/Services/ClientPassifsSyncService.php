@@ -20,6 +20,12 @@ class ClientPassifsSyncService
             'nombre_passifs_recus' => count($passifsData),
         ]);
 
+        // 🔀 ÉTAPE 1: Dédupliquer les données entrantes AVANT traitement
+        // Fusionne les entrées de même nature pour éviter les doublons
+        $passifsData = $this->deduplicateIncomingPassifs($passifsData);
+
+        Log::info("📉 [PASSIFS] Après déduplication entrante: " . count($passifsData) . " passif(s)");
+
         // Charger les passifs existants
         $existingPassifs = $client->passifs;
         Log::info("📉 [PASSIFS] Passifs existants: {$existingPassifs->count()}");
@@ -62,6 +68,77 @@ class ClientPassifsSyncService
         }
 
         Log::info('✅ [PASSIFS] Synchronisation terminée - ' . count($processedIds) . ' passif(s) traité(s), total: ' . $client->passifs()->count());
+    }
+
+    /**
+     * Déduplique les passifs entrants en fusionnant ceux de même nature/prêteur
+     *
+     * GPT peut retourner plusieurs objets pour le même crédit :
+     * - Un avec le prêteur et le montant de remboursement
+     * - Un autre avec le capital restant dû
+     * Cette méthode les fusionne en un seul objet complet
+     */
+    private function deduplicateIncomingPassifs(array $passifs): array
+    {
+        if (count($passifs) <= 1) {
+            return $passifs;
+        }
+
+        $merged = [];
+
+        foreach ($passifs as $passif) {
+            $passif = $this->filterEmptyValues($passif);
+            if (empty($passif) || empty($passif['nature'])) {
+                continue;
+            }
+
+            $nature = $this->normalizeString($passif['nature']);
+            $preteur = isset($passif['preteur']) ? $this->normalizeString($passif['preteur']) : null;
+
+            // Clé de regroupement : nature + prêteur (si disponible)
+            $key = $nature . ($preteur ? '_' . $preteur : '');
+
+            // Chercher une entrée existante avec la même nature
+            $found = false;
+            foreach ($merged as $existingKey => &$existing) {
+                $existingNature = $this->normalizeString($existing['nature'] ?? '');
+                $existingPreteur = isset($existing['preteur']) ? $this->normalizeString($existing['preteur']) : null;
+
+                // Match si même nature ET (même prêteur OU l'un des deux n'a pas de prêteur)
+                if ($existingNature === $nature) {
+                    if ($preteur === $existingPreteur || !$preteur || !$existingPreteur) {
+                        // Fusionner : garder les infos non vides de chaque côté
+                        foreach ($passif as $field => $value) {
+                            if (!empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
+                                $existing[$field] = $value;
+                            }
+                        }
+                        // Si le nouveau a un prêteur et l'existant non, utiliser le nouveau prêteur
+                        if (!empty($passif['preteur']) && empty($existing['preteur'])) {
+                            $existing['preteur'] = $passif['preteur'];
+                        }
+                        $found = true;
+                        Log::info("📉 [PASSIFS] 🔀 Fusion de passifs de même nature", [
+                            'nature' => $nature,
+                            'preteur' => $existing['preteur'] ?? 'non spécifié',
+                        ]);
+                        break;
+                    }
+                }
+            }
+
+            if (!$found) {
+                $merged[$key] = $passif;
+            }
+        }
+
+        $result = array_values($merged);
+
+        if (count($result) < count($passifs)) {
+            Log::info("📉 [PASSIFS] 🔀 Déduplication entrante: " . count($passifs) . " → " . count($result) . " passif(s)");
+        }
+
+        return $result;
     }
 
     /**

@@ -41,6 +41,7 @@ class Client extends Model
         'activites_sportives',
         'details_activites_sportives',
         'niveau_activites_sportives',
+        'km_parcourus_annuels',
         // 'nombre_enfants', // SUPPRIMÉ : Colonne inexistante en base
         'besoins',
         'transcription_path',
@@ -117,6 +118,11 @@ class Client extends Model
         return $this->hasOne(BaeEpargne::class);
     }
 
+    public function complianceDocuments(): HasMany
+    {
+        return $this->hasMany(ClientComplianceDocument::class);
+    }
+
     public function questionnaireRisque(): HasOne
     {
         return $this->hasOne(QuestionnaireRisque::class);
@@ -150,6 +156,11 @@ class Client extends Model
     public function autresEpargnes(): HasMany
     {
         return $this->hasMany(ClientAutreEpargne::class);
+    }
+
+    public function charges(): HasMany
+    {
+        return $this->hasMany(ClientCharge::class);
     }
 
     public function audioRecords(): HasMany

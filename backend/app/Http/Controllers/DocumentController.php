@@ -160,19 +160,17 @@ class DocumentController extends Controller
     }
 
     /**
-     * Télécharge un document généré
+     * Télécharge un document généré (depuis S3)
      */
-    public function downloadDocument(int $documentId): BinaryFileResponse
+    public function downloadDocument(int $documentId)
     {
         $document = GeneratedDocument::findOrFail($documentId);
 
-        $filePath = Storage::path($document->file_path);
-
-        if (!file_exists($filePath)) {
+        if (!Storage::exists($document->file_path)) {
             abort(404, 'Fichier non trouvé');
         }
 
-        return response()->download($filePath);
+        return Storage::download($document->file_path);
     }
 
     /**

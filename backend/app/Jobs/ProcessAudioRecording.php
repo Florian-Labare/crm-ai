@@ -126,10 +126,35 @@ class ProcessAudioRecording implements ShouldQueue
             } else {
                 // Transcription via Whisper
                 Log::info("🧠 Transcription audio #{$this->audioRecord->id}...");
-                $audioPath = storage_path("app/public/{$this->audioRecord->path}");
+
+                // Télécharger depuis S3 vers temp pour traitement
+                $tempDir = storage_path('app/temp/audio');
+                if (!is_dir($tempDir)) {
+                    mkdir($tempDir, 0755, true);
+                }
+
+                $tempAudioPath = $tempDir . '/' . basename($this->audioRecord->path);
+
+                // Vérifier si le fichier existe sur S3
+                if (!\Illuminate\Support\Facades\Storage::exists($this->audioRecord->path)) {
+                    $message = "Fichier audio introuvable sur S3 : {$this->audioRecord->path}";
+                    Log::error("❌ {$message}");
+                    $this->audioRecord->update([
+                        'status' => 'failed',
+                        'transcription' => $message,
+                    ]);
+                    $this->fail(new Exception($message));
+                    return;
+                }
+
+                // Télécharger depuis S3 vers temp
+                $audioContent = \Illuminate\Support\Facades\Storage::get($this->audioRecord->path);
+                file_put_contents($tempAudioPath, $audioContent);
+
+                $audioPath = $tempAudioPath;
 
                 if (!file_exists($audioPath) || !is_file($audioPath)) {
-                    $message = "Chemin audio invalide ou introuvable : {$audioPath}";
+                    $message = "Échec du téléchargement de l'audio vers temp : {$audioPath}";
                     Log::error("❌ {$message}");
                     $this->audioRecord->update([
                         'status' => 'failed',
@@ -140,6 +165,9 @@ class ProcessAudioRecording implements ShouldQueue
                 }
 
                 $transcription = $transcriptionService->transcribe($audioPath);
+
+                // Nettoyer le fichier temp après transcription
+                @unlink($tempAudioPath);
 
                 if (empty($transcription)) {
                     throw new Exception("Transcription vide ou échec de Whisper API");
