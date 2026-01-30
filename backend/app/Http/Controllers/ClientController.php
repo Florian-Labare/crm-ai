@@ -47,6 +47,7 @@ class ClientController extends Controller
             'actifsFinanciers',
             'biensImmobiliers',
             'autresEpargnes',
+            'charges',
         ])
             ->findOrFail($id);
 

@@ -238,6 +238,13 @@ class ImportMappingService
             'autre_epargne_detenteur' => ['type' => 'string', 'db_field' => 'detenteur'],
             'autre_epargne_valeur' => ['type' => 'decimal', 'db_field' => 'valeur'],
         ],
+
+        // ==================== CLIENT_CHARGES (Charges - Multiple) ====================
+        'client_charge' => [
+            'charge_nature' => ['type' => 'string', 'db_field' => 'nature'],
+            'charge_periodicite' => ['type' => 'string', 'db_field' => 'periodicite'],
+            'charge_montant' => ['type' => 'decimal', 'db_field' => 'montant'],
+        ],
     ];
 
     /**
@@ -1069,6 +1076,7 @@ class ImportMappingService
                 case 'client_bien_immobilier':
                 case 'client_passif':
                 case 'client_autre_epargne':
+                case 'client_charge':
                     $tableName = $tableInfo['table'];
                     if (!isset($mappedData["_{$tableName}"])) {
                         $mappedData["_{$tableName}"] = [];
@@ -1170,6 +1178,7 @@ class ImportMappingService
             'client_bien_immobilier' => 'Biens Immobiliers',
             'client_passif' => 'Passifs / Emprunts',
             'client_autre_epargne' => 'Autres Épargnes',
+            'client_charge' => 'Charges',
             'entreprise' => 'Entreprise',
             'questionnaire_risque' => 'Questionnaire Risque',
         ];

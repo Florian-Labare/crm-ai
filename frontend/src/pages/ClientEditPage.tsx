@@ -11,6 +11,7 @@ import type {
   ClientActifFinancier,
   ClientBienImmobilier,
   ClientAutreEpargne,
+  ClientCharge,
   SanteSouhait,
   BaePrevoyance,
   BaeRetraite,
@@ -67,6 +68,7 @@ export default function ClientEditPage() {
   const [actifsFinanciers, setActifsFinanciers] = useState<ClientActifFinancier[]>([]);
   const [biensImmobiliers, setBiensImmobiliers] = useState<ClientBienImmobilier[]>([]);
   const [autresEpargnes, setAutresEpargnes] = useState<ClientAutreEpargne[]>([]);
+  const [charges, setCharges] = useState<ClientCharge[]>([]);
 
   // États pour les BAE
   const [santeSouhait, setSanteSouhait] = useState<SanteSouhait | null>(null);
@@ -150,6 +152,7 @@ export default function ClientEditPage() {
       setActifsFinanciers(client.actifs_financiers || []);
       setBiensImmobiliers(client.biens_immobiliers || []);
       setAutresEpargnes(client.autres_epargnes || []);
+      setCharges(client.charges || []);
 
       // Charger les BAE
       setSanteSouhait(client.sante_souhait || null);
@@ -362,6 +365,40 @@ export default function ClientEditPage() {
       await api.delete(`/clients/${id}/autres-epargnes/${epargneId}`);
       setAutresEpargnes(autresEpargnes.filter(e => e.id !== epargneId));
       toast.success("✅ Épargne supprimée");
+    } catch (err) {
+      toast.error("❌ Erreur lors de la suppression");
+    }
+  };
+
+  // ===== CRUD CHARGES =====
+  const handleAddCharge = async (data: Partial<ClientCharge>) => {
+    try {
+      const res = await api.post(`/clients/${id}/charges`, data);
+      setCharges([...charges, res.data]);
+      setShowModal(null);
+      toast.success("✅ Charge ajoutée");
+    } catch (err) {
+      toast.error("❌ Erreur lors de l'ajout");
+    }
+  };
+
+  const handleUpdateCharge = async (chargeId: number, data: Partial<ClientCharge>) => {
+    try {
+      const res = await api.put(`/clients/${id}/charges/${chargeId}`, data);
+      setCharges(charges.map(c => c.id === chargeId ? res.data : c));
+      setShowModal(null);
+      toast.success("✅ Charge modifiée");
+    } catch (err) {
+      toast.error("❌ Erreur lors de la modification");
+    }
+  };
+
+  const handleDeleteCharge = async (chargeId: number) => {
+    if (!confirm("Supprimer cette charge ?")) return;
+    try {
+      await api.delete(`/clients/${id}/charges/${chargeId}`);
+      setCharges(charges.filter(c => c.id !== chargeId));
+      toast.success("✅ Charge supprimée");
     } catch (err) {
       toast.error("❌ Erreur lors de la suppression");
     }
@@ -1398,6 +1435,57 @@ export default function ClientEditPage() {
               )}
             </CollapsibleSection>
 
+            {/* Section Charges - Collapsible */}
+            {charges.length > 0 && (
+              <CollapsibleSection
+                title="Charges"
+                icon={<CreditCard className="w-6 h-6" />}
+                color="red"
+                count={charges.length}
+                isExpanded={expandedSections.includes('charges')}
+                onToggle={() => toggleSection('charges')}
+                onAdd={() => setShowModal({type: 'charge'})}
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-[#F8F8F8]">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-[#B9B9C3] uppercase">Nature</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-[#B9B9C3] uppercase">Périodicité</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-[#B9B9C3] uppercase">Montant</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-[#B9B9C3] uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {charges.map((charge) => (
+                        <tr key={charge.id} className="hover:bg-[#F8F8F8]">
+                          <td className="px-4 py-3 text-sm">{charge.nature || '-'}</td>
+                          <td className="px-4 py-3 text-sm">{charge.periodicite || '-'}</td>
+                          <td className="px-4 py-3 text-sm">{charge.montant ? `${charge.montant} €` : '-'}</td>
+                          <td className="px-4 py-3 text-sm text-right">
+                            <button
+                              type="button"
+                              onClick={() => setShowModal({type: 'charge', data: charge})}
+                              className="text-[#7367F0] hover:text-[#5E50EE] mr-3"
+                            >
+                              Éditer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCharge(charge.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CollapsibleSection>
+            )}
+
             {/* Section Santé / Souhait - Collapsible */}
             <CollapsibleSection
               title="Santé / Souhait"
@@ -1665,6 +1753,8 @@ export default function ClientEditPage() {
               showModal.data ? handleUpdateBienImmobilier(showModal.data.id, data) : handleAddBienImmobilier(data);
             } else if (showModal.type === 'epargne') {
               showModal.data ? handleUpdateAutreEpargne(showModal.data.id, data) : handleAddAutreEpargne(data);
+            } else if (showModal.type === 'charge') {
+              showModal.data ? handleUpdateCharge(showModal.data.id, data) : handleAddCharge(data);
             } else if (showModal.type === 'sante') {
               handleSaveSanteSouhait(data);
             } else if (showModal.type === 'prevoyance') {
@@ -2030,6 +2120,45 @@ function Modal({ type, data, onClose, onSubmit }: ModalProps) {
                 step="0.01"
                 value={formData.valeur || ''}
                 onChange={(e) => setFormData({...formData, valeur: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              />
+            </div>
+          </>
+        );
+
+      case 'charge':
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Nature</label>
+              <input
+                value={formData.nature || ''}
+                onChange={(e) => setFormData({...formData, nature: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+                placeholder="Loyer, pension, impôts, etc."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Périodicité</label>
+              <select
+                value={formData.periodicite || ''}
+                onChange={(e) => setFormData({...formData, periodicite: e.target.value})}
+                className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
+              >
+                <option value="">-- Sélectionner --</option>
+                <option value="Mensuel">Mensuel</option>
+                <option value="Trimestriel">Trimestriel</option>
+                <option value="Annuel">Annuel</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#5E5873] mb-1">Montant (€)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.montant || ''}
+                onChange={(e) => setFormData({...formData, montant: e.target.value})}
                 className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
               />
             </div>
@@ -2694,6 +2823,7 @@ function Modal({ type, data, onClose, onSubmit }: ModalProps) {
               type === 'actif' ? 'un actif financier' :
               type === 'bien' ? 'un bien immobilier' :
               type === 'epargne' ? 'une épargne' :
+              type === 'charge' ? 'une charge' :
               type === 'sante' ? 'Santé / Souhait' :
               type === 'prevoyance' ? 'BAE Prévoyance' :
               type === 'retraite' ? 'BAE Retraite' :
