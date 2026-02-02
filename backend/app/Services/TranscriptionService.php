@@ -9,10 +9,21 @@ class TranscriptionService
 {
     public function transcribe(string $audioPath): ?string
     {
-        // Utiliser Whisper local (plus rapide et gratuit)
+        // 1. Voxtral (Mistral) si activé
+        if (config('mistral.features.use_for_transcription', false)) {
+            $transcription = $this->transcribeVoxtral($audioPath);
+
+            if (!empty($transcription)) {
+                return $transcription;
+            }
+
+            Log::warning('⚠️ Voxtral a échoué, tentative Whisper local...');
+        }
+
+        // 2. Whisper local (plus rapide et gratuit)
         $transcription = $this->transcribeLocal($audioPath);
 
-        // Fallback sur OpenAI API si échec local
+        // 3. Fallback sur OpenAI API si échec local
         if (empty($transcription)) {
             Log::warning('⚠️ Whisper local a échoué, utilisation de l\'API OpenAI');
 
@@ -20,6 +31,58 @@ class TranscriptionService
         }
 
         return $transcription;
+    }
+
+    /**
+     * Transcription via Voxtral (Mistral AI).
+     */
+    private function transcribeVoxtral(string $audioPath): ?string
+    {
+        try {
+            if (!file_exists($audioPath)) {
+                throw new \Exception("Fichier audio introuvable : {$audioPath}");
+            }
+
+            if (!is_file($audioPath)) {
+                throw new \Exception("Chemin audio invalide (pas un fichier) : {$audioPath}");
+            }
+
+            $apiKey = config('mistral.api_key');
+            if (!$apiKey) {
+                throw new \Exception('Clé API Mistral manquante.');
+            }
+
+            Log::info('🎤 Transcription Voxtral', [
+                'file' => basename($audioPath),
+                'model' => config('mistral.stt.model'),
+            ]);
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+            ])
+                ->asMultipart()
+                ->attach('file', file_get_contents($audioPath), basename($audioPath))
+                ->attach('model', config('mistral.stt.model', 'voxtral-mini-latest'))
+                ->timeout(300)
+                ->post(config('mistral.stt.endpoint'));
+
+            if (!$response->successful()) {
+                Log::error('[Voxtral] Erreur ' . $response->status() . ' : ' . $response->body());
+
+                return null;
+            }
+
+            $transcription = $response->json('text') ?? null;
+
+            Log::info('📝 Transcription Voxtral', ['text' => $transcription]);
+
+            return $transcription;
+
+        } catch (\Throwable $e) {
+            Log::error('[Voxtral] ' . $e->getMessage());
+
+            return null;
+        }
     }
 
     private function transcribeLocal(string $audioPath): ?string

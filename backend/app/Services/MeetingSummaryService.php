@@ -3,76 +3,81 @@
 namespace App\Services;
 
 use App\Models\MeetingSummary;
-use Illuminate\Support\Facades\Http;
+use App\Services\Ai\Traits\LlmClientTrait;
 use Illuminate\Support\Facades\Log;
 
 class MeetingSummaryService
 {
+    use LlmClientTrait;
+
     public function generateSummary(string $transcription): array
     {
-        $prompt = <<<PROMPT
-            Génère un résumé de rendez-vous détaillé à partir de cette transcription.
-            Le résumé doit :
-            - Respecter l'ordre chronologique des échanges.
-            - Être hiérarchique (sections > points > détails).
-            - N'inclure que les informations réellement mentionnées par le client.
-            - Ignorer les questions/phrases du conseiller si elles ne sont pas confirmées par le client.
+        $systemPrompt = <<<'SYSTEM'
+Tu es un assistant spécialisé en production de comptes-rendus d'entretien client en français.
 
-            Réponds STRICTEMENT au format JSON suivant (sans texte autour) :
-            {
-              "overview": "Résumé court en 2-4 phrases",
-              "chronology": [
-                {
-                  "phase": "Phase/étape chronologique",
-                  "topics": [
-                    {
-                      "title": "Sujet évoqué",
-                      "details": ["fait/élément 1", "fait/élément 2"]
-                    }
-                  ]
-                }
-              ],
-              "key_points": [
-                {
-                  "section": "Données essentielles",
-                  "items": ["point clé 1", "point clé 2"]
-                }
-              ],
-              "needs": ["Besoins exprimés (ex: Retraite, Épargne)"],
-              "next_steps": ["Actions ou suites évoquées, si présentes"]
-            }
+[OBJECTIF]
+Générer un résumé structuré et détaillé d'un entretien client à partir d'une transcription vocale.
 
-            Transcription :
-            ---
-            $transcription
-            ---
-        PROMPT;
+[RÈGLES]
+1. Respecter l'ordre chronologique des échanges
+2. Structurer de manière hiérarchique (sections > points > détails)
+3. N'inclure QUE les informations mentionnées par le client
+4. Ignorer les questions/phrases du conseiller non confirmées par le client
+5. Répondre UNIQUEMENT avec du JSON valide
+
+[FORMAT DE SORTIE]
+Réponds UNIQUEMENT avec un JSON valide au format spécifié, sans texte avant ou après.
+SYSTEM;
+
+        $userPrompt = <<<PROMPT
+Génère un résumé de rendez-vous détaillé à partir de cette transcription.
+
+Réponds STRICTEMENT au format JSON suivant :
+{
+  "overview": "Résumé court en 2-4 phrases",
+  "chronology": [
+    {
+      "phase": "Phase/étape chronologique",
+      "topics": [
+        {
+          "title": "Sujet évoqué",
+          "details": ["fait/élément 1", "fait/élément 2"]
+        }
+      ]
+    }
+  ],
+  "key_points": [
+    {
+      "section": "Données essentielles",
+      "items": ["point clé 1", "point clé 2"]
+    }
+  ],
+  "needs": ["Besoins exprimés (ex: Retraite, Épargne)"],
+  "next_steps": ["Actions ou suites évoquées, si présentes"]
+}
+
+[EXEMPLES]
+
+Input: "Je m'appelle Jean Dupont, j'ai 45 ans. Je veux préparer ma retraite et protéger ma famille."
+Output: {"overview": "Entretien avec Jean Dupont, 45 ans, qui souhaite préparer sa retraite et mettre en place une protection familiale.", "chronology": [{"phase": "Présentation", "topics": [{"title": "Identité", "details": ["Jean Dupont", "45 ans"]}]}, {"phase": "Expression des besoins", "topics": [{"title": "Objectifs", "details": ["Préparation retraite", "Protection famille"]}]}], "key_points": [{"section": "Identité", "items": ["Jean Dupont, 45 ans"]}], "needs": ["Retraite", "Prévoyance"], "next_steps": []}
+
+Transcription :
+---
+$transcription
+---
+PROMPT;
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-                'OpenAI-Organization' => env('OPENAI_ORG_ID'),
-            ])->post('https://api.openai.com/v1/chat/completions', [
-                'model' => 'gpt-4o-mini',
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => "Tu es un assistant qui produit des comptes-rendus d'entretien client en français.",
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => $prompt,
-                    ],
-                ],
-                'temperature' => 0.2,
-            ]);
-
-            $raw = $response->json('choices.0.message.content', '');
-            $summaryJson = $this->extractJson($raw);
+            $summaryJson = $this->callLlm(
+                $systemPrompt,
+                $userPrompt,
+                0.2,
+                true
+            );
 
             if (!$summaryJson) {
                 return [
-                    'summary_text' => trim($raw),
+                    'summary_text' => null,
                     'summary_json' => null,
                 ];
             }
@@ -85,6 +90,7 @@ class MeetingSummaryService
             ];
         } catch (\Throwable $e) {
             Log::error('MeetingSummaryService error', ['error' => $e->getMessage()]);
+
             return [
                 'summary_text' => null,
                 'summary_json' => null,
@@ -109,27 +115,6 @@ class MeetingSummaryService
             ['audio_record_id' => $audioRecordId],
             $data
         );
-    }
-
-    private function extractJson(string $raw): ?array
-    {
-        $trimmed = trim($raw);
-        $trimmed = preg_replace('/^```(?:json)?/i', '', $trimmed);
-        $trimmed = preg_replace('/```$/', '', $trimmed);
-
-        $decoded = json_decode($trimmed, true);
-        if (is_array($decoded)) {
-            return $decoded;
-        }
-
-        if (preg_match('/\\{.*\\}/s', $trimmed, $matches)) {
-            $decoded = json_decode($matches[0], true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-        }
-
-        return null;
     }
 
     private function formatSummaryText(array $summaryJson): string

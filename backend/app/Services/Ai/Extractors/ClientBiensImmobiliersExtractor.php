@@ -2,7 +2,7 @@
 
 namespace App\Services\Ai\Extractors;
 
-use Illuminate\Support\Facades\Http;
+use App\Services\Ai\Traits\LlmClientTrait;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -14,33 +14,23 @@ use Illuminate\Support\Facades\Log;
  */
 class ClientBiensImmobiliersExtractor
 {
+    use LlmClientTrait;
+
     public function extract(string $transcription, array $currentData = []): array
     {
         $prompt = $this->buildPrompt($transcription);
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-                'OpenAI-Organization' => env('OPENAI_ORG_ID'),
-            ])->post('https://api.openai.com/v1/chat/completions', [
-                        'model' => 'gpt-4o-mini',
-                        'messages' => [
-                            ['role' => 'system', 'content' => $this->getSystemPrompt()],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-            $json = $response->json();
-            $raw = $json['choices'][0]['message']['content'] ?? '';
-
-            Log::info('[ClientBiensImmobiliersExtractor] Réponse OpenAI', ['raw' => $raw]);
-
-            $data = json_decode($raw, true);
+            $data = $this->callLlm(
+                $this->getSystemPrompt(),
+                $prompt,
+                0.1,
+                true
+            );
 
             if (!is_array($data)) {
-                Log::warning('[ClientBiensImmobiliersExtractor] Impossible de parser la réponse GPT', ['content' => $raw]);
+                Log::warning('[ClientBiensImmobiliersExtractor] Impossible de parser la réponse LLM');
+
                 return [];
             }
 
@@ -53,6 +43,7 @@ class ClientBiensImmobiliersExtractor
 
         } catch (\Throwable $e) {
             Log::error('[ClientBiensImmobiliersExtractor] Erreur lors de l\'extraction', ['message' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -168,23 +159,17 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de BIENS IMMOBILIERS clients.
 
-🎯 OBJECTIF :
+[OBJECTIF]
 Détecter et extraire tous les biens immobiliers mentionnés par le client (résidence principale, secondaire, locatif, etc.).
 
-🔤 EPPELLATION / DICTÉE :
-- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
-- Ignore les séparateurs (espaces, tirets, points, pauses).
-- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
-- Pour téléphone : concatène tous les chiffres en une seule chaîne.
-
-🚫 RÈGLE ABSOLUE :
+[RÈGLE ABSOLUE]
 - Ignore toutes les phrases du conseiller
 - Ne tiens compte QUE des phrases du client
 
-🔍 MOTS-CLÉS IMMOBILIER :
+[MOTS-CLÉS IMMOBILIER]
 Maison, appartement, résidence principale, résidence secondaire, bien locatif, immeuble, terrain, propriété, SCI, indivision, pleine propriété, nue-propriété, usufruit
 
-✅ SI LE CLIENT PARLE DE BIENS IMMOBILIERS :
+[SI DÉTECTÉ - BIENS IMMOBILIERS]
 
 Retourne :
 {
@@ -200,7 +185,7 @@ Retourne :
   ]
 }
 
-📋 CHAMPS pour chaque bien :
+[CHAMPS pour chaque bien]
 - "designation" (string, requis) : Description du bien (type + localisation si mentionnée)
 - "detenteur" (string, optionnel) : client, conjoint, ou commun
 - "forme_propriete" (string, optionnel) : pleine-propriete, indivision, SCI, nue-propriete, usufruit
@@ -208,58 +193,44 @@ Retourne :
 - "annee_acquisition" (integer, optionnel) : Année d'achat
 - "valeur_acquisition" (decimal, optionnel) : Prix d'achat
 
-⚠️ RÈGLES IMPORTANTES :
+[RÈGLES IMPORTANTES]
 - Créer une entrée séparée pour chaque bien immobilier DIFFÉRENT
-- Si le même bien est mentionné plusieurs fois (avec des infos complémentaires), FUSIONNER en UNE SEULE entrée
-- Exemple : "J'ai un studio" puis "le studio vaut 64000€" → UN SEUL objet avec toutes les infos
+- Si même bien mentionné plusieurs fois, FUSIONNER en UNE SEULE entrée
 - Inclure le type de bien dans la désignation (maison, appartement, terrain, etc.)
 - Si localisation mentionnée, l'inclure dans la désignation
 
-🔀 RÈGLE DE FUSION CRITIQUE :
-- Si le même bien (ex: "studio", "maison", "appartement") est mentionné plusieurs fois
-- REGROUPER toutes les informations dans UNE SEULE entrée
-- Ne PAS créer de doublons pour le même bien avec des infos différentes
+[RÈGLE DE FUSION]
+- Si même bien mentionné plusieurs fois, REGROUPER en UNE SEULE entrée
+- Ne PAS créer de doublons
 
-❌ SI LE CLIENT NE PARLE PAS DE BIENS IMMOBILIERS :
-Retourne un objet vide :
-{}
+[SI NON DÉTECTÉ]
+Retourne un objet vide : {}
 
-📌 EXEMPLES :
+[EXEMPLES]
 
-Exemple 1 - Résidence principale :
-"Ma maison principale vaut 400000€, je l'ai achetée 350000€ en 2015"
-→ {"client_biens_immobiliers": [{"designation": "Résidence principale - Maison", "valeur_actuelle_estimee": 400000, "annee_acquisition": 2015, "valeur_acquisition": 350000}]}
+Input: "Ma maison principale vaut 400000€, je l'ai achetée 350000€ en 2015"
+Output: {"client_biens_immobiliers": [{"designation": "Résidence principale - Maison", "valeur_actuelle_estimee": 400000, "annee_acquisition": 2015, "valeur_acquisition": 350000}]}
 
-Exemple 2 - Avec localisation :
-"J'ai un appartement à Paris estimé à 500000€"
-→ {"client_biens_immobiliers": [{"designation": "Appartement à Paris", "valeur_actuelle_estimee": 500000}]}
+Input: "J'ai un appartement à Paris estimé à 500000€"
+Output: {"client_biens_immobiliers": [{"designation": "Appartement à Paris", "valeur_actuelle_estimee": 500000}]}
 
-Exemple 3 - Bien locatif :
-"Je possède un studio en location à Lyon, acheté 120000€ en 2018, qui vaut maintenant 150000€"
-→ {"client_biens_immobiliers": [{"designation": "Studio locatif à Lyon", "valeur_actuelle_estimee": 150000, "annee_acquisition": 2018, "valeur_acquisition": 120000}]}
+Input: "Je possède un studio en location à Lyon, acheté 120000€ en 2018, qui vaut maintenant 150000€"
+Output: {"client_biens_immobiliers": [{"designation": "Studio locatif à Lyon", "valeur_actuelle_estimee": 150000, "annee_acquisition": 2018, "valeur_acquisition": 120000}]}
 
-Exemple 4 - Multiples biens :
-"J'ai ma maison principale de 400000€ et une résidence secondaire de 200000€"
-→ {"client_biens_immobiliers": [
-  {"designation": "Résidence principale - Maison", "valeur_actuelle_estimee": 400000},
-  {"designation": "Résidence secondaire", "valeur_actuelle_estimee": 200000}
-]}
+Input: "J'ai ma maison principale de 400000€ et une résidence secondaire de 200000€"
+Output: {"client_biens_immobiliers": [{"designation": "Résidence principale - Maison", "valeur_actuelle_estimee": 400000}, {"designation": "Résidence secondaire", "valeur_actuelle_estimee": 200000}]}
 
-Exemple 5 - SCI :
-"J'ai un immeuble en SCI estimé à 800000€"
-→ {"client_biens_immobiliers": [{"designation": "Immeuble", "forme_propriete": "SCI", "valeur_actuelle_estimee": 800000}]}
+Input: "J'ai un immeuble en SCI estimé à 800000€"
+Output: {"client_biens_immobiliers": [{"designation": "Immeuble", "forme_propriete": "SCI", "valeur_actuelle_estimee": 800000}]}
 
-Exemple 6 - Indivision :
-"Mon conjoint et moi possédons en indivision un appartement de 350000€"
-→ {"client_biens_immobiliers": [{"designation": "Appartement", "detenteur": "commun", "forme_propriete": "indivision", "valeur_actuelle_estimee": 350000}]}
+Input: "Mon conjoint et moi possédons en indivision un appartement de 350000€"
+Output: {"client_biens_immobiliers": [{"designation": "Appartement", "detenteur": "commun", "forme_propriete": "indivision", "valeur_actuelle_estimee": 350000}]}
 
-Exemple 7 - Terrain :
-"Je possède un terrain à construire acheté 80000€ en 2020"
-→ {"client_biens_immobiliers": [{"designation": "Terrain à construire", "annee_acquisition": 2020, "valeur_acquisition": 80000}]}
+Input: "Je possède un terrain à construire acheté 80000€ en 2020"
+Output: {"client_biens_immobiliers": [{"designation": "Terrain à construire", "annee_acquisition": 2020, "valeur_acquisition": 80000}]}
 
-Exemple 8 - Pas concerné :
-"Je veux optimiser mon patrimoine financier"
-→ {}
+Input: "Je veux optimiser mon patrimoine financier"
+Output: {}
 PROMPT;
     }
 }

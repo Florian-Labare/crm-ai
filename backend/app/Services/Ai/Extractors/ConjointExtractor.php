@@ -2,7 +2,7 @@
 
 namespace App\Services\Ai\Extractors;
 
-use Illuminate\Support\Facades\Http;
+use App\Services\Ai\Traits\LlmClientTrait;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ConjointExtractor
 {
+    use LlmClientTrait;
+
     /**
      * Extrait les données du conjoint depuis la transcription.
      *
@@ -30,28 +32,16 @@ class ConjointExtractor
         $prompt = $this->buildPrompt($transcription);
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-                'OpenAI-Organization' => env('OPENAI_ORG_ID'),
-            ])->post('https://api.openai.com/v1/chat/completions', [
-                        'model' => 'gpt-4o-mini',
-                        'messages' => [
-                            ['role' => 'system', 'content' => $this->getSystemPrompt()],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'temperature' => 0.1, // Extraction déterministe
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-            $json = $response->json();
-            $raw = $json['choices'][0]['message']['content'] ?? '';
-
-            Log::info('[ConjointExtractor] Réponse OpenAI', ['raw' => $raw]);
-
-            $data = json_decode($raw, true);
+            $data = $this->callLlm(
+                $this->getSystemPrompt(),
+                $prompt,
+                0.1,
+                true
+            );
 
             if (!is_array($data)) {
-                Log::warning('[ConjointExtractor] Impossible de parser la réponse GPT', ['content' => $raw]);
+                Log::warning('[ConjointExtractor] Impossible de parser la réponse LLM');
+
                 return [];
             }
 
@@ -59,6 +49,7 @@ class ConjointExtractor
 
         } catch (\Throwable $e) {
             Log::error('[ConjointExtractor] Erreur lors de l\'extraction', ['message' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -71,9 +62,9 @@ class ConjointExtractor
         return <<<PROMPT
 Analyse cette transcription et extrais UNIQUEMENT les informations concernant le CONJOINT (époux/épouse, partenaire de PACS, concubin(e)).
 
-⚠️ IMPORTANT :
+IMPORTANT :
 - Cherche les mentions : "mon conjoint", "ma femme", "mon mari", "mon épouse", "elle/il" (parlant du conjoint)
-- N'extrais JAMAIS des informations d'enfants (si tu vois "mon fils", "ma fille", "mes enfants", "Alicia", "Léana" → ce ne sont PAS des conjoints)
+- N'extrais JAMAIS des informations d'enfants ("mon fils", "ma fille", "mes enfants" = PAS des conjoints)
 - IGNORE complètement les informations du client principal (celui qui dit "je", "moi")
 
 Transcription :
@@ -81,7 +72,7 @@ Transcription :
 $transcription
 ---
 
-Réponds STRICTEMENT avec un JSON valide concernant UNIQUEMENT le conjoint (ou {} si aucune info sur le conjoint), sans aucun texte avant ou après.
+Réponds UNIQUEMENT avec un JSON valide concernant le conjoint (ou {} si aucune info), sans texte avant ou après.
 PROMPT;
     }
 
@@ -93,108 +84,76 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de données CONJOINT pour un CRM d'assurance.
 
-🎯 OBJECTIF :
+[OBJECTIF]
 Détecter si le client parle de son CONJOINT et extraire les données associées.
 
-🔤 EPPELLATION / DICTÉE :
-- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
-- Ignore les séparateurs (espaces, tirets, points, pauses).
-- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
+[ÉPELLATION / DICTÉE]
+- Si une valeur est épelée lettre par lettre (ex: "D U P O N T"), reconstruis le mot complet.
+- Pour email : "arobase" = "@", "point" = ".", "tiret" = "-", "underscore" = "_"
 - Pour téléphone : concatène tous les chiffres en une seule chaîne.
 
-🚫 RÈGLES ABSOLUES - DISTINCTION CLIENT PRINCIPAL vs CONJOINT :
+[RÈGLES ABSOLUES]
 
-1. **N'extrais QUE le CONJOINT** : Cherche UNIQUEMENT les informations introduites par :
-   - "mon conjoint", "ma femme", "mon mari", "mon épouse", "mon époux"
-   - "ma/mon partenaire", "ma/mon compagne/compagnon"
-   - "elle" ou "il" (quand le contexte indique clairement qu'il s'agit du conjoint)
+1. N'extrais QUE le CONJOINT : informations introduites par "mon conjoint", "ma femme", "mon mari", "mon épouse", "mon époux", "ma/mon partenaire", "elle/il" (contexte conjoint)
 
-2. **IGNORE TOTALEMENT le CLIENT PRINCIPAL** :
-   - Si le client dit "je m'appelle...", "je suis...", "mon métier..." → IGNORE, c'est le client principal
-   - Cherche UNIQUEMENT les phrases qui parlent d'une AUTRE personne (le conjoint)
+2. IGNORE TOTALEMENT le CLIENT PRINCIPAL : "je m'appelle...", "je suis...", "mon métier..." = client, pas conjoint
 
-3. **🚨 IGNORE LES ENFANTS - RÈGLE CRITIQUE** :
-   - ❌ Si tu vois "mon fils", "ma fille", "mes enfants" → CE NE SONT PAS DES CONJOINTS !
-   - ❌ Si un prénom comme "Alicia", "Léana", "Emma", "Louis" est mentionné dans le contexte des enfants → NE PAS l'extraire comme conjoint
-   - ✅ Seuls les noms/prénoms explicitement introduits par "ma femme", "mon mari", etc. sont des conjoints
+3. IGNORE LES ENFANTS : "mon fils", "ma fille", "mes enfants" = PAS des conjoints
 
-4. **Exemples de détection** :
-   - ✅ "Ma femme s'appelle Sophie" → Extraire : {"prenom": "Sophie"}
-   - ✅ "Mon mari est médecin" → Extraire : {"profession": "médecin"}
-   - ✅ "Elle est née en 1985" (si contexte = conjoint) → Extraire : {"date_naissance": "1985-XX-XX"}
-   - ❌ "Je m'appelle Jean" → IGNORER (c'est le client principal)
-   - ❌ "Je suis architecte" → IGNORER (c'est le client principal)
+4. En cas de doute sur qui est concerné : N'extrais PAS l'information
 
-4. En cas de doute sur qui est concerné → N'extrais PAS l'information
-
-✅ SI LE CLIENT PARLE DE SON CONJOINT :
+[SI DÉTECTÉ - CONJOINT]
 
 Retourne :
 {
   "conjoint": {
-    // Remplis les champs ci-dessous SEULEMENT si mentionnés
+    // Champs ci-dessous SEULEMENT si mentionnés
   }
 }
 
-📋 CHAMPS conjoint (optionnels) :
+[CHAMPS conjoint] (tous optionnels)
 
 - "nom" (string) : nom de famille du conjoint
 - "nom_jeune_fille" (string) : nom de jeune fille si applicable
 - "prenom" (string) : prénom du conjoint
-- "date_naissance" (string) : format "YYYY-MM-DD" ou "DD/MM/YYYY"
-- "lieu_naissance" (string) : ville COMPLÈTE (ex: "Marseille")
-- "nationalite" (string) : nationalité du conjoint
+- "date_naissance" (string) : format "YYYY-MM-DD"
+- "lieu_naissance" (string) : ville complète
+- "nationalite" (string) : nationalité
 - "profession" (string) : métier exact (ex: "infirmière", "avocat")
 - "situation_actuelle_statut" (string) : "Salarié(e)", "Retraité(e)", "Indépendant(e)", "Demandeur d'emploi"
-- "chef_entreprise" (boolean) : true si le conjoint est chef d'entreprise
+- "chef_entreprise" (boolean) : true si chef d'entreprise
 - "date_evenement_professionnel" (string) : date d'un événement pro
-- "risques_professionnels" (boolean) : true/false
-- "details_risques_professionnels" (string) : détails sur les risques professionnels
-- "telephone" (string) : numéro de téléphone du conjoint
-- "adresse" (string) : adresse complète si différente du client
+- "risques_professionnels" (boolean)
+- "details_risques_professionnels" (string)
+- "telephone" (string)
+- "adresse" (string) : si différente du client
 
-📌 RÈGLES IMPORTANTES :
-1. **UNIQUEMENT LE CONJOINT** : N'extrais QUE les informations introduites par "mon conjoint/ma femme/mon mari/elle/il"
-2. **JAMAIS LE CLIENT PRINCIPAL** : Si tu vois "je", "moi", "mon métier" (parlant du client) → IGNORE complètement
+[RÈGLES IMPORTANTES]
+1. UNIQUEMENT le CONJOINT : informations introduites par "mon conjoint/ma femme/mon mari/elle/il"
+2. JAMAIS le CLIENT PRINCIPAL : "je", "moi", "mon métier" (parlant du client) = IGNORER
 3. Ne jamais inventer de données
-4. Ne remplir un champ QUE si l'information est claire et concerne bien le CONJOINT (pas le client)
-5. Respecter l'épellation lettre par lettre si énoncé
-6. Si aucune information sur le conjoint n'est mentionnée, retourner un JSON vide : {}
-7. Répondre UNIQUEMENT avec du JSON strict, sans texte explicatif
+4. Ne remplir un champ QUE si l'information est claire et concerne le CONJOINT
+5. Respecter l'épellation lettre par lettre
+6. Si aucune information sur le conjoint, retourner : {}
+7. Répondre UNIQUEMENT avec du JSON valide
 
-❌ SI LE CLIENT NE PARLE PAS DE SON CONJOINT :
-Retourne un objet vide :
-{}
+[SI NON DÉTECTÉ]
+Retourne un objet vide : {}
 
-📌 EXEMPLES :
+[EXEMPLES]
 
-Exemple 1 - Conjoint détecté avec détails :
-"Ma femme s'appelle Sophie Martin, elle est infirmière, née le 20 août 1982"
-→ {
-  "conjoint": {
-    "nom": "Martin",
-    "prenom": "Sophie",
-    "date_naissance": "1982-08-20",
-    "profession": "infirmière"
-  }
-}
+Input: "Ma femme s'appelle Sophie Martin, elle est infirmière, née le 20 août 1982"
+Output: {"conjoint": {"nom": "Martin", "prenom": "Sophie", "date_naissance": "1982-08-20", "profession": "infirmière"}}
 
-Exemple 2 - Conjoint détecté, infos partielles :
-"Mon mari est médecin"
-→ {
-  "conjoint": {
-    "profession": "médecin"
-  }
-}
+Input: "Mon mari est médecin"
+Output: {"conjoint": {"profession": "médecin"}}
 
-Exemple 3 - Pas de conjoint mentionné :
-"Je suis architecte, j'ai 45 ans"
-→ {}
+Input: "Je suis architecte, j'ai 45 ans"
+Output: {}
 
-❌ EXEMPLE À NE PAS FAIRE - Extraire les infos du client principal :
-Transcription : "Je m'appelle Jean Dupont, je suis architecte. Ma femme s'appelle Sophie, elle est infirmière."
-MAUVAIS → {"conjoint": {"nom": "Dupont", "prenom": "Jean", "profession": "architecte"}}  // ❌ C'est le client !
-BON → {"conjoint": {"prenom": "Sophie", "profession": "infirmière"}}  // ✅ Uniquement le conjoint
+Input: "Je m'appelle Jean Dupont, je suis architecte. Ma femme s'appelle Sophie, elle est infirmière."
+Output: {"conjoint": {"prenom": "Sophie", "profession": "infirmière"}}
+Note: Jean Dupont est le client principal, pas le conjoint.
 PROMPT;
     }
 }

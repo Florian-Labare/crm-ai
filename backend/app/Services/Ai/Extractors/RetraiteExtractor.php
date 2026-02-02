@@ -2,12 +2,12 @@
 
 namespace App\Services\Ai\Extractors;
 
-use Illuminate\Support\Facades\Http;
+use App\Services\Ai\Traits\LlmClientTrait;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Extracteur spécialisé pour RETRAITE.
- * 
+ *
  * Responsabilité :
  * - Détection du besoin "retraite"
  * - Extraction des données bae_retraite
@@ -15,33 +15,23 @@ use Illuminate\Support\Facades\Log;
  */
 class RetraiteExtractor
 {
+    use LlmClientTrait;
+
     public function extract(string $transcription, array $currentData = []): array
     {
         $prompt = $this->buildPrompt($transcription);
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
-                'OpenAI-Organization' => env('OPENAI_ORG_ID'),
-            ])->post('https://api.openai.com/v1/chat/completions', [
-                        'model' => 'gpt-4o-mini',
-                        'messages' => [
-                            ['role' => 'system', 'content' => $this->getSystemPrompt()],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-            $json = $response->json();
-            $raw = $json['choices'][0]['message']['content'] ?? '';
-
-            Log::info('[RetraiteExtractor] Réponse OpenAI', ['raw' => $raw]);
-
-            $data = json_decode($raw, true);
+            $data = $this->callLlm(
+                $this->getSystemPrompt(),
+                $prompt,
+                0.1,
+                true
+            );
 
             if (!is_array($data)) {
-                Log::warning('[RetraiteExtractor] Impossible de parser la réponse GPT', ['content' => $raw]);
+                Log::warning('[RetraiteExtractor] Impossible de parser la réponse LLM');
+
                 return [];
             }
 
@@ -49,6 +39,7 @@ class RetraiteExtractor
 
         } catch (\Throwable $e) {
             Log::error('[RetraiteExtractor] Erreur lors de l\'extraction', ['message' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -72,34 +63,28 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de besoins RETRAITE.
 
-🎯 OBJECTIF :
+[OBJECTIF]
 Détecter si le client exprime un besoin de retraite et extraire les données associées.
 
-🔤 EPPELLATION / DICTÉE :
-- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
-- Ignore les séparateurs (espaces, tirets, points, pauses).
-- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
-- Pour téléphone : concatène tous les chiffres en une seule chaîne.
-
-🚫 RÈGLE ABSOLUE :
+[RÈGLE ABSOLUE]
 - Ignore toutes les phrases du conseiller
 - Ne tiens compte QUE des phrases du client
 
-🔍 MOTS-CLÉS RETRAITE :
+[MOTS-CLÉS RETRAITE]
 Retraite, pension, PER, PERP, complément retraite, départ retraite, maintenir revenus retraite, préparer retraite, âge de départ, trimestres, régime retraite, épargne retraite
 
-✅ SI LE CLIENT PARLE DE RETRAITE :
+[SI DÉTECTÉ - RETRAITE]
 
 Retourne :
 {
   "besoins": ["retraite"],
   "besoins_action": "add",
   "bae_retraite": {
-    // Remplis les champs ci-dessous SEULEMENT si mentionnés
+    // Champs ci-dessous SEULEMENT si mentionnés
   }
 }
 
-📋 CHAMPS bae_retraite (optionnels) :
+[CHAMPS bae_retraite] (tous optionnels)
 - "revenus_annuels" (decimal) : revenus annuels du client
 - "revenus_annuels_foyer" (decimal) : revenus du foyer
 - "impot_revenu" (decimal) : impôt sur le revenu
@@ -110,42 +95,36 @@ Retourne :
 - "age_depart_retraite_conjoint" (integer) : âge de départ du conjoint
 - "pourcentage_revenu_a_maintenir" (decimal) : % du revenu actuel à maintenir
 - "contrat_en_place" (string) : nom du contrat existant (PER, PERP, etc.)
-- "bilan_retraite_disponible" (boolean) : true si le client a son relevé de carrière
+- "bilan_retraite_disponible" (boolean) : true si relevé de carrière disponible
 - "complementaire_retraite_mise_en_place" (boolean) : true si produit déjà en place
 - "designation_etablissement" (string) : assureur/banque/organisme
 - "cotisations_annuelles" (decimal) : montant des cotisations annuelles
 - "titulaire" (string) : titulaire du contrat
 
-⚠️ RÈGLE CRITIQUE - besoins_action :
+[RÈGLE CRITIQUE - besoins_action]
 - Par défaut : "add" (TOUJOURS)
 - "remove" UNIQUEMENT si le client dit : "je n'ai PLUS besoin de retraite", "supprimez la retraite"
 - NE JAMAIS utiliser "replace"
 
-❌ SI LE CLIENT NE PARLE PAS DE RETRAITE :
-Retourne un objet vide :
-{}
+[SI NON DÉTECTÉ]
+Retourne un objet vide : {}
 
-📌 EXEMPLES :
+[EXEMPLES]
 
-Exemple 1 - Besoin détaillé :
-"Je veux partir à la retraite à 62 ans et maintenir 70% de mes revenus"
-→ {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"age_depart_retraite": 62, "pourcentage_revenu_a_maintenir": 70}}
+Input: "Je veux partir à la retraite à 62 ans et maintenir 70% de mes revenus"
+Output: {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"age_depart_retraite": 62, "pourcentage_revenu_a_maintenir": 70}}
 
-Exemple 2 - Avec TMI et revenus foyer :
-"Mon TMI est de 30%. Le revenu foyer est de 80000 euros."
-→ {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"tmi": "30%", "revenus_annuels_foyer": 80000}}
+Input: "Mon TMI est de 30%. Le revenu foyer est de 80000 euros."
+Output: {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {"tmi": "30%", "revenus_annuels_foyer": 80000}}
 
-Exemple 3 - Besoin générique :
-"Je veux préparer ma retraite"
-→ {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {}}
+Input: "Je veux préparer ma retraite"
+Output: {"besoins": ["retraite"], "besoins_action": "add", "bae_retraite": {}}
 
-Exemple 4 - Négation :
-"Je n'ai plus besoin de retraite"
-→ {"besoins": ["retraite"], "besoins_action": "remove"}
+Input: "Je n'ai plus besoin de retraite"
+Output: {"besoins": ["retraite"], "besoins_action": "remove"}
 
-Exemple 5 - Pas concerné :
-"Je veux garantir 3000€ en cas d'invalidité"
-→ {}
+Input: "Je veux garantir 3000€ en cas d'invalidité"
+Output: {}
 PROMPT;
     }
 }
