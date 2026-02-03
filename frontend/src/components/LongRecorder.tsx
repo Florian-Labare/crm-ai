@@ -359,7 +359,7 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
             </p>
             <div className="bg-[#FF9F43]/10 border border-[#FF9F43]/30 rounded-lg p-4 text-left">
               <p className="text-sm text-[#5E5873] leading-relaxed">
-                <span className="font-semibold text-[#FF9F43]">Information :</span> Notre outil s'appuie sur un modèle de transcription OpenAI.
+                <span className="font-semibold text-[#FF9F43]">Information :</span> Notre outil s'appuie sur un modèle de transcription Mistral AI.
                 Il peut, dans certains cas, interpréter incorrectement des mots, des noms ou des dates — ou proposer certaines informations dans une section qui n'est pas la bonne.
               </p>
               <p className="text-sm text-[#5E5873] mt-2 leading-relaxed">

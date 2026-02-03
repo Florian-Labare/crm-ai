@@ -19,10 +19,12 @@ use Illuminate\Support\Facades\Storage;
 class RecordingService
 {
     private DiarizationService $diarizationService;
+    private TranscriptionService $transcriptionService;
 
-    public function __construct(DiarizationService $diarizationService)
+    public function __construct(DiarizationService $diarizationService, TranscriptionService $transcriptionService)
     {
         $this->diarizationService = $diarizationService;
+        $this->transcriptionService = $transcriptionService;
     }
 
     /**
@@ -197,7 +199,7 @@ class RecordingService
     }
 
     /**
-     * Transcrit un chunk via Whisper API OpenAI
+     * Transcrit un chunk via TranscriptionService (Mistral Voxtral ou OpenAI Whisper)
      */
     private function transcribeChunk(string $filePath): string
     {
@@ -210,50 +212,24 @@ class RecordingService
         $fileSize = filesize($filePath);
         if ($fileSize < 1024) {
             Log::warning("⚠️ [RECORDING] Fichier trop petit ({$fileSize} bytes), ignoré");
-            return ''; // Retourner une chaîne vide pour les fichiers trop petits
+            return '';
         }
 
-        Log::info("📊 [RECORDING] Taille du fichier : " . round($fileSize / 1024, 2) . " KB");
-
-        $apiKey = config('services.openai.api_key');
-
-        if (!$apiKey) {
-            throw new \Exception("Clé API OpenAI non configurée");
-        }
-
-        // ⏱️ Timeout dynamique basé sur la taille du fichier
-        // - Minimum 60 secondes
-        // - +30 secondes par MB de fichier audio
-        // - Maximum 10 minutes pour les très gros fichiers
         $fileSizeMB = $fileSize / (1024 * 1024);
-        $timeoutSeconds = min(600, max(60, (int)(60 + ($fileSizeMB * 30))));
+        $provider = config('mistral.features.use_for_transcription', false) ? 'Voxtral (Mistral)' : 'Whisper (OpenAI)';
 
-        Log::info("⏱️ [RECORDING] Timeout Whisper configuré", [
+        Log::info("📊 [RECORDING] Transcription via {$provider}", [
             'file_size_mb' => round($fileSizeMB, 2),
-            'timeout_seconds' => $timeoutSeconds
+            'file' => basename($filePath),
         ]);
 
-        $response = Http::timeout($timeoutSeconds)
-            ->withHeaders([
-                'Authorization' => "Bearer {$apiKey}",
-            ])
-            ->attach('file', file_get_contents($filePath), basename($filePath))
-            ->post('https://api.openai.com/v1/audio/transcriptions', [
-                'model' => 'whisper-1',
-                'language' => 'fr',
-            ]);
+        $transcription = $this->transcriptionService->transcribe($filePath);
 
-        if (!$response->successful()) {
-            Log::error("❌ [RECORDING] Erreur Whisper API", [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'file_size' => $fileSize,
-                'file_path' => $filePath,
-            ]);
-            throw new \Exception("Erreur lors de la transcription Whisper");
+        if (empty($transcription)) {
+            throw new \Exception("Erreur lors de la transcription");
         }
 
-        return $response->json('text', '');
+        return $transcription;
     }
 
     /**
