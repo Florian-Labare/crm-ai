@@ -1,6 +1,7 @@
-import React from 'react';
-import { Edit, FileText, FileDown, Trash2, Hash, Clock, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit, FileText, FileDown, Trash2, Hash, Clock, CheckCircle, User, Users, Archive } from 'lucide-react';
 import { ComplianceBadge } from './ComplianceBadge';
+import { ConfirmClientModal } from './ConfirmClientModal';
 
 interface VuexyClientHeaderProps {
   client: any;
@@ -11,6 +12,9 @@ interface VuexyClientHeaderProps {
   showEditButton?: boolean;
   showExportQuestionnaireButton?: boolean;
   onExportQuestionnairePDF?: () => void;
+  onStatusChange?: (isClient: boolean) => Promise<void>;
+  onArchive?: () => Promise<void>;
+  onRestore?: () => Promise<void>;
 }
 
 export const VuexyClientHeader: React.FC<VuexyClientHeaderProps> = ({
@@ -22,11 +26,28 @@ export const VuexyClientHeader: React.FC<VuexyClientHeaderProps> = ({
   showEditButton = true,
   showExportQuestionnaireButton = false,
   onExportQuestionnairePDF,
+  onStatusChange,
+  onArchive,
+  onRestore,
 }) => {
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [isStatusLoading, setIsStatusLoading] = useState(false);
+
   const getInitials = (prenom?: string, nom?: string): string => {
     const p = prenom?.charAt(0)?.toUpperCase() || '';
     const n = nom?.charAt(0)?.toUpperCase() || '';
     return p + n || '?';
+  };
+
+  const handleConvertToClient = async () => {
+    if (!onStatusChange) return;
+    setIsStatusLoading(true);
+    try {
+      await onStatusChange(true);
+      setShowClientModal(false);
+    } finally {
+      setIsStatusLoading(false);
+    }
   };
 
   const formatDate = (date?: string): string => {
@@ -63,10 +84,27 @@ export const VuexyClientHeader: React.FC<VuexyClientHeaderProps> = ({
                 <Clock size={16} />
                 Dernière mise à jour: {lastUpdate}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#28C76F]/10 text-[#28C76F] font-semibold text-xs uppercase tracking-wider">
-                <CheckCircle size={14} />
-                Actif
-              </span>
+              {/* Badge Prospect/Client/Archive */}
+              {client.is_archived ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs uppercase tracking-wider">
+                  <Archive size={14} />
+                  Archive
+                </span>
+              ) : client.is_client ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#28C76F]/10 text-[#28C76F] font-semibold text-xs uppercase tracking-wider">
+                  <Users size={14} />
+                  Client
+                </span>
+              ) : (
+                <button
+                  onClick={() => setShowClientModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00CFE8]/10 text-[#00CFE8] font-semibold text-xs uppercase tracking-wider hover:bg-[#7367F0]/10 hover:text-[#7367F0] transition-colors cursor-pointer"
+                  title="Cliquez pour passer en client"
+                >
+                  <User size={14} />
+                  Prospect
+                </button>
+              )}
               <ComplianceBadge clientId={client.id} variant="badge" />
             </div>
           </div>
@@ -110,6 +148,25 @@ export const VuexyClientHeader: React.FC<VuexyClientHeaderProps> = ({
               Export questionnaire PDF
             </button>
           )}
+          {/* Bouton Archiver/Restaurer */}
+          {!client.is_archived && onArchive && (
+            <button
+              onClick={onArchive}
+              className="px-4 py-2.5 rounded-lg border border-[#EBE9F1] bg-white text-[#6E6B7B] font-semibold hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 flex items-center gap-2"
+            >
+              <Archive size={18} />
+              Archiver
+            </button>
+          )}
+          {client.is_archived && onRestore && (
+            <button
+              onClick={onRestore}
+              className="px-4 py-2.5 rounded-lg border border-[#28C76F] bg-white text-[#28C76F] font-semibold hover:bg-[#28C76F]/10 transition-all duration-200 flex items-center gap-2"
+            >
+              <CheckCircle size={18} />
+              Restaurer
+            </button>
+          )}
           <button
             onClick={onDelete}
             className="px-4 py-2.5 rounded-lg border border-[#EA5455] bg-white text-[#EA5455] font-semibold hover:bg-[#EA5455]/10 transition-all duration-200 flex items-center gap-2"
@@ -119,6 +176,15 @@ export const VuexyClientHeader: React.FC<VuexyClientHeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Modal de confirmation passage en client */}
+      <ConfirmClientModal
+        isOpen={showClientModal}
+        onClose={() => setShowClientModal(false)}
+        onConfirm={handleConvertToClient}
+        clientName={`${client.prenom || ''} ${(client.nom || '').toUpperCase()}`}
+        isLoading={isStatusLoading}
+      />
     </div>
   );
 };

@@ -18,6 +18,7 @@ use App\Http\Controllers\ImportSessionController;
 use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\MeetingSummaryController;
 use App\Http\Controllers\ClientComplianceController;
+use App\Http\Controllers\ComplianceDashboardController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
@@ -45,6 +46,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/clients', [ClientController::class, 'store']);
     Route::put('/clients/{id}', [ClientController::class, 'update']);
     Route::delete('/clients/{id}', [ClientController::class, 'destroy']);
+
+    // Gestion du statut Prospect/Client et archivage
+    Route::patch('/clients/{client}/status', [ClientController::class, 'updateStatus']);
+    Route::post('/clients/{client}/archive', [ClientController::class, 'archive']);
+    Route::post('/clients/{client}/restore', [ClientController::class, 'restore']);
 
     // Gestion des relations client
     // Revenus
@@ -152,11 +158,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Compliance / Documents réglementaires signés
     Route::get('/clients/{client}/compliance/status', [ClientComplianceController::class, 'status']);
     Route::get('/clients/{client}/compliance/badge', [ClientComplianceController::class, 'badge']);
+    Route::get('/clients/{client}/compliance/alerts', [ClientComplianceController::class, 'alerts']);
+
+    // Dashboard de conformité global
+    Route::get('/compliance/dashboard', [ComplianceDashboardController::class, 'index']);
+    Route::get('/compliance/alerts', [ComplianceDashboardController::class, 'alerts']);
     Route::post('/clients/{client}/compliance/upload', [ClientComplianceController::class, 'upload']);
+    Route::post('/clients/{client}/compliance/upload-signed', [ClientComplianceController::class, 'uploadSigned']);
     Route::post('/clients/{client}/compliance/{document}/validate', [ClientComplianceController::class, 'validate']);
     Route::post('/clients/{client}/compliance/{document}/reject', [ClientComplianceController::class, 'reject']);
     Route::get('/clients/{client}/compliance/{document}/download', [ClientComplianceController::class, 'download']);
     Route::delete('/clients/{client}/compliance/{document}', [ClientComplianceController::class, 'destroy']);
+
+    // Liaison documents signés ↔ exigences
+    Route::post('/clients/{client}/compliance/{document}/link', [ClientComplianceController::class, 'linkToRequirements']);
+    Route::delete('/clients/{client}/compliance/{document}/unlink/{requirement}', [ClientComplianceController::class, 'unlinkFromRequirement']);
+    Route::post('/clients/{client}/compliance/{document}/validate-link/{requirement}', [ClientComplianceController::class, 'validateLink']);
+    Route::post('/clients/{client}/compliance/{document}/reject-link/{requirement}', [ClientComplianceController::class, 'rejectLink']);
 
     // Résumé de rendez-vous (audio)
     Route::get('/clients/{client}/meeting-summary', [MeetingSummaryController::class, 'showLatest']);

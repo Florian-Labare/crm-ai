@@ -24,8 +24,8 @@ class ComplianceRequirementsSeeder extends Seeder
             ],
             [
                 'besoin' => 'global',
-                'document_type' => 'avis_imposition',
-                'document_label' => "Avis d'imposition",
+                'document_type' => 'avis_imposition_n1',
+                'document_label' => "Avis d'imposition N-1",
                 'category' => 'fiscal',
                 'is_mandatory' => true,
                 'priority' => 2,

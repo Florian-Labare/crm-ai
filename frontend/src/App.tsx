@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { RiskQuestionnaire } from "./pages/RiskQuestionnaire";
 import ImportPage from "./pages/ImportPage";
+import ComplianceDashboard from "./pages/ComplianceDashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -41,6 +42,7 @@ export default function App() {
                 <Route path="/clients/:id/edit" element={<ProtectedRoute><ClientEditPage /></ProtectedRoute>} />
                 <Route path="/clients/:clientId/questionnaire-risque" element={<ProtectedRoute><RiskQuestionnaire /></ProtectedRoute>} />
                 <Route path="/import" element={<ProtectedRoute><ImportPage /></ProtectedRoute>} />
+                <Route path="/compliance-dashboard" element={<ProtectedRoute><ComplianceDashboard /></ProtectedRoute>} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </main>

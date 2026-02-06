@@ -20,14 +20,23 @@ class ClientController extends Controller
 {
     /**
      * Liste tous les clients de l'utilisateur connecté
+     * Filtrage par type : all (actifs), prospects, clients, archived
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $clients = Client::with(['conjoint', 'enfants'])
-            ->latest('id')
-            ->get();
+        $query = Client::with(['conjoint', 'enfants']);
 
-        return ClientResource::collection($clients);
+        $type = $request->get('type', 'active');
+        match ($type) {
+            'prospects' => $query->prospects(),
+            'clients' => $query->clients(),
+            'archived' => $query->archived(),
+            'active' => $query->active(),
+            'all' => null, // Pas de filtre, retourne tout
+            default => $query->active(),
+        };
+
+        return ClientResource::collection($query->latest('id')->get());
     }
 
     /**
@@ -156,6 +165,57 @@ class ClientController extends Controller
         $client->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Met à jour le statut is_client d'un client (Prospect ↔ Client)
+     */
+    public function updateStatus(Request $request, Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $validated = $request->validate([
+            'is_client' => 'required|boolean',
+        ]);
+
+        $client->update(['is_client' => $validated['is_client']]);
+
+        return response()->json([
+            'message' => $validated['is_client']
+                ? 'Le prospect a été converti en client.'
+                : 'Le client a été rétrogradé en prospect.',
+            'client' => ClientResource::make($client->fresh()),
+        ]);
+    }
+
+    /**
+     * Archive un client (RAF - Rien à Faire)
+     */
+    public function archive(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $client->update(['is_archived' => true]);
+
+        return response()->json([
+            'message' => 'Le contact a été archivé.',
+            'client' => ClientResource::make($client->fresh()),
+        ]);
+    }
+
+    /**
+     * Restaure un client archivé
+     */
+    public function restore(Client $client): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $client->update(['is_archived' => false]);
+
+        return response()->json([
+            'message' => 'Le contact a été restauré.',
+            'client' => ClientResource::make($client->fresh()),
+        ]);
     }
 
     // ===== GESTION DES REVENUS =====

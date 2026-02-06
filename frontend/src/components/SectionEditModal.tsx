@@ -1032,6 +1032,70 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
                 </label>
               </div>
             </FormField>
+            <FormField label="Durée d'indemnisation souhaitée">
+              <input
+                type="text"
+                placeholder="Ex: 3 ans, jusqu'à la retraite..."
+                value={formData.duree_indemnisation_souhaitee || ""}
+                onChange={(e) => handleChange("duree_indemnisation_souhaitee", e.target.value)}
+                className="form-input"
+              />
+            </FormField>
+            <FormField label="Payeur">
+              <input
+                type="text"
+                placeholder="Qui paie les cotisations ?"
+                value={formData.payeur || ""}
+                onChange={(e) => handleChange("payeur", e.target.value)}
+                className="form-input"
+              />
+            </FormField>
+            <FormField label="Couvrir charges professionnelles" fullWidth>
+              <div className="flex items-center h-[46px]">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.souhaite_couvrir_charges_professionnelles || false}
+                    onChange={(e) => handleChange("souhaite_couvrir_charges_professionnelles", e.target.checked)}
+                    className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                  />
+                  <span className="ml-2 text-sm text-[#5E5873]">Souhaite couvrir les charges professionnelles</span>
+                </label>
+              </div>
+            </FormField>
+            <FormField label="Montant annuel charges pro (€)">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.montant_annuel_charges_professionnelles || ""}
+                onChange={(e) => handleChange("montant_annuel_charges_professionnelles", e.target.value)}
+                className="form-input"
+              />
+            </FormField>
+            <FormField label="Garantir totalité charges pro" fullWidth>
+              <div className="flex items-center h-[46px]">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.garantir_totalite_charges_professionnelles || false}
+                    onChange={(e) => handleChange("garantir_totalite_charges_professionnelles", e.target.checked)}
+                    className="w-4 h-4 text-[#7367F0] border-[#D8D6DE] rounded focus:ring-[#7367F0]"
+                  />
+                  <span className="ml-2 text-sm text-[#5E5873]">Garantir la totalité des charges</span>
+                </label>
+              </div>
+            </FormField>
+            <FormField label="Montant charges pro à garantir (€)">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.montant_charges_professionnelles_a_garantir || ""}
+                onChange={(e) => handleChange("montant_charges_professionnelles_a_garantir", e.target.value)}
+                className="form-input"
+              />
+            </FormField>
           </>
         );
 

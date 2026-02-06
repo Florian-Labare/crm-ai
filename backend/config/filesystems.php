@@ -81,8 +81,8 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
+            'throw' => true,  // Enable exceptions to see errors
+            'report' => true, // Enable error reporting
         ],
 
     ],

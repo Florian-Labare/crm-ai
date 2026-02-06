@@ -24,6 +24,11 @@ class ClientResource extends JsonResource
         return [
             'id' => $this->id,
 
+            // Statut Prospect/Client/Archivé
+            'is_client' => $this->is_client,
+            'is_archived' => $this->is_archived,
+            'type_label' => $this->is_archived ? 'Archivé' : ($this->is_client ? 'Client' : 'Prospect'),
+
             // Informations personnelles
             'civilite' => $this->civilite,
             'nom' => $this->nom,

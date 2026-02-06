@@ -31,8 +31,8 @@ class AudioService
             $this->validateClientAccess($clientId, $userId);
         }
 
-        // Sauvegarder le fichier audio
-        $path = $audioFile->store('audio_uploads', 'public');
+        // Sauvegarder le fichier audio sur S3 (disk par défaut)
+        $path = $audioFile->store('audio_uploads');
 
         // Créer l'enregistrement
         $audioRecord = AudioRecord::create([

@@ -15,6 +15,7 @@ use App\Services\Ai\Extractors\ClientPassifsExtractor;
 use App\Services\Ai\Extractors\ClientActifsFinanciersExtractor;
 use App\Services\Ai\Extractors\ClientBiensImmobiliersExtractor;
 use App\Services\Ai\Extractors\ClientAutresEpargnesExtractor;
+use App\Services\Ai\Extractors\ClientSanteExtractor;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -47,7 +48,8 @@ class AnalysisService
         private ClientPassifsExtractor $clientPassifsExtractor,
         private ClientActifsFinanciersExtractor $clientActifsFinanciersExtractor,
         private ClientBiensImmobiliersExtractor $clientBiensImmobiliersExtractor,
-        private ClientAutresEpargnesExtractor $clientAutresEpargnesExtractor
+        private ClientAutresEpargnesExtractor $clientAutresEpargnesExtractor,
+        private ClientSanteExtractor $santeExtractor
     ) {
     }
 
@@ -131,6 +133,7 @@ class AnalysisService
             'prevoyance' => $this->prevoyanceExtractor->extract($transcription),
             'retraite' => $this->retraiteExtractor->extract($transcription),
             'epargne' => $this->epargneExtractor->extract($transcription),
+            'sante' => $this->santeExtractor->extract($transcription),
             'revenus' => $this->clientRevenusExtractor->extract($transcription),
             'passifs' => $this->clientPassifsExtractor->extract($transcription),
             'actifs_financiers' => $this->clientActifsFinanciersExtractor->extract($transcription),

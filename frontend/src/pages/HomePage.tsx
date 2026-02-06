@@ -6,7 +6,7 @@ import api from "../api/apiClient";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { extractCollection } from "../utils/apiHelpers";
 import type { Client } from "../types/api";
-import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone, LogOut, Upload } from "lucide-react";
+import { Users, UserPlus, ClipboardList, Eye, Edit, Trash2, Mail, Phone, LogOut, Upload, User, Archive, Filter } from "lucide-react";
 import { VuexyStatCard } from "../components/VuexyStatCard";
 import { PendingChangesBadge } from "../components/PendingChangesBadge";
 import { ReviewChangesModal } from "../components/ReviewChangesModal";
@@ -16,7 +16,11 @@ import { useAuth } from "../contexts/AuthContext";
 interface ExtendedClient extends Client {
   situation_matrimoniale?: string;
   besoins?: string[];
+  is_client?: boolean;
+  is_archived?: boolean;
 }
+
+type StatusFilterType = "prospects" | "clients" | "archived";
 
 const FILTER_STORAGE_KEY = "home_clients_filters_v1";
 const COLUMN_STORAGE_KEY = "home_clients_columns_v1";
@@ -33,6 +37,7 @@ const HomePage: React.FC = () => {
   const { user, logout, isAdmin } = useAuth();
   const [selectedPendingChangeId, setSelectedPendingChangeId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [statusFilters, setStatusFilters] = useState<StatusFilterType[]>(["prospects", "clients"]);
   const [besoinFilter, setBesoinFilter] = useState("all");
   const [situationFilter, setSituationFilter] = useState("all");
   const [professionFilter, setProfessionFilter] = useState("");
@@ -149,7 +154,7 @@ const HomePage: React.FC = () => {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/clients");
+      const res = await api.get("/clients?type=all");
       const clientsData = extractCollection<ExtendedClient>(res);
       setClients(clientsData);
 
@@ -182,6 +187,48 @@ const HomePage: React.FC = () => {
     if (lower.includes("emprunt") || lower.includes("emprunteur") || lower.includes("crédit") || lower.includes("credit")) return "Emprunteur";
     if (lower.includes("épargne") || lower.includes("epargne") || lower.includes("assurance vie") || lower.includes("livret") || lower.includes("pea") || lower.includes("invest")) return "Épargne";
     return "Autre";
+  };
+
+  const toggleStatusFilter = (filter: StatusFilterType) => {
+    setStatusFilters((prev) =>
+      prev.includes(filter)
+        ? prev.filter((f) => f !== filter)
+        : [...prev, filter]
+    );
+  };
+
+  // Compteurs par statut
+  const statusCounts = useMemo(() => {
+    return {
+      prospects: clients.filter((c) => !c.is_client && !c.is_archived).length,
+      clients: clients.filter((c) => c.is_client && !c.is_archived).length,
+      archived: clients.filter((c) => c.is_archived).length,
+    };
+  }, [clients]);
+
+  const getStatusBadge = (client: ExtendedClient) => {
+    if (client.is_archived) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+          <Archive size={10} />
+          Archive
+        </span>
+      );
+    }
+    if (client.is_client) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[#28C76F]/10 text-[#28C76F]">
+          <Users size={10} />
+          Client
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[#00CFE8]/10 text-[#00CFE8]">
+        <User size={10} />
+        Prospect
+      </span>
+    );
   };
 
   const filteredClients = useMemo(() => {
@@ -251,6 +298,13 @@ const HomePage: React.FC = () => {
     };
 
     let filtered = clients.filter((client) => {
+      // Filtre par statut (prospect/client/archive)
+      const statusMatches = statusFilters.length === 0 || statusFilters.length === 3 ? true : (() => {
+        if (client.is_archived) return statusFilters.includes("archived");
+        if (client.is_client) return statusFilters.includes("clients");
+        return statusFilters.includes("prospects");
+      })();
+
       const besoinMatches =
         besoinFilter === "all"
           ? true
@@ -268,6 +322,7 @@ const HomePage: React.FC = () => {
       const emailMatches = emailTerm ? (client.email || "").toLowerCase().includes(emailTerm) : true;
 
       return (
+        statusMatches &&
         matchesSearch(client) &&
         besoinMatches &&
         situationMatches &&
@@ -304,6 +359,7 @@ const HomePage: React.FC = () => {
   }, [
     clients,
     searchText,
+    statusFilters,
     besoinFilter,
     situationFilter,
     professionFilter,
@@ -327,6 +383,7 @@ const HomePage: React.FC = () => {
 
   const resetFilters = () => {
     setSearchText("");
+    setStatusFilters(["prospects", "clients"]);
     setBesoinFilter("all");
     setSituationFilter("all");
     setProfessionFilter("");
@@ -432,6 +489,7 @@ const HomePage: React.FC = () => {
     setCurrentPage(1);
   }, [
     searchText,
+    statusFilters,
     besoinFilter,
     situationFilter,
     professionFilter,
@@ -615,6 +673,59 @@ const HomePage: React.FC = () => {
                       <p className="text-sm text-[#6E6B7B]">
                         {filteredClients.length} résultat{filteredClients.length > 1 ? "s" : ""} sur {clients.length}
                       </p>
+                    </div>
+
+                    {/* Filtres par statut */}
+                    <div className="flex items-center gap-2">
+                      <Filter size={16} className="text-[#6E6B7B]" />
+                      <button
+                        onClick={() => toggleStatusFilter("prospects")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          statusFilters.includes("prospects")
+                            ? "bg-[#00CFE8]/10 text-[#00CFE8] border border-[#00CFE8]/30"
+                            : "bg-[#F3F2F7] text-[#6E6B7B] border border-transparent hover:bg-[#EBE9F1]"
+                        }`}
+                      >
+                        <User size={12} />
+                        Prospects
+                        <span className={`ml-0.5 px-1.5 py-0.5 rounded text-[10px] ${
+                          statusFilters.includes("prospects") ? "bg-[#00CFE8]/20" : "bg-[#EBE9F1]"
+                        }`}>
+                          {statusCounts.prospects}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => toggleStatusFilter("clients")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          statusFilters.includes("clients")
+                            ? "bg-[#28C76F]/10 text-[#28C76F] border border-[#28C76F]/30"
+                            : "bg-[#F3F2F7] text-[#6E6B7B] border border-transparent hover:bg-[#EBE9F1]"
+                        }`}
+                      >
+                        <Users size={12} />
+                        Clients
+                        <span className={`ml-0.5 px-1.5 py-0.5 rounded text-[10px] ${
+                          statusFilters.includes("clients") ? "bg-[#28C76F]/20" : "bg-[#EBE9F1]"
+                        }`}>
+                          {statusCounts.clients}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => toggleStatusFilter("archived")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          statusFilters.includes("archived")
+                            ? "bg-gray-200 text-gray-700 border border-gray-300"
+                            : "bg-[#F3F2F7] text-[#6E6B7B] border border-transparent hover:bg-[#EBE9F1]"
+                        }`}
+                      >
+                        <Archive size={12} />
+                        Archives
+                        <span className={`ml-0.5 px-1.5 py-0.5 rounded text-[10px] ${
+                          statusFilters.includes("archived") ? "bg-gray-300" : "bg-[#EBE9F1]"
+                        }`}>
+                          {statusCounts.archived}
+                        </span>
+                      </button>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {filtersSummary.length > 0 && (
@@ -895,8 +1006,11 @@ const HomePage: React.FC = () => {
                               {client.nom?.charAt(0) || ''}
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-semibold text-[#5E5873]">
-                                {client.nom_complet}
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-[#5E5873]">
+                                  {client.nom_complet}
+                                </span>
+                                {getStatusBadge(client)}
                               </div>
                               <div className="text-xs text-[#B9B9C3]">
                                 ID: {client.id}

@@ -36,6 +36,8 @@ interface SanteSouhait {
 
 // Extension du type Client pour inclure les champs non-BAE
 interface ExtendedClient extends Client {
+  is_client?: boolean;
+  is_archived?: boolean;
   civilite?: string;
   nom_jeune_fille?: string;
   lieu_naissance?: string;
@@ -396,6 +398,40 @@ const ClientDetailPage: React.FC = () => {
     });
   };
 
+  const handleStatusChange = async (isClient: boolean) => {
+    try {
+      await api.patch(`/clients/${id}/status`, { is_client: isClient });
+      toast.success(isClient ? "Le prospect a été converti en client" : "Le client a été rétrogradé en prospect");
+      fetchClient();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors du changement de statut");
+      throw err;
+    }
+  };
+
+  const handleArchive = async () => {
+    try {
+      await api.post(`/clients/${id}/archive`);
+      toast.success("Le contact a été archivé");
+      fetchClient();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de l'archivage");
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await api.post(`/clients/${id}/restore`);
+      toast.success("Le contact a été restauré");
+      fetchClient();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
   const handleExportPDF = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -613,6 +649,9 @@ const ClientDetailPage: React.FC = () => {
             showEditButton={activeTab === "info"}
             showExportQuestionnaireButton={activeTab === "questionnaires"}
             onExportQuestionnairePDF={handleExportQuestionnairePdf}
+            onStatusChange={handleStatusChange}
+            onArchive={handleArchive}
+            onRestore={handleRestore}
           />
 
           {/* Bouton Enregistrer une conversation */}
