@@ -74,17 +74,21 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       });
 
       const { data: audioRecord } = response.data;
-      const { status, client, error_message: errorMsg } = audioRecord;
+      const { status, client, has_transcription: hasTranscription, error_message: errorMsg } = audioRecord;
 
-      console.log(`📊 Statut audio #${audioRecordId}: ${status}`);
+      console.log(`📊 Statut audio #${audioRecordId}: ${status}, transcription: ${hasTranscription}`);
 
       // Mettre à jour le message de statut
       switch (status) {
         case 'pending':
-          setProcessingStatus('⏳ En attente de traitement...');
+          setProcessingStatus('⏳ En file d\'attente...');
           break;
         case 'processing':
-          setProcessingStatus('🧠 Analyse IA en cours...');
+          if (hasTranscription) {
+            setProcessingStatus('🧠 Analyse IA en cours...');
+          } else {
+            setProcessingStatus('🎙️ Diarisation et transcription en cours...');
+          }
           break;
         case 'pending_review':
           // Modifications en attente de validation
@@ -291,9 +295,8 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
         }
       );
 
-      const { audio_record_id, transcription } = response.data;
-      console.log(`✅ Transcription reçue: ${transcription.substring(0, 100)}...`);
-      console.log(`📝 AudioRecord créé: #${audio_record_id}`);
+      const { audio_record_id } = response.data;
+      console.log(`Finalisation lancee, audio_record #${audio_record_id}`);
 
       // Démarrer le polling pour le traitement GPT
       if (audio_record_id) {

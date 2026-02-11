@@ -1,0 +1,106 @@
+# ============================================
+# Stage 1: Composer dependencies
+# ============================================
+FROM php:8.3-cli AS composer-builder
+
+RUN apt-get update && apt-get install -y \
+    git unzip zip libzip-dev \
+    && docker-php-ext-install zip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+# ============================================
+# Stage 2: Final production image
+# ============================================
+FROM php:8.3-cli
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ffmpeg \
+    curl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql gd mbstring exif pcntl bcmath opcache zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions: Redis + Swoole
+RUN pecl install redis swoole \
+    && docker-php-ext-enable redis swoole
+
+# OPcache production config
+RUN { \
+    echo 'opcache.enable=1'; \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=64'; \
+    echo 'opcache.max_accelerated_files=20000'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.save_comments=1'; \
+    echo 'opcache.jit_buffer_size=100M'; \
+    } > /usr/local/etc/php/conf.d/opcache-prod.ini
+
+# PHP production config (uploads, memory)
+RUN { \
+    echo 'upload_max_filesize = 50M'; \
+    echo 'post_max_size = 50M'; \
+    echo 'max_execution_time = 300'; \
+    echo 'max_input_time = 300'; \
+    echo 'memory_limit = 512M'; \
+    } > /usr/local/etc/php/conf.d/production.ini
+
+WORKDIR /var/www/html
+
+# Copy application code
+COPY . .
+
+# Copy Composer dependencies from builder stage
+COPY --from=composer-builder /app/vendor ./vendor
+
+# Install Python dependencies for audio processing (Whisper, Pyannote)
+RUN pip3 install --no-cache-dir --break-system-packages -r /var/www/html/scripts/requirements.txt \
+    && chmod +x /var/www/html/scripts/whisper_transcribe.py \
+    && chmod +x /var/www/html/scripts/diarize_audio.py \
+    && chmod +x /var/www/html/scripts/init_pyannote.py
+
+# Create necessary directories
+RUN mkdir -p \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/cache \
+    storage/logs \
+    storage/app/public \
+    storage/app/temp \
+    storage/app/recordings \
+    bootstrap/cache
+
+# Set permissions (www-data user for security)
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
+
+# Remove dev/test files not needed in production
+RUN rm -rf tests/ .env.example docker/ docker-compose* docker-entrypoint.sh \
+    Dockerfile Dockerfile.prod .editorconfig .gitattributes phpunit.xml
+
+# Copy production entrypoint
+COPY docker-entrypoint.prod.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+EXPOSE 8000
+
+USER www-data
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto", "--task-workers=auto", "--max-requests=500"]

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\AudioRecord;
 
 /**
  * Recording Session Model
@@ -15,9 +16,10 @@ class RecordingSession extends Model
 {
     protected $fillable = [
         'session_id',
-        'team_id', // Added team_id
+        'team_id',
         'user_id',
         'client_id',
+        'audio_record_id',
         'total_chunks',
         'final_transcription',
         'status',
@@ -52,5 +54,13 @@ class RecordingSession extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * Relation avec l'AudioRecord
+     */
+    public function audioRecord(): BelongsTo
+    {
+        return $this->belongsTo(AudioRecord::class);
     }
 }

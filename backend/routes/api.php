@@ -22,7 +22,7 @@ use App\Http\Controllers\ComplianceDashboardController;
 
 // Routes publiques d'authentification
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // Health check endpoints (publics pour monitoring externe) - avec rate limiting
 Route::prefix('health')->middleware('throttle:health-check')->group(function () {
@@ -228,17 +228,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{team}/members/{user}', [\App\Http\Controllers\TeamController::class, 'removeMember']);
     });
 
-    // Debug simple
-    Route::get('/ping', fn() => response()->json(['pong' => true]));
-
-    Route::get('/test-error', function () {
-        try {
-            $client = \App\Models\Client::first();
-            return response()->json(['client' => $client]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    });
+    // Debug routes (dev only)
+    if (app()->environment('local', 'testing')) {
+        Route::get('/ping', fn() => response()->json(['pong' => true]));
+        Route::get('/test-error', function () {
+            try {
+                $client = \App\Models\Client::first();
+                return response()->json(['client' => $client]);
+            } catch (\Exception $e) {
+                return response()->json(['error' => $e->getMessage()], 500);
+            }
+        });
+    }
 
     // ============================================
     // 📥 IMPORT - Import de données clients

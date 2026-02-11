@@ -104,7 +104,11 @@ class TranscriptionService
 
             // Modèle à utiliser (tiny, base, small, medium, large)
             // base = bon compromis vitesse/qualité pour un POC
-            $model = env('WHISPER_MODEL', 'base');
+            $model = config('mistral.whisper_model', 'base');
+            if (in_array($model, ['none', 'disabled', ''], true)) {
+                Log::info('[Whisper Local] Desactive par configuration (WHISPER_MODEL=' . $model . ')');
+                return null;
+            }
 
             // Exécuter le script Python avec timeout de 5 minutes
             $command = sprintf(

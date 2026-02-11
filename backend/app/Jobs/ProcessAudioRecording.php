@@ -39,12 +39,17 @@ class ProcessAudioRecording implements ShouldQueue
     /**
      * Temps max d'exécution (5 minutes)
      */
-    public $timeout = 300;
+    public $timeout = 600;
 
     /**
      * Délai avant nouvelle tentative (backoff exponentiel)
      */
     public $backoff = [30, 60, 120]; // 30s, 1min, 2min
+
+    /**
+     * Queue dédiée pour les traitements audio
+     */
+    public $queue = 'audio';
 
     /**
      * L'enregistrement audio à traiter
@@ -133,7 +138,7 @@ class ProcessAudioRecording implements ShouldQueue
                     mkdir($tempDir, 0755, true);
                 }
 
-                $tempAudioPath = $tempDir . '/' . basename($this->audioRecord->path);
+                $tempAudioPath = $tempDir . '/' . $this->audioRecord->id . '_' . basename($this->audioRecord->path);
 
                 // Vérifier si le fichier existe sur S3
                 if (!\Illuminate\Support\Facades\Storage::exists($this->audioRecord->path)) {
@@ -164,10 +169,12 @@ class ProcessAudioRecording implements ShouldQueue
                     return;
                 }
 
-                $transcription = $transcriptionService->transcribe($audioPath);
-
-                // Nettoyer le fichier temp après transcription
-                @unlink($tempAudioPath);
+                try {
+                    $transcription = $transcriptionService->transcribe($audioPath);
+                } finally {
+                    // Nettoyer le fichier temp même en cas d'échec
+                    @unlink($tempAudioPath);
+                }
 
                 if (empty($transcription)) {
                     throw new Exception("Transcription vide ou échec de Whisper API");

@@ -19,4 +19,6 @@ return [
     ],
 
     'fallback_to_openai' => env('MISTRAL_FALLBACK', true),
+
+    'whisper_model' => env('WHISPER_MODEL', 'base'),
 ];

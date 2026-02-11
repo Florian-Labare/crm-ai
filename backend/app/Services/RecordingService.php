@@ -2,31 +2,15 @@
 
 namespace App\Services;
 
-use App\Jobs\ProcessAudioRecording;
+use App\Jobs\FinalizeRecordingJob;
 use App\Models\AudioRecord;
 use App\Models\RecordingSession;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-/**
- * Recording Service
- *
- * Gère la logique métier pour les enregistrements longs (jusqu'à 2h)
- * avec découpage automatique en chunks de 10min max
- */
 class RecordingService
 {
-    private DiarizationService $diarizationService;
-    private TranscriptionService $transcriptionService;
-
-    public function __construct(DiarizationService $diarizationService, TranscriptionService $transcriptionService)
-    {
-        $this->diarizationService = $diarizationService;
-        $this->transcriptionService = $transcriptionService;
-    }
-
     /**
      * Stocke un chunk audio
      */
@@ -35,16 +19,15 @@ class RecordingService
         int $partIndex,
         UploadedFile $audio,
         int $userId,
-        int $teamId, // Added teamId
+        int $teamId,
         ?int $clientId = null
     ): RecordingSession {
-        Log::info("🎙️ [RECORDING] Stockage du chunk #{$partIndex} pour la session {$sessionId}");
+        Log::info("[RECORDING] Stockage du chunk #{$partIndex} pour la session {$sessionId}");
 
-        // Récupérer ou créer la session
         $session = RecordingSession::firstOrCreate(
             ['session_id' => $sessionId],
             [
-                'team_id' => $teamId, // Added team_id
+                'team_id' => $teamId,
                 'user_id' => $userId,
                 'client_id' => $clientId,
                 'status' => 'recording',
@@ -52,18 +35,15 @@ class RecordingService
             ]
         );
 
-        // Vérifier que la session appartient bien à l'utilisateur
         if ($session->user_id !== $userId) {
             throw new \Exception("Cette session n'appartient pas à l'utilisateur connecté");
         }
 
-        // Stocker le fichier audio sur le disk recordings (local)
         $filename = "{$sessionId}_part_{$partIndex}.webm";
         $path = $audio->storeAs("{$sessionId}", $filename, 'recordings');
 
-        Log::info("✅ [RECORDING] Chunk #{$partIndex} stocké : {$path}");
+        Log::info("[RECORDING] Chunk #{$partIndex} stocke : {$path}");
 
-        // Mettre à jour le nombre de chunks
         $session->update([
             'total_chunks' => max($session->total_chunks, $partIndex + 1),
         ]);
@@ -72,116 +52,46 @@ class RecordingService
     }
 
     /**
-     * Finalise l'enregistrement : transcrit tous les chunks et concatène
+     * Finalise l'enregistrement : dispatch le job asynchrone et retour immediat
      */
     public function finalizeRecording(string $sessionId, int $userId): RecordingSession
     {
-        Log::info("🎬 [RECORDING] Finalisation de la session {$sessionId}");
+        Log::info("[RECORDING] Finalisation de la session {$sessionId}");
 
         $session = RecordingSession::where('session_id', $sessionId)
             ->where('user_id', $userId)
             ->firstOrFail();
 
-        // Marquer comme en cours de traitement
         $session->update(['status' => 'processing']);
 
-        try {
-            // Récupérer tous les chunks dans l'ordre
-            $chunks = $this->getChunksInOrder($sessionId, $session->total_chunks);
-
-            if (empty($chunks)) {
-                throw new \Exception("Aucun chunk trouvé pour cette session");
-            }
-
-            Log::info("📂 [RECORDING] {$session->total_chunks} chunks trouvés");
-
-            // Étape 1: Concaténer tous les chunks en un seul fichier audio
-            Log::info("🔗 [RECORDING] Concaténation des chunks...");
-            $concatenatedAudio = $this->concatenateChunks($chunks, $sessionId);
-
-            // Étape 2: Diarisation pour identifier courtier/client
-            Log::info("🎙️ [RECORDING] Diarisation pour séparer courtier/client...");
-            $diarizationResult = $this->diarizationService->diarize($concatenatedAudio);
-
-            $finalTranscription = '';
-
-            if ($diarizationResult['success'] && !empty($diarizationResult['client_segments'])) {
-                // Diarisation réussie - ne transcrire que les segments du client
-                Log::info("✅ [RECORDING] Diarisation réussie - {$diarizationResult['stats']['client_num_segments']} segments client détectés");
-
-                // Extraire l'audio du client uniquement
-                $clientAudioPath = $this->diarizationService->extractClientAudio(
-                    $concatenatedAudio,
-                    $diarizationResult['client_segments']
-                );
-
-                if ($clientAudioPath) {
-                    // Transcrire uniquement l'audio du client
-                    Log::info("🧠 [RECORDING] Transcription des segments client...");
-                    $finalTranscription = $this->transcribeChunk($clientAudioPath);
-
-                    // Nettoyer le fichier audio client temporaire
-                    $this->diarizationService->cleanup($clientAudioPath);
-                } else {
-                    Log::warning("⚠️ [RECORDING] Impossible d'extraire l'audio client, transcription complète");
-                    $finalTranscription = $this->transcribeChunk($concatenatedAudio);
-                }
-            } else {
-                // Diarisation échouée - transcrire tout l'audio (comportement par défaut)
-                Log::warning("⚠️ [RECORDING] Diarisation échouée, transcription de tout l'audio");
-                $finalTranscription = $this->transcribeChunk($concatenatedAudio);
-            }
-
-            // Nettoyer le fichier audio concaténé
-            $this->diarizationService->cleanup($concatenatedAudio);
-
-            Log::info("🎉 [RECORDING] Transcription finale : " . strlen($finalTranscription) . " caractères");
-
-            if (trim($finalTranscription) === '') {
-                throw new \Exception("Transcription vide après traitement des chunks");
-            }
-
-            // Créer un AudioRecord avec la transcription pour traitement GPT
-            $audioRecord = AudioRecord::create([
-                'team_id' => $session->team_id, // Added team_id
-                'user_id' => $session->user_id,
-                'client_id' => $session->client_id,
-                'path' => null, // Pas de fichier audio unique, juste la transcription
-                'transcription' => $finalTranscription,
-                'status' => 'pending',
-            ]);
-
-            Log::info("📝 [RECORDING] AudioRecord #{$audioRecord->id} créé pour traitement GPT");
-
-            // Dispatcher le job de traitement GPT
-            ProcessAudioRecording::dispatch($audioRecord, $session->client_id);
-
-            // Sauvegarder la transcription finale dans la session
-            $session->update([
-                'final_transcription' => $finalTranscription,
-                'status' => 'completed',
-                'finalized_at' => now(),
-            ]);
-
-            // Ajouter l'ID de l'AudioRecord à la session pour le polling
-            $session->audio_record_id = $audioRecord->id;
-
-            // Nettoyer les chunks
-            $this->cleanupChunks($sessionId);
-
-            return $session;
-        } catch (\Exception $e) {
-            Log::error("❌ [RECORDING] Erreur lors de la finalisation : " . $e->getMessage());
-
+        // Verifier qu'il y a des chunks
+        $chunks = $this->getChunksInOrder($sessionId, $session->total_chunks);
+        if (empty($chunks)) {
             $session->update(['status' => 'failed']);
-
-            throw $e;
+            throw new \Exception("Aucun chunk trouve pour cette session");
         }
+
+        // Creer l'AudioRecord en attente (sera rempli par le job)
+        $audioRecord = AudioRecord::create([
+            'team_id' => $session->team_id,
+            'user_id' => $session->user_id,
+            'client_id' => $session->client_id,
+            'path' => null,
+            'transcription' => null,
+            'status' => 'pending',
+        ]);
+
+        // Sauvegarder l'audio_record_id pour le polling frontend
+        $session->update(['audio_record_id' => $audioRecord->id]);
+
+        // Dispatcher le job asynchrone (sur queue 'finalize' = app-server)
+        FinalizeRecordingJob::dispatch($session, $audioRecord);
+
+        Log::info("[RECORDING] FinalizeRecordingJob dispatche pour session {$sessionId}, audio #{$audioRecord->id}");
+
+        return $session;
     }
 
-    /**
-     * Récupère les chunks dans l'ordre (depuis le disk recordings local)
-     */
     private function getChunksInOrder(string $sessionId, int $totalChunks): array
     {
         $chunks = [];
@@ -192,154 +102,9 @@ class RecordingService
             if (Storage::disk('recordings')->exists($path)) {
                 $chunks[$i] = Storage::disk('recordings')->path($path);
             } else {
-                Log::warning("⚠️ [RECORDING] Chunk manquant : {$filename}");
+                Log::warning("[RECORDING] Chunk manquant : {$filename}");
             }
         }
         return $chunks;
-    }
-
-    /**
-     * Transcrit un chunk via TranscriptionService (Mistral Voxtral ou OpenAI Whisper)
-     */
-    private function transcribeChunk(string $filePath): string
-    {
-        // Vérifier que le fichier existe
-        if (!file_exists($filePath)) {
-            throw new \Exception("Fichier audio introuvable : {$filePath}");
-        }
-
-        // Vérifier la taille du fichier (minimum 1KB pour éviter les fichiers vides)
-        $fileSize = filesize($filePath);
-        if ($fileSize < 1024) {
-            Log::warning("⚠️ [RECORDING] Fichier trop petit ({$fileSize} bytes), ignoré");
-            return '';
-        }
-
-        $fileSizeMB = $fileSize / (1024 * 1024);
-        $provider = config('mistral.features.use_for_transcription', false) ? 'Voxtral (Mistral)' : 'Whisper (OpenAI)';
-
-        Log::info("📊 [RECORDING] Transcription via {$provider}", [
-            'file_size_mb' => round($fileSizeMB, 2),
-            'file' => basename($filePath),
-        ]);
-
-        $transcription = $this->transcriptionService->transcribe($filePath);
-
-        if (empty($transcription)) {
-            throw new \Exception("Erreur lors de la transcription");
-        }
-
-        return $transcription;
-    }
-
-    /**
-     * Concatène tous les chunks en un seul fichier audio
-     */
-    private function concatenateChunks(array $chunks, string $sessionId): string
-    {
-        if (count($chunks) === 1) {
-            // Un seul chunk - copier vers temp pour un nettoyage uniforme
-            $tempDir = storage_path('app/temp');
-            if (!is_dir($tempDir)) {
-                mkdir($tempDir, 0755, true);
-            }
-
-            $outputPath = $tempDir . '/concatenated_' . $sessionId . '.webm';
-            copy($chunks[0], $outputPath);
-
-            Log::info('✅ [RECORDING] Chunk unique copié vers temp', [
-                'output_path' => $outputPath
-            ]);
-
-            return $outputPath;
-        }
-
-        // Créer le dossier temp s'il n'existe pas
-        $tempDir = storage_path('app/temp');
-        if (!is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
-
-        // Créer un fichier de liste pour ffmpeg
-        $fileListPath = $tempDir . '/filelist_' . $sessionId . '.txt';
-        $fileListContent = '';
-
-        foreach ($chunks as $chunkPath) {
-            // Vérifier que le fichier existe avant de l'ajouter
-            if (!file_exists($chunkPath)) {
-                Log::warning('[RECORDING] Chunk introuvable lors de la concaténation', ['path' => $chunkPath]);
-                continue;
-            }
-            // ffmpeg nécessite le format: file '/path/to/file.webm'
-            $fileListContent .= "file '" . str_replace("'", "'\\''", $chunkPath) . "'\n";
-        }
-
-        if (empty($fileListContent)) {
-            throw new \Exception('Aucun chunk valide trouvé pour la concaténation');
-        }
-
-        file_put_contents($fileListPath, $fileListContent);
-
-        Log::info('[RECORDING] Liste de fichiers pour concaténation', [
-            'file_list_path' => $fileListPath,
-            'content' => $fileListContent,
-            'num_chunks' => count($chunks)
-        ]);
-
-        // 🔧 SOLUTION : Utiliser .ogg pour conserver le codec Opus
-        // Le format WAV ne supporte pas le codec Opus, donc on utilise OGG qui le supporte
-        $outputPath = $tempDir . '/concatenated_' . $sessionId . '.ogg';
-
-        // Concaténer avec ffmpeg - utiliser OGG pour le codec Opus
-        $command = sprintf(
-            'ffmpeg -y -f concat -safe 0 -i %s -c copy %s 2>&1',
-            escapeshellarg($fileListPath),
-            escapeshellarg($outputPath)
-        );
-
-        Log::info('[RECORDING] Commande ffmpeg', ['command' => $command]);
-
-        exec($command, $output, $returnCode);
-
-        // Nettoyer le fichier de liste
-        @unlink($fileListPath);
-
-        if ($returnCode !== 0) {
-            Log::error('[RECORDING] Échec de la concaténation ffmpeg', [
-                'command' => $command,
-                'return_code' => $returnCode,
-                'output' => implode("\n", $output)
-            ]);
-            throw new \Exception('Échec de la concaténation des chunks (ffmpeg error code: ' . $returnCode . ')');
-        }
-
-        if (!file_exists($outputPath) || filesize($outputPath) < 1024) {
-            Log::error('[RECORDING] Fichier de sortie invalide', [
-                'output_path' => $outputPath,
-                'exists' => file_exists($outputPath),
-                'size' => file_exists($outputPath) ? filesize($outputPath) : 0
-            ]);
-            throw new \Exception('Échec de la concaténation des chunks (fichier de sortie invalide)');
-        }
-
-        Log::info('✅ [RECORDING] Chunks concaténés', [
-            'output_path' => $outputPath,
-            'file_size' => filesize($outputPath)
-        ]);
-
-        return $outputPath;
-    }
-
-    /**
-     * Nettoie les chunks après finalisation (disk recordings local)
-     */
-    private function cleanupChunks(string $sessionId): void
-    {
-        $directory = $sessionId;
-
-        if (Storage::disk('recordings')->exists($directory)) {
-            Storage::disk('recordings')->deleteDirectory($directory);
-            Log::info("🗑️ [RECORDING] Chunks supprimés pour la session {$sessionId}");
-        }
     }
 }
