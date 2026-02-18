@@ -47,11 +47,6 @@ class ProcessAudioRecording implements ShouldQueue
     public $backoff = [30, 60, 120]; // 30s, 1min, 2min
 
     /**
-     * Queue dédiée pour les traitements audio
-     */
-    public $queue = 'audio';
-
-    /**
      * L'enregistrement audio à traiter
      */
     protected AudioRecord $audioRecord;
@@ -79,6 +74,7 @@ class ProcessAudioRecording implements ShouldQueue
         $this->audioRecord = $audioRecord;
         $this->existingClientId = $existingClientId;
         $this->reviewMode = $reviewMode;
+        $this->onQueue('audio');
     }
 
     /**

@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\AudioRecord;
 use App\Models\RecordingSession;
-use App\Services\DiarizationService;
 use App\Services\TranscriptionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,18 +17,17 @@ class FinalizeRecordingJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 900;
+    public $timeout = 300;
     public $tries = 1;
-    public $queue = 'finalize';
 
     public function __construct(
         protected RecordingSession $session,
         protected AudioRecord $audioRecord
     ) {
+        $this->onQueue('finalize');
     }
 
     public function handle(
-        DiarizationService $diarizationService,
         TranscriptionService $transcriptionService
     ): void {
         $sessionId = $this->session->session_id;
@@ -53,37 +51,9 @@ class FinalizeRecordingJob implements ShouldQueue
         $concatenatedAudio = $this->concatenateChunks($chunks, $sessionId);
 
         try {
-            // 3. Diariser avec Pyannote
-            Log::info("[FINALIZE] Diarisation pour separer courtier/client...");
-            $diarizationResult = $diarizationService->diarize($concatenatedAudio);
-
-            $finalTranscription = '';
-
-            if ($diarizationResult['success'] && !empty($diarizationResult['client_segments'])) {
-                Log::info("[FINALIZE] Diarisation reussie - {$diarizationResult['stats']['client_num_segments']} segments client");
-
-                // 4. Extraire l'audio client
-                $clientAudioPath = $diarizationService->extractClientAudio(
-                    $concatenatedAudio,
-                    $diarizationResult['client_segments']
-                );
-
-                if ($clientAudioPath) {
-                    // 5. Transcrire (Voxtral API)
-                    Log::info("[FINALIZE] Transcription des segments client...");
-                    $finalTranscription = $this->transcribeAudio($clientAudioPath, $transcriptionService);
-                    $diarizationService->cleanup($clientAudioPath);
-                } else {
-                    Log::warning("[FINALIZE] Impossible d'extraire l'audio client, transcription complete");
-                    $finalTranscription = $this->transcribeAudio($concatenatedAudio, $transcriptionService);
-                }
-            } else {
-                Log::warning("[FINALIZE] Diarisation echouee, transcription de tout l'audio");
-                $finalTranscription = $this->transcribeAudio($concatenatedAudio, $transcriptionService);
-            }
-
-            // Nettoyer le fichier audio concatene
-            $diarizationService->cleanup($concatenatedAudio);
+            // 3. Transcrire l'audio complet directement (sans diarisation)
+            Log::info("[FINALIZE] Transcription de l'audio complet...");
+            $finalTranscription = $this->transcribeAudio($concatenatedAudio, $transcriptionService);
 
             Log::info("[FINALIZE] Transcription finale : " . strlen($finalTranscription) . " caracteres");
 
@@ -91,32 +61,37 @@ class FinalizeRecordingJob implements ShouldQueue
                 throw new \Exception("Transcription vide apres traitement des chunks");
             }
 
-            // 6. Mettre a jour l'AudioRecord avec la transcription
+            // 4. Mettre a jour l'AudioRecord avec la transcription
             $this->audioRecord->update([
                 'transcription' => $finalTranscription,
                 'status' => 'pending',
             ]);
 
-            // 7. Dispatcher ProcessAudioRecording (sur queue 'audio' -> worker-server)
-            ProcessAudioRecording::dispatch($this->audioRecord, $this->session->client_id);
-
-            Log::info("[FINALIZE] ProcessAudioRecording dispatche pour audio #{$this->audioRecord->id}");
-
-            // 8. Mettre a jour la session
+            // 5. Mettre a jour la session
             $this->session->update([
                 'final_transcription' => $finalTranscription,
                 'status' => 'completed',
                 'finalized_at' => now(),
             ]);
 
-            // 9. Cleanup chunks
+            // 6. Dispatcher ProcessAudioRecording (sur queue 'audio' -> worker-server)
+            ProcessAudioRecording::dispatch($this->audioRecord, $this->session->client_id);
+            Log::info("[FINALIZE] ProcessAudioRecording dispatche pour audio #{$this->audioRecord->id}");
+
+            // 7. Dispatcher DiarizeRecordingJob en background (sur queue 'finalize')
+            DiarizeRecordingJob::dispatch($this->audioRecord, $concatenatedAudio, $sessionId);
+            Log::info("[FINALIZE] DiarizeRecordingJob dispatche en background pour audio #{$this->audioRecord->id}");
+
+            // 8. Cleanup chunks (mais PAS le fichier concatene - DiarizeRecordingJob s'en charge)
             $this->cleanupChunks($sessionId);
 
             Log::info("[FINALIZE] Session {$sessionId} finalisee avec succes");
 
         } catch (\Throwable $e) {
-            // Nettoyer le fichier concatene en cas d'erreur
-            $diarizationService->cleanup($concatenatedAudio);
+            // Nettoyer le fichier concatene en cas d'erreur (DiarizeRecordingJob ne sera pas dispatche)
+            if (file_exists($concatenatedAudio) && str_contains($concatenatedAudio, '/temp/')) {
+                @unlink($concatenatedAudio);
+            }
             throw $e;
         }
     }
