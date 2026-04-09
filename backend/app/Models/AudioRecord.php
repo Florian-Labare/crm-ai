@@ -14,7 +14,6 @@ class AudioRecord extends Model
         'path',
         'status',
         'transcription',
-        'client_transcription',
         'processed_at',
         // Champs de diarisation
         'diarization_data',

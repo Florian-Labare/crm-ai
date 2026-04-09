@@ -74,21 +74,17 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       });
 
       const { data: audioRecord } = response.data;
-      const { status, client, has_transcription: hasTranscription, error_message: errorMsg } = audioRecord;
+      const { status, client, error_message: errorMsg } = audioRecord;
 
-      console.log(`📊 Statut audio #${audioRecordId}: ${status}, transcription: ${hasTranscription}`);
+      console.log(`📊 Statut audio #${audioRecordId}: ${status}`);
 
       // Mettre à jour le message de statut
       switch (status) {
         case 'pending':
-          setProcessingStatus('⏳ En file d\'attente...');
+          setProcessingStatus('⏳ En attente de traitement...');
           break;
         case 'processing':
-          if (hasTranscription) {
-            setProcessingStatus('🧠 Analyse IA en cours...');
-          } else {
-            setProcessingStatus('🎙️ Diarisation et transcription en cours...');
-          }
+          setProcessingStatus('🧠 Analyse IA en cours...');
           break;
         case 'pending_review':
           // Modifications en attente de validation
@@ -192,15 +188,8 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Choisir le mimeType supporté par le navigateur
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : '';
-
       const mediaRecorder = new MediaRecorder(stream, {
-        ...(mimeType ? { mimeType } : {}),
+        mimeType: 'audio/webm',
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -213,9 +202,8 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
         }
       };
 
-      // Démarrer l'enregistrement avec un timeslice de 1s pour collecter les données en continu
-      // (sans timeslice, ondataavailable ne se déclenche qu'au stop() → race condition)
-      mediaRecorder.start(1000);
+      // Démarrer l'enregistrement
+      mediaRecorder.start();
       setIsRecording(true);
       setPartIndex(0);
       setRecordingTime(0);
@@ -226,11 +214,11 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       // Créer et envoyer un chunk toutes les 10 minutes
       chunkIntervalRef.current = setInterval(async () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          // Arrêter et attendre le flush des données via onstop
-          await new Promise<void>((resolve) => {
-            mediaRecorderRef.current!.onstop = () => resolve();
-            mediaRecorderRef.current!.stop();
-          });
+          // Arrêter temporairement pour récupérer les données
+          mediaRecorderRef.current.stop();
+
+          // Attendre que les données soient disponibles
+          await new Promise((resolve) => setTimeout(resolve, 100));
 
           // Créer et envoyer le chunk
           const currentIndex = partIndex;
@@ -240,14 +228,14 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
           // Redémarrer l'enregistrement pour le chunk suivant
           if (stream.active) {
             const newMediaRecorder = new MediaRecorder(stream, {
-              ...(mimeType ? { mimeType } : {}),
+              mimeType: 'audio/webm',
             });
             newMediaRecorder.ondataavailable = (event) => {
               if (event.data.size > 0) {
                 chunksRef.current.push(event.data);
               }
             };
-            newMediaRecorder.start(1000);
+            newMediaRecorder.start();
             mediaRecorderRef.current = newMediaRecorder;
           }
         }
@@ -271,14 +259,13 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       chunkIntervalRef.current = null;
     }
 
-    // Arrêter le MediaRecorder et attendre l'événement onstop
-    // (garantit que ondataavailable a fini de flush avant d'uploader)
-    await new Promise<void>((resolve) => {
-      mediaRecorderRef.current!.onstop = () => resolve();
-      mediaRecorderRef.current!.stop();
-    });
+    // Arrêter le MediaRecorder
+    mediaRecorderRef.current.stop();
 
-    // Envoyer le dernier chunk (chunksRef est maintenant garanti non-vide)
+    // Attendre que les dernières données soient disponibles
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Envoyer le dernier chunk
     const lastIndex = partIndex;
     await createAndUploadChunk(lastIndex);
 
@@ -304,8 +291,9 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
         }
       );
 
-      const { audio_record_id } = response.data;
-      console.log(`Finalisation lancee, audio_record #${audio_record_id}`);
+      const { audio_record_id, transcription } = response.data;
+      console.log(`✅ Transcription reçue: ${transcription.substring(0, 100)}...`);
+      console.log(`📝 AudioRecord créé: #${audio_record_id}`);
 
       // Démarrer le polling pour le traitement GPT
       if (audio_record_id) {
@@ -371,7 +359,7 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
             </p>
             <div className="bg-[#FF9F43]/10 border border-[#FF9F43]/30 rounded-lg p-4 text-left">
               <p className="text-sm text-[#5E5873] leading-relaxed">
-                <span className="font-semibold text-[#FF9F43]">Information :</span> Notre outil s'appuie sur un modèle de transcription Mistral AI.
+                <span className="font-semibold text-[#FF9F43]">Information :</span> Notre outil s'appuie sur un modèle de transcription OpenAI.
                 Il peut, dans certains cas, interpréter incorrectement des mots, des noms ou des dates — ou proposer certaines informations dans une section qui n'est pas la bonne.
               </p>
               <p className="text-sm text-[#5E5873] mt-2 leading-relaxed">

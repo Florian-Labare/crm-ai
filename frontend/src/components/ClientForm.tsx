@@ -4,12 +4,6 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
 
-interface DuplicateWarning {
-  id: number;
-  nom: string;
-  prenom: string | null;
-}
-
 export default function ClientForm() {
   const [form, setForm] = useState({
     civilite: "",
@@ -28,23 +22,7 @@ export default function ClientForm() {
     nombre_enfants: "",
   });
   const [loading, setLoading] = useState(false);
-  const [emailWarning, setEmailWarning] = useState<DuplicateWarning | null>(null);
   const navigate = useNavigate();
-
-  const handleEmailBlur = async () => {
-    const email = form.email.trim();
-    if (!email) return;
-    try {
-      const res = await api.get("/clients/check-duplicate", { params: { email } });
-      if (res.data.has_duplicates && res.data.best_match) {
-        setEmailWarning(res.data.best_match);
-      } else {
-        setEmailWarning(null);
-      }
-    } catch {
-      // silently ignore check errors
-    }
-  };
 
   // Afficher le champ nom de jeune fille si Madame et Marié(e)
   const showNomJeuneFille = form.civilite === "Madame" && form.situation_matrimoniale === "Marié(e)";
@@ -60,23 +38,11 @@ export default function ClientForm() {
 
       // Rediriger vers la page de détail du client créé
       setTimeout(() => {
-        navigate(`/clients/${response.data.data.id}`);
+        navigate(`/clients/${response.data.id}`);
       }, 1000);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      if (err?.response?.status === 409) {
-        const existing = err.response.data?.existing_client;
-        if (existing) {
-          toast.error(
-            `Un client avec cet email existe déjà : ${existing.prenom ?? ""} ${existing.nom}`,
-            { autoClose: 5000 }
-          );
-        } else {
-          toast.error(err.response.data?.message ?? "Email déjà utilisé dans votre cabinet.");
-        }
-      } else {
-        toast.error("Erreur lors de la création du client");
-      }
+      toast.error("Erreur lors de la création du client");
     } finally {
       setLoading(false);
     }
@@ -85,8 +51,8 @@ export default function ClientForm() {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="py-8 px-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-[#F8F8F8] py-8 px-4">
+        <div className="max-w-3xl mx-auto">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-[#5E5873] mb-2">
@@ -189,20 +155,9 @@ export default function ClientForm() {
                       type="email"
                       placeholder="exemple@email.com"
                       value={form.email}
-                      onChange={(e) => { setForm({ ...form, email: e.target.value }); setEmailWarning(null); }}
-                      onBlur={handleEmailBlur}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
                       className="w-full px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0] focus:border-[#7367F0] text-[#5E5873] placeholder-[#B9B9C3] transition-colors"
                     />
-                    {emailWarning && (
-                      <div className="mt-1 px-3 py-2 bg-yellow-50 border border-yellow-300 rounded-lg text-sm text-yellow-800">
-                        Un client avec cet email existe déjà :{" "}
-                        <strong>{emailWarning.prenom} {emailWarning.nom}</strong>{" "}
-                        —{" "}
-                        <a href={`/clients/${emailWarning.id}`} className="underline font-semibold">
-                          Voir la fiche
-                        </a>
-                      </div>
-                    )}
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-[#5E5873] mb-1">Adresse</label>

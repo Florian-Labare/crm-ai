@@ -65,14 +65,16 @@ class RecordingController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Traitement en cours...',
+                'message' => 'Transcription terminée, traitement IA en cours...',
                 'audio_record_id' => $session->audio_record_id,
+                'transcription' => $session->final_transcription,
                 'session' => [
                     'session_id' => $session->session_id,
                     'total_chunks' => $session->total_chunks,
                     'status' => $session->status,
+                    'finalized_at' => $session->finalized_at?->toISOString(),
                 ],
-            ], 202);
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class GeneratedDocument extends Model
 {
@@ -48,14 +47,6 @@ class GeneratedDocument extends Model
     public function documentTemplate(): BelongsTo
     {
         return $this->belongsTo(DocumentTemplate::class);
-    }
-
-    /**
-     * Un document généré peut avoir été envoyé en conformité
-     */
-    public function complianceDocument(): HasOne
-    {
-        return $this->hasOne(ClientComplianceDocument::class, 'generated_document_id');
     }
 
     /**

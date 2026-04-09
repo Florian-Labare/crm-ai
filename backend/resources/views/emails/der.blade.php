@@ -39,13 +39,14 @@
 
     <p style="color: #7f8c8d; font-size: 14px; margin-top: 30px;">
         Cordialement,<br>
-        <strong>{{ trim(($sender->firstname ?? '') . ' ' . ($sender->name ?? '')) }}</strong>
+        <strong>L'équipe</strong>
     </p>
 
     <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
 
     <p style="color: #95a5a6; font-size: 12px; text-align: center;">
-        Pour toute question, vous pouvez répondre directement à cet email ou contacter {{ $chargeClientele->name }} à l'adresse {{ $chargeClientele->email }}.
+        Cet email est envoyé automatiquement. Merci de ne pas y répondre directement.<br>
+        Pour toute question, veuillez contacter {{ $chargeClientele->name }} à l'adresse {{ $chargeClientele->email }}.
     </p>
 </body>
 </html>

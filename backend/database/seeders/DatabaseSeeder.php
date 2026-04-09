@@ -29,7 +29,6 @@ class DatabaseSeeder extends Seeder
             TeamSeeder::class,        // Équipe par défaut (ID=1)
             MiaUserSeeder::class,     // Utilisateurs MIA
             DocumentTemplateSeeder::class, // Templates de documents
-            AssureurSeeder::class,    // Assureurs pré-peuplés
         ]);
 
         $this->command->info('Base de données initialisée avec succès !');

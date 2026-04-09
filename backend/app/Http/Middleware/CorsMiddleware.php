@@ -13,7 +13,11 @@ class CorsMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $allowedOrigins = config('cors.allowed_origins', ['http://localhost:5173']);
+        $allowedOrigins = [
+            'http://localhost:5173',           // ✅ Dev (Vite)
+            'https://ton-domaine.fr',          // ✅ Prod
+            'https://app.ton-domaine.fr',      // ✅ Sous-domaine prod
+        ];
 
         $origin = $request->headers->get('Origin');
         $response = $request->getMethod() === 'OPTIONS'

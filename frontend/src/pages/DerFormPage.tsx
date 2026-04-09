@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePage } from "../contexts/PageContext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
@@ -14,7 +13,6 @@ interface MIA {
 
 const DerFormPage: React.FC = () => {
   const navigate = useNavigate();
-  const { setPage } = usePage();
   const [loading, setLoading] = useState(false);
   const [mias, setMias] = useState<MIA[]>([]);
   const [formData, setFormData] = useState({
@@ -27,13 +25,6 @@ const DerFormPage: React.FC = () => {
     date_rdv: "",
     heure_rdv: "",
   });
-
-  useEffect(() => {
-    setPage('Nouveau rendez-vous', [], [
-      { label: 'Rendez-vous' },
-      { label: 'Nouveau rendez-vous' },
-    ]);
-  }, [setPage]);
 
   useEffect(() => {
     fetchMias();
@@ -79,8 +70,8 @@ const DerFormPage: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="py-8 px-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-[#F8F8F8] py-12 px-4">
+        <div className="max-w-2xl mx-auto">
           <div className="vx-card mb-6">
             <div className="flex items-center space-x-4 mb-6">
               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white shadow-md shadow-purple-500/30">

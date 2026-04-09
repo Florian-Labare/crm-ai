@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePage } from "../contexts/PageContext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
@@ -121,7 +120,6 @@ const LEGAL_BASES: Record<string, string> = {
 const ImportPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
-  const { setPage } = usePage();
   const [sessions, setSessions] = useState<ImportSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -158,13 +156,6 @@ const ImportPage: React.FC = () => {
     confirm_authorization: false,
   });
   const [submittingConsent, setSubmittingConsent] = useState(false);
-
-  useEffect(() => {
-    setPage('Import clients', [], [
-      { label: 'Administration' },
-      { label: 'Import clients' },
-    ]);
-  }, [setPage]);
 
   // Redirect if not admin
   useEffect(() => {
@@ -476,7 +467,7 @@ const ImportPage: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="min-h-screen bg-[#F8F8F8] py-6 px-4 lg:px-6">
+      <div className="min-h-screen bg-[#F8F8F8] py-8 px-4">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div className="vx-card">
