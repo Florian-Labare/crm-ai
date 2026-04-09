@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDerRequest;
-use App\Mail\DerMail;
 use App\Models\Client;
 use App\Models\User;
 use App\Services\DerService;
+use App\Services\OAuthMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * DER Controller
@@ -22,7 +21,8 @@ class DerController extends Controller
      * Injecter le service DER
      */
     public function __construct(
-        private readonly DerService $derService
+        private readonly DerService $derService,
+        private readonly OAuthMailService $oauthMailService,
     ) {
     }
 
@@ -82,8 +82,25 @@ class DerController extends Controller
             // 3. Générer le DER
             $derFilePath = $this->derService->generateDer($client, $chargeClientele);
 
-            // 4. Envoyer le DER par email
-            Mail::to($client->email)->send(new DerMail($client, $chargeClientele, $derFilePath));
+            // 4. Envoyer le DER par email depuis le compte du user connecté (secrétaire / super admin)
+            $sender = auth()->user();
+            $subject = "Votre Document d'Entrée en Relation - {$client->prenom} " . strtoupper($client->nom);
+            $htmlBody = view('emails.der', [
+                'client'          => $client,
+                'chargeClientele' => $chargeClientele,
+                'sender'          => $sender,
+            ])->render();
+            $attachmentName = 'DER_' . strtoupper($client->nom) . '_' . strtoupper($client->prenom) . '.docx';
+
+            $this->oauthMailService->sendEmail(
+                $sender,
+                $client->email,
+                $subject,
+                $htmlBody,
+                $derFilePath,
+                $attachmentName,
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            );
 
             Log::info("📧 DER envoyé par email à {$client->email}");
 

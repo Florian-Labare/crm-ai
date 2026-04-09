@@ -4,68 +4,95 @@ namespace App\Policies;
 
 use App\Models\Client;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ClientPolicy
 {
     /**
-     * Determine whether the user can view any models.
+     * Super-admins bypass all policy checks automatically.
+     * This runs before every other method.
+     */
+    public function before(User $user): ?bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return null; // Continue to the specific method
+    }
+
+    /**
+     * Any authenticated user can list clients (the query scope restricts what they see).
      */
     public function viewAny(User $user): bool
     {
-        // Tout utilisateur connecté peut voir les clients
         return true;
     }
 
     /**
-     * Determine whether the user can view the model.
+     * A user can view a client if they own it or are a team admin.
      */
     public function view(User $user, Client $client): bool
     {
-        // Tout utilisateur connecté peut voir un client
-        return true;
+        return $this->hasAccess($user, $client);
     }
 
     /**
-     * Determine whether the user can create models.
+     * Any authenticated user can create a client.
      */
     public function create(User $user): bool
     {
-        // Tout utilisateur connecté peut créer un client
         return true;
     }
 
     /**
-     * Determine whether the user can update the model.
+     * A user can update a client if they own it or are a team admin.
      */
     public function update(User $user, Client $client): bool
     {
-        // Tout utilisateur connecté peut modifier un client
-        return true;
+        return $this->hasAccess($user, $client);
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * A user can delete a client if they own it or are a team admin.
      */
     public function delete(User $user, Client $client): bool
     {
-        // Tout utilisateur connecté peut supprimer un client
-        return true;
+        return $this->hasAccess($user, $client);
     }
 
     /**
-     * Determine whether the user can restore the model.
+     * A user can restore a client if they own it or are a team admin.
      */
     public function restore(User $user, Client $client): bool
     {
-        return true;
+        return $this->hasAccess($user, $client);
     }
 
     /**
-     * Determine whether the user can permanently delete the model.
+     * Only team admins can permanently delete a client.
      */
     public function forceDelete(User $user, Client $client): bool
     {
-        return true;
+        $team = $user->currentTeam();
+        return $team && $user->isTeamAdmin($team);
+    }
+
+    /**
+     * A user has access to a client if:
+     * - they own the client (user_id match), OR
+     * - they are an admin of the client's team
+     */
+    private function hasAccess(User $user, Client $client): bool
+    {
+        if ($client->user_id === $user->id) {
+            return true;
+        }
+
+        $team = $user->currentTeam();
+        if ($team && $client->team_id === $team->id && $user->isTeamAdmin($team)) {
+            return true;
+        }
+
+        return false;
     }
 }

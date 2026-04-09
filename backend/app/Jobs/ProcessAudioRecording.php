@@ -14,6 +14,7 @@ use App\Services\ClientPassifsSyncService;
 use App\Services\ClientActifsFinanciersSyncService;
 use App\Services\ClientBiensImmobiliersSyncService;
 use App\Services\ClientAutresEpargnesSyncService;
+use App\Services\BesoinService;
 use App\Services\MergeService;
 use App\Services\AuditService;
 use App\Services\AssetCategorizationService;
@@ -39,7 +40,7 @@ class ProcessAudioRecording implements ShouldQueue
     /**
      * Temps max d'exécution (5 minutes)
      */
-    public $timeout = 300;
+    public $timeout = 600;
 
     /**
      * Délai avant nouvelle tentative (backoff exponentiel)
@@ -74,6 +75,7 @@ class ProcessAudioRecording implements ShouldQueue
         $this->audioRecord = $audioRecord;
         $this->existingClientId = $existingClientId;
         $this->reviewMode = $reviewMode;
+        $this->onQueue('audio');
     }
 
     /**
@@ -133,7 +135,7 @@ class ProcessAudioRecording implements ShouldQueue
                     mkdir($tempDir, 0755, true);
                 }
 
-                $tempAudioPath = $tempDir . '/' . basename($this->audioRecord->path);
+                $tempAudioPath = $tempDir . '/' . $this->audioRecord->id . '_' . basename($this->audioRecord->path);
 
                 // Vérifier si le fichier existe sur S3
                 if (!\Illuminate\Support\Facades\Storage::exists($this->audioRecord->path)) {
@@ -164,10 +166,12 @@ class ProcessAudioRecording implements ShouldQueue
                     return;
                 }
 
-                $transcription = $transcriptionService->transcribe($audioPath);
-
-                // Nettoyer le fichier temp après transcription
-                @unlink($tempAudioPath);
+                try {
+                    $transcription = $transcriptionService->transcribe($audioPath);
+                } finally {
+                    // Nettoyer le fichier temp même en cas d'échec
+                    @unlink($tempAudioPath);
+                }
 
                 if (empty($transcription)) {
                     throw new Exception("Transcription vide ou échec de Whisper API");
@@ -245,6 +249,13 @@ class ProcessAudioRecording implements ShouldQueue
                                 'besoins_finaux' => $data['besoins'],
                             ]);
                             break;
+                    }
+                    // Normaliser les besoins vers des slugs propres avant stockage
+                    if (isset($data['besoins']) && is_array($data['besoins'])) {
+                        $data['besoins'] = app(BesoinService::class)->normalizeSlugs($data['besoins']);
+                        Log::info("🔧 [BESOINS] Besoins normalisés en slugs", [
+                            'besoins_slugs' => $data['besoins'],
+                        ]);
                     }
                     unset($data['besoins_action']);
                 }

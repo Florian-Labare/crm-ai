@@ -21,6 +21,8 @@ class AnalyzeImportFileJob implements ShouldQueue
 
     public $backoff = [10, 30, 60];
 
+    public $queue = 'import';
+
     protected ImportSession $session;
 
     public function __construct(ImportSession $session)

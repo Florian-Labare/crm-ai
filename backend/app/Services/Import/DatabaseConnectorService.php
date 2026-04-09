@@ -84,6 +84,10 @@ class DatabaseConnectorService
      */
     public function getTableColumns(array $config, string $tableName): array
     {
+        if (!$this->isValidTableName($tableName)) {
+            throw new \InvalidArgumentException('Nom de table invalide');
+        }
+
         $connection = $this->createConnection($config);
         $driver = $config['driver'] ?? 'mysql';
 
@@ -152,29 +156,48 @@ class DatabaseConnectorService
     }
 
     /**
-     * Execute a custom SQL query (SELECT only)
+     * Execute a custom SQL query (SELECT only).
+     *
+     * Security notes:
+     * - Strips SQL comments before validation to prevent bypass via comment injection
+     * - Blocks multi-statement execution (semicolons outside string literals)
+     * - Keyword check runs on comment-stripped, uppercased query
      */
     public function executeQuery(array $config, string $query, int $limit = 1000): array
     {
-        // Security: Only allow SELECT statements
-        $normalizedQuery = strtoupper(trim($query));
+        // Strip SQL single-line (--) and multi-line (/* */) comments before validation
+        $stripped = preg_replace('/--[^\r\n]*/', '', $query);
+        $stripped = preg_replace('/\/\*.*?\*\//s', '', $stripped);
+        $normalizedQuery = strtoupper(trim($stripped));
+
         if (!str_starts_with($normalizedQuery, 'SELECT')) {
             throw new \InvalidArgumentException('Seules les requêtes SELECT sont autorisées');
         }
 
-        // Prevent dangerous operations
-        $dangerousKeywords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE', 'EXEC', 'EXECUTE'];
-        foreach ($dangerousKeywords as $keyword) {
+        // Block dangerous keywords and multi-statement execution
+        $blockedPatterns = [
+            'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER',
+            'TRUNCATE', 'EXEC', 'EXECUTE', 'CALL', 'LOAD', 'OUTFILE',
+            'INTO OUTFILE', 'INTO DUMPFILE',
+        ];
+        foreach ($blockedPatterns as $keyword) {
             if (str_contains($normalizedQuery, $keyword)) {
-                throw new \InvalidArgumentException("Opération non autorisée: {$keyword}");
+                throw new \InvalidArgumentException("Opération non autorisée détectée dans la requête");
             }
+        }
+
+        // Block multiple statements (semicolons outside quotes — simple heuristic)
+        if (preg_match('/;(?=(?:[^\'"]|\'[^\']*\'|"[^"]*")*$)/', rtrim($stripped, '; '))) {
+            throw new \InvalidArgumentException('Les requêtes multi-instructions ne sont pas autorisées');
         }
 
         $connection = $this->createConnection($config);
 
         // Add LIMIT if not present
         if (!str_contains($normalizedQuery, 'LIMIT')) {
-            $query = rtrim($query, ';') . " LIMIT {$limit}";
+            $query = rtrim($stripped, '; ') . " LIMIT {$limit}";
+        } else {
+            $query = $stripped;
         }
 
         $results = $connection->select($query);

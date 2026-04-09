@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -10,8 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Modifier l'ENUM pour ajouter pending_review
-        DB::statement("ALTER TABLE audio_records MODIFY COLUMN status ENUM('pending', 'processing', 'done', 'failed', 'pending_review') DEFAULT 'pending'");
+        $driver = Schema::getConnection()->getDriverName();
+
+        // SQLite n'a pas de type ENUM, il utilise TEXT/VARCHAR qui accepte toutes les valeurs
+        // Cette migration ne sert qu'à MySQL/MariaDB pour étendre l'ENUM
+        if ($driver !== 'sqlite') {
+            DB::statement("ALTER TABLE audio_records MODIFY COLUMN status ENUM('pending', 'processing', 'done', 'failed', 'pending_review') DEFAULT 'pending'");
+        }
     }
 
     /**
@@ -19,7 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Remettre l'ancien ENUM (attention: les enregistrements avec pending_review seront perdus)
-        DB::statement("ALTER TABLE audio_records MODIFY COLUMN status ENUM('pending', 'processing', 'done', 'failed') DEFAULT 'pending'");
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver !== 'sqlite') {
+            DB::statement("ALTER TABLE audio_records MODIFY COLUMN status ENUM('pending', 'processing', 'done', 'failed') DEFAULT 'pending'");
+        }
     }
 };

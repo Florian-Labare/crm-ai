@@ -89,24 +89,21 @@ services:
     depends_on:
       - db
 
-  # --- QUEUE WORKER (Traitement asynchrone) ---
-  queue-worker:
+  # --- QUEUE WORKER : finalize (concat + transcription + diarisation Pyannote) ---
+  queue-worker-finalize:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: laravel_queue_worker
+    container_name: laravel_queue_finalize
     restart: unless-stopped
 
-    # Même configuration que le backend
     volumes:
       - ./backend:/var/www/html
       - ./backend/.env:/var/www/html/.env
 
-    # Charger aussi ces variables comme ENV du container (pour pyannote, etc.)
     env_file:
       - ./backend/.env
 
-    # Variables d'environnement identiques au backend
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
@@ -124,8 +121,52 @@ services:
       CACHE_STORE: ${CACHE_STORE:-redis}
       TRANSCRIPTION_MODE: ${TRANSCRIPTION_MODE:-openai}
 
-    # Lancer le queue worker au démarrage (avec redis)
-    command: sh -c "sleep 5 && php artisan queue:work redis --verbose --tries=3 --timeout=300"
+    # FinalizeRecordingJob (concat+transcription) + DiarizeRecordingJob (pyannote)
+    # timeout=300 pour FinalizeJob, DiarizeJob peut prendre jusqu'à 600s
+    command: sh -c "sleep 5 && php artisan queue:work redis --queue=finalize --verbose --tries=2 --timeout=600"
+
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  # --- QUEUE WORKER : audio + default (analyse LLM Mistral, imports) ---
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: laravel_queue_worker
+    restart: unless-stopped
+
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/.env:/var/www/html/.env
+
+    env_file:
+      - ./backend/.env
+
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-crm_ai}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      CACHE_STORE: ${CACHE_STORE:-redis}
+      TRANSCRIPTION_MODE: ${TRANSCRIPTION_MODE:-openai}
+
+    # ProcessAudioRecording (LLM Mistral) + jobs d'import + jobs par défaut
+    command: sh -c "sleep 5 && php artisan queue:work redis --queue=audio,import,default --verbose --tries=3 --timeout=300"
 
     depends_on:
       backend:

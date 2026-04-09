@@ -29,7 +29,36 @@ interface VuexyClientInfoSectionProps {
     field: 'actifs_financiers_details' | 'actifs_immo_details' | 'actifs_autres_details' | 'passifs_details',
     index: number
   ) => void;
+  onToggleBesoin?: (slug: string) => void;
 }
+
+// Helper pour afficher les valeurs booléennes sous forme de badges
+// variant: 'default' (cyan), 'warning' (orange), 'danger' (rouge)
+const BooleanBadge: React.FC<{
+  value: boolean | null | undefined;
+  variant?: 'default' | 'warning' | 'danger';
+}> = ({ value, variant = 'default' }) => {
+  const colors = {
+    default: { yes: 'bg-[#00CFE8]/10 text-[#00CFE8]', no: 'bg-[#B9B9C3]/10 text-[#B9B9C3]' },
+    warning: { yes: 'bg-[#FF9F43]/10 text-[#FF9F43]', no: 'bg-[#B9B9C3]/10 text-[#B9B9C3]' },
+    danger: { yes: 'bg-[#EA5455]/10 text-[#EA5455]', no: 'bg-[#B9B9C3]/10 text-[#B9B9C3]' },
+  };
+  const colorSet = colors[variant];
+
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${value ? colorSet.yes : colorSet.no}`}>
+      {value ? 'Oui' : 'Non'}
+    </span>
+  );
+};
+
+const BESOINS_OPTIONS = [
+  { value: 'prevoyance', label: 'Prévoyance' },
+  { value: 'retraite',   label: 'Retraite' },
+  { value: 'epargne',    label: 'Épargne' },
+  { value: 'sante',      label: 'Santé' },
+  { value: 'emprunteur', label: 'Emprunteur' },
+];
 
 export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   client,
@@ -38,6 +67,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   onEditSection,
   onDeleteItem,
   onDeleteBaeDetail,
+  onToggleBesoin,
 }) => {
   // Calcul des revenus annuels depuis le tableau client.revenus (prioritaire)
   // Fallback sur les champs uniques pour compatibilité avec anciennes données
@@ -191,21 +221,58 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   };
 
   const besoinLabels = buildBesoinLabels();
+
+  // Slugs effectifs : client.besoins + inférés des sections BAE
+  const effectiveBesoins = (() => {
+    const slugs: string[] = Array.isArray(client.besoins) ? [...client.besoins] : [];
+    if (client.bae_prevoyance && !slugs.includes('prevoyance')) slugs.push('prevoyance');
+    if (client.bae_retraite   && !slugs.includes('retraite'))   slugs.push('retraite');
+    if (client.bae_epargne    && !slugs.includes('epargne'))    slugs.push('epargne');
+    if (client.sante_souhait  && !slugs.includes('sante'))      slugs.push('sante');
+    return slugs;
+  })();
+
   const renderBesoinBadges = () => {
+    // Mode édition inline : chips toggleables
+    if (onToggleBesoin) {
+      return (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {BESOINS_OPTIONS.map((opt) => {
+            const selected = effectiveBesoins.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onToggleBesoin(opt.value)}
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${
+                  selected
+                    ? 'bg-gradient-to-br from-[#9055FD] to-[#B085FF] text-white border-transparent shadow-sm'
+                    : 'bg-white text-[#6E6B7B] border-[#D8D6DE] hover:border-[#9055FD] hover:text-[#9055FD]'
+                }`}
+              >
+                {opt.label}
+                {selected && <span className="opacity-60 text-[9px] leading-none">✕</span>}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Mode lecture : badges statiques
     if (besoinLabels.length === 0) {
       return (
-        <span className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]">
+        <span className="inline-flex items-center rounded-full bg-[#F2F0FF] px-2.5 py-0.5 text-[11px] font-semibold text-[#9055FD]">
           0 besoins
         </span>
       );
     }
-
     return (
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {besoinLabels.map((label) => (
           <span
             key={label}
-            className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]"
+            className="inline-flex items-center rounded-full bg-gradient-to-br from-[#9055FD] to-[#B085FF] px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm"
           >
             {label}
           </span>
@@ -220,11 +287,15 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <VuexyStatCard
           label="Âge"
-          value={
-            client.date_naissance
-              ? `${new Date().getFullYear() - new Date(client.date_naissance).getFullYear()} ans`
-              : 'N/A'
-          }
+          value={(() => {
+            if (!client.date_naissance) return 'N/A';
+            const birth = new Date(client.date_naissance);
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            return `${age} ans`;
+          })()}
           icon={<Calendar size={20} />}
           color="blue"
           delay={0.1}
@@ -238,7 +309,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         />
         <VuexyStatCard
           label="Besoins"
-          value={client.besoins?.length || 0}
+          value={besoinLabels.length}
           footer={renderBesoinBadges()}
           icon={<TrendingUp size={20} />}
           color="purple"
@@ -339,17 +410,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
           )}
           <VuexyInfoRow
             label="Risques professionnels"
-            value={
-              client.risques_professionnels ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#EA5455]/10 text-[#EA5455] text-xs font-semibold">
-                  Oui
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#28C76F]/10 text-[#28C76F] text-xs font-semibold">
-                  Non
-                </span>
-              )
-            }
+            value={<BooleanBadge value={client.risques_professionnels} variant="danger" />}
           />
           {client.details_risques_professionnels && (
             <VuexyInfoRow
@@ -367,31 +428,11 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         >
           <VuexyInfoRow
             label="Fumeur"
-            value={
-              client.fumeur ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#FF9F43]/10 text-[#FF9F43] text-xs font-semibold">
-                  Oui
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#28C76F]/10 text-[#28C76F] text-xs font-semibold">
-                  Non
-                </span>
-              )
-            }
+            value={<BooleanBadge value={client.fumeur} variant="warning" />}
           />
           <VuexyInfoRow
             label="Activités sportives"
-            value={
-              client.activites_sportives ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#00CFE8]/10 text-[#00CFE8] text-xs font-semibold">
-                  Oui
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#B9B9C3]/10 text-[#B9B9C3] text-xs font-semibold">
-                  Non
-                </span>
-              )
-            }
+            value={<BooleanBadge value={client.activites_sportives} />}
           />
           {client.details_activites_sportives && (
             <VuexyInfoRow label="Détails des activités" value={client.details_activites_sportives} />
@@ -412,45 +453,15 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <VuexyInfoRow
               label="Chef d'entreprise"
-              value={
-                client.chef_entreprise ? (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#FF9F43]/10 text-[#FF9F43] text-xs font-semibold">
-                    Oui
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#B9B9C3]/10 text-[#B9B9C3] text-xs font-semibold">
-                    Non
-                  </span>
-                )
-              }
+              value={<BooleanBadge value={client.chef_entreprise} variant="warning" />}
             />
             <VuexyInfoRow
               label="Travailleur indépendant"
-              value={
-                client.travailleur_independant ? (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#FF9F43]/10 text-[#FF9F43] text-xs font-semibold">
-                    Oui
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#B9B9C3]/10 text-[#B9B9C3] text-xs font-semibold">
-                    Non
-                  </span>
-                )
-              }
+              value={<BooleanBadge value={client.travailleur_independant} variant="warning" />}
             />
             <VuexyInfoRow
               label="Mandataire social"
-              value={
-                client.mandataire_social ? (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#FF9F43]/10 text-[#FF9F43] text-xs font-semibold">
-                    Oui
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#B9B9C3]/10 text-[#B9B9C3] text-xs font-semibold">
-                    Non
-                  </span>
-                )
-              }
+              value={<BooleanBadge value={client.mandataire_social} variant="warning" />}
             />
             {client.statut && (
               <VuexyInfoRow label="Statut juridique" value={client.statut} />
@@ -815,7 +826,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
             />
             <VuexyInfoRow
               label="Couverture invalidité"
-              value={client.bae_prevoyance.souhaite_couverture_invalidite ? "Oui" : "Non"}
+              value={<BooleanBadge value={client.bae_prevoyance.souhaite_couverture_invalidite} />}
             />
             <VuexyInfoRow
               label="Revenu à garantir"
@@ -841,6 +852,34 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
               label="Rente conjoint"
               value={client.bae_prevoyance.rente_conjoint ? formatCurrency(client.bae_prevoyance.rente_conjoint) : undefined}
               empty={!client.bae_prevoyance.rente_conjoint}
+            />
+            <VuexyInfoRow
+              label="Durée indemnisation"
+              value={client.bae_prevoyance.duree_indemnisation_souhaitee}
+              empty={!client.bae_prevoyance.duree_indemnisation_souhaitee}
+            />
+            <VuexyInfoRow
+              label="Payeur"
+              value={client.bae_prevoyance.payeur}
+              empty={!client.bae_prevoyance.payeur}
+            />
+            <VuexyInfoRow
+              label="Couvrir charges pro"
+              value={<BooleanBadge value={client.bae_prevoyance.souhaite_couvrir_charges_professionnelles} />}
+            />
+            <VuexyInfoRow
+              label="Charges pro annuelles"
+              value={client.bae_prevoyance.montant_annuel_charges_professionnelles ? formatCurrency(client.bae_prevoyance.montant_annuel_charges_professionnelles) : undefined}
+              empty={!client.bae_prevoyance.montant_annuel_charges_professionnelles}
+            />
+            <VuexyInfoRow
+              label="Garantir totalité charges"
+              value={<BooleanBadge value={client.bae_prevoyance.garantir_totalite_charges_professionnelles} />}
+            />
+            <VuexyInfoRow
+              label="Montant charges à garantir"
+              value={client.bae_prevoyance.montant_charges_professionnelles_a_garantir ? formatCurrency(client.bae_prevoyance.montant_charges_professionnelles_a_garantir) : undefined}
+              empty={!client.bae_prevoyance.montant_charges_professionnelles_a_garantir}
             />
           </div>
         </VuexyInfoSection>

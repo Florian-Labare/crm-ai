@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, XCircle, FileWarning } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, FileWarning, Clock } from 'lucide-react';
 import api from '../api/apiClient';
 
 interface ComplianceData {
@@ -11,6 +11,8 @@ interface ComplianceData {
   missing_count: number;
   total_required: number;
   missing_documents: string[];
+  expired_count?: number;
+  expiring_soon_count?: number;
 }
 
 interface ComplianceBadgeProps {
@@ -83,10 +85,13 @@ export const ComplianceBadge: React.FC<ComplianceBadgeProps> = ({
   const config = colorConfig[data.color];
   const Icon = config.icon;
 
+  const hasExpirationAlerts = (data.expired_count ?? 0) > 0 || (data.expiring_soon_count ?? 0) > 0;
+  const showTooltipContent = data.missing_documents.length > 0 || hasExpirationAlerts;
+
   // Variant: badge (petit badge compact)
   if (variant === 'badge') {
     return (
-      <div className={`relative inline-block ${className}`}>
+      <div className={`relative inline-flex items-center gap-1 ${className}`}>
         <button
           onClick={() => showTooltip && setIsTooltipOpen(!isTooltipOpen)}
           onMouseEnter={() => showTooltip && setIsTooltipOpen(true)}
@@ -97,23 +102,66 @@ export const ComplianceBadge: React.FC<ComplianceBadgeProps> = ({
           {data.label}
         </button>
 
+        {/* Badge alerte expiration */}
+        {(data.expired_count ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#EA5455]/10 text-[#EA5455] font-semibold text-xs">
+            <XCircle size={12} />
+            {data.expired_count}
+          </span>
+        )}
+        {(data.expiring_soon_count ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FF9F43]/10 text-[#FF9F43] font-semibold text-xs">
+            <Clock size={12} />
+            {data.expiring_soon_count}
+          </span>
+        )}
+
         {/* Tooltip */}
-        {showTooltip && isTooltipOpen && data.missing_documents.length > 0 && (
-          <div className="absolute z-50 top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-[#EBE9F1] p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <FileWarning size={16} className="text-[#EA5455]" />
-              <span className="font-semibold text-[#5E5873] text-sm">
-                Documents manquants
-              </span>
-            </div>
-            <ul className="space-y-1">
-              {data.missing_documents.map((doc, idx) => (
-                <li key={idx} className="text-sm text-[#6E6B7B] flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#EA5455]" />
-                  {doc}
-                </li>
-              ))}
-            </ul>
+        {showTooltip && isTooltipOpen && showTooltipContent && (
+          <div className="absolute z-50 top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-xl border border-[#EBE9F1] p-3">
+            {/* Alertes d'expiration */}
+            {hasExpirationAlerts && (
+              <div className="mb-3">
+                {(data.expired_count ?? 0) > 0 && (
+                  <div className="flex items-center gap-2 mb-1 text-[#EA5455]">
+                    <XCircle size={14} />
+                    <span className="text-sm font-medium">
+                      {data.expired_count} document{(data.expired_count ?? 0) > 1 ? 's' : ''} expiré{(data.expired_count ?? 0) > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+                {(data.expiring_soon_count ?? 0) > 0 && (
+                  <div className="flex items-center gap-2 text-[#FF9F43]">
+                    <Clock size={14} />
+                    <span className="text-sm font-medium">
+                      {data.expiring_soon_count} document{(data.expiring_soon_count ?? 0) > 1 ? 's' : ''} expire{(data.expiring_soon_count ?? 0) > 1 ? 'nt' : ''} bientôt
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Documents manquants */}
+            {data.missing_documents.length > 0 && (
+              <>
+                {hasExpirationAlerts && <div className="border-t border-[#EBE9F1] my-2" />}
+                <div className="flex items-center gap-2 mb-2">
+                  <FileWarning size={16} className="text-[#EA5455]" />
+                  <span className="font-semibold text-[#5E5873] text-sm">
+                    Documents manquants
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {data.missing_documents.map((doc, idx) => (
+                    <li key={idx} className="text-sm text-[#6E6B7B] flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#EA5455]" />
+                      {doc}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
             <div className="mt-2 pt-2 border-t border-[#EBE9F1]">
               <span className="text-xs text-[#6E6B7B]">
                 {data.valid_count}/{data.total_required} documents validés

@@ -8,8 +8,13 @@ interface User {
   email: string;
   current_team_id?: number;
   current_team_name?: string;
+  current_team_logo_url?: string | null;
+  avatar_url?: string | null;
   team_role?: 'owner' | 'admin' | 'member' | 'viewer';
   is_admin?: boolean;
+  is_super_admin?: boolean;
+  has_team?: boolean;
+  linked_providers?: string[];
 }
 
 interface AuthContextType {
@@ -18,8 +23,12 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, password_confirmation: string) => Promise<void>;
   logout: () => Promise<void>;
+  loginWithProvider: (provider: 'google' | 'azure') => void;
+  fetchUser: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  hasTeam: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,10 +88,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const loginWithProvider = (provider: 'google' | 'azure') => {
+    const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api';
+    window.location.href = `${apiUrl}/auth/${provider}/redirect`;
+  };
+
   const isAdmin = user?.is_admin ?? false;
+  const isSuperAdmin = user?.is_super_admin ?? false;
+  const hasTeam = user?.has_team ?? false;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, loginWithProvider, fetchUser, loading, isAdmin, isSuperAdmin, hasTeam }}>
       {children}
     </AuthContext.Provider>
   );

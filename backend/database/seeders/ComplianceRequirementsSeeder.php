@@ -24,8 +24,8 @@ class ComplianceRequirementsSeeder extends Seeder
             ],
             [
                 'besoin' => 'global',
-                'document_type' => 'avis_imposition',
-                'document_label' => "Avis d'imposition",
+                'document_type' => 'avis_imposition_n1',
+                'document_label' => "Avis d'imposition N-1",
                 'category' => 'fiscal',
                 'is_mandatory' => true,
                 'priority' => 2,
@@ -43,7 +43,7 @@ class ComplianceRequirementsSeeder extends Seeder
             [
                 'besoin' => 'prevoyance',
                 'document_type' => 'lettre_mission_prevoyance',
-                'document_label' => 'Lettre de mission - Prévoyance',
+                'document_label' => "Rapport d'adéquation - Prévoyance",
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 10,
@@ -69,7 +69,7 @@ class ComplianceRequirementsSeeder extends Seeder
             [
                 'besoin' => 'retraite',
                 'document_type' => 'lettre_mission_retraite',
-                'document_label' => 'Lettre de mission - Retraite',
+                'document_label' => "Rapport d'adéquation - Retraite",
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 20,
@@ -95,7 +95,7 @@ class ComplianceRequirementsSeeder extends Seeder
             [
                 'besoin' => 'epargne',
                 'document_type' => 'lettre_mission_epargne',
-                'document_label' => 'Lettre de mission - Épargne',
+                'document_label' => "Rapport d'adéquation - Épargne",
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 30,
@@ -121,7 +121,7 @@ class ComplianceRequirementsSeeder extends Seeder
             [
                 'besoin' => 'sante',
                 'document_type' => 'lettre_mission_sante',
-                'document_label' => 'Lettre de mission - Santé',
+                'document_label' => "Rapport d'adéquation - Santé",
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 40,
@@ -147,7 +147,7 @@ class ComplianceRequirementsSeeder extends Seeder
             [
                 'besoin' => 'immobilier',
                 'document_type' => 'lettre_mission_immobilier',
-                'document_label' => 'Lettre de mission - Immobilier',
+                'document_label' => "Rapport d'adéquation - Immobilier",
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 50,
@@ -165,7 +165,7 @@ class ComplianceRequirementsSeeder extends Seeder
             [
                 'besoin' => 'fiscalite',
                 'document_type' => 'lettre_mission_fiscalite',
-                'document_label' => 'Lettre de mission - Fiscalité',
+                'document_label' => "Rapport d'adéquation - Fiscalité",
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 60,
@@ -177,6 +177,50 @@ class ComplianceRequirementsSeeder extends Seeder
                 'category' => 'regulatory',
                 'is_mandatory' => true,
                 'priority' => 61,
+            ],
+
+            // any_besoin — Mandat & Mission (requis pour tout client avec au moins un besoin)
+            [
+                'besoin' => 'any_besoin',
+                'document_type' => 'mandat_recherche',
+                'document_label' => 'Mandat de recherche',
+                'category' => 'regulatory',
+                'is_mandatory' => true,
+                'priority' => 1,
+            ],
+            [
+                'besoin' => 'any_besoin',
+                'document_type' => 'recueil_global',
+                'document_label' => 'Recueil Global PP',
+                'category' => 'regulatory',
+                'is_mandatory' => true,
+                'priority' => 2,
+            ],
+            [
+                'besoin' => 'any_besoin',
+                'document_type' => 'der_signe',
+                'document_label' => 'DER signé',
+                'category' => 'regulatory',
+                'is_mandatory' => true,
+                'priority' => 3,
+            ],
+
+            // Emprunteur
+            [
+                'besoin' => 'emprunteur',
+                'document_type' => 'lettre_mission_emprunteur',
+                'document_label' => "Rapport d'adéquation - Emprunteur",
+                'category' => 'regulatory',
+                'is_mandatory' => true,
+                'priority' => 1,
+            ],
+            [
+                'besoin' => 'emprunteur',
+                'document_type' => 'recueil_ade',
+                'document_label' => 'Recueil ADE',
+                'category' => 'regulatory',
+                'is_mandatory' => true,
+                'priority' => 2,
             ],
         ];
 

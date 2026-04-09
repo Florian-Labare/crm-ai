@@ -5,79 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientComplianceDocument;
 use App\Models\ComplianceRequirement;
+use App\Models\ComplianceDocumentRequirement;
+use App\Services\BesoinService;
+use App\Services\ComplianceStatusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class ClientComplianceController extends Controller
 {
+    public function __construct(
+        private readonly BesoinService $besoinService,
+        private readonly ComplianceStatusService $complianceStatusService,
+    ) {}
+
     /**
-     * Retourne un badge simplifié (feu tricolore) pour le statut compliance
-     * Rouge = Documents manquants, Orange = En attente de validation, Vert = Complet
+     * Retourne un badge simplifié (feu tricolore) pour le statut compliance.
      */
     public function badge(Client $client): JsonResponse
     {
-        // Documents globaux obligatoires (CNI, Avis imposition, RIB)
-        $globalRequirements = ComplianceRequirement::where('besoin', 'global')
-            ->where('is_mandatory', true)
-            ->pluck('document_type')
-            ->toArray();
-
-        // Documents fournis et validés
-        $validDocuments = $client->complianceDocuments()
-            ->where('status', 'validated')
-            ->whereIn('document_type', $globalRequirements)
-            ->pluck('document_type')
-            ->toArray();
-
-        // Documents en attente
-        $pendingDocuments = $client->complianceDocuments()
-            ->where('status', 'pending')
-            ->whereIn('document_type', $globalRequirements)
-            ->pluck('document_type')
-            ->toArray();
-
-        $totalRequired = count($globalRequirements);
-        $validCount = count(array_intersect($globalRequirements, $validDocuments));
-        $pendingCount = count(array_intersect($globalRequirements, $pendingDocuments));
-        $missingCount = $totalRequired - $validCount - $pendingCount;
-
-        // Déterminer la couleur du feu
-        $color = 'red'; // Par défaut rouge
-        $label = 'Incomplet';
-
-        if ($validCount === $totalRequired) {
-            $color = 'green';
-            $label = 'Complet';
-        } elseif ($pendingCount > 0 && $missingCount === 0) {
-            $color = 'orange';
-            $label = 'En attente';
-        } elseif ($validCount > 0 || $pendingCount > 0) {
-            $color = 'orange';
-            $label = 'Partiel';
-        }
-
-        // Liste des documents manquants
-        $allProvided = array_unique(array_merge($validDocuments, $pendingDocuments));
-        $missing = array_diff($globalRequirements, $allProvided);
-        $missingLabels = [];
-        foreach ($missing as $type) {
-            $missingLabels[] = ClientComplianceDocument::DOCUMENT_LABELS[$type] ?? $type;
-        }
+        $badge = $this->complianceStatusService->computeBadge($client);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'color' => $color,
-                'label' => $label,
-                'score' => $totalRequired > 0 ? round(($validCount / $totalRequired) * 100) : 0,
-                'valid_count' => $validCount,
-                'pending_count' => $pendingCount,
-                'missing_count' => $missingCount,
-                'total_required' => $totalRequired,
-                'missing_documents' => $missingLabels,
-            ],
+            'data'    => $badge,
         ]);
     }
 
@@ -86,16 +39,27 @@ class ClientComplianceController extends Controller
      */
     public function status(Client $client): JsonResponse
     {
-        // Récupérer les besoins du client
-        $besoins = $this->normalizeBesoins($client->besoins ?? []);
-
-        // Récupérer les documents requis pour ces besoins
-        $requirements = ComplianceRequirement::getRequirementsForBesoins($besoins);
-
         // Récupérer les documents fournis par le client
         $documents = $client->complianceDocuments()
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Récupérer les documents signés (taggés) avec leurs liaisons
+        $signedDocs = $documents
+            ->where('document_type', 'signed_document')
+            ->whereNotNull('tags')
+            ->load('linkedRequirements');
+
+        // Extraire les tags uniques de tous les documents signés
+        $tagsFromSignedDocs = $signedDocs
+            ->pluck('tags')
+            ->flatten()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // Les exigences sont pilotées par les besoins effectifs du client (déclarés + BAE)
+        $requirements = $this->complianceStatusService->getRequirements($client);
 
         // Construire le statut pour chaque exigence
         $checklistItems = [];
@@ -108,9 +72,22 @@ class ClientComplianceController extends Controller
                 ->where('document_type', $requirement->document_type)
                 ->first();
 
+            // Vérifier s'il y a un document signé lié et validé pour cette exigence
+            $linkedSignedDoc = null;
+            $linkedStatus = null;
+            foreach ($signedDocs as $signedDoc) {
+                $linkedReq = $signedDoc->linkedRequirements->firstWhere('id', $requirement->id);
+                if ($linkedReq) {
+                    $linkedSignedDoc = $signedDoc;
+                    $linkedStatus = $linkedReq->pivot->status;
+                    break;
+                }
+            }
+
             $status = 'missing';
             $isValid = false;
 
+            // Priorité : document direct > document signé lié
             if ($matchingDoc) {
                 if ($matchingDoc->status === 'validated' && !$matchingDoc->isExpired()) {
                     $status = 'valid';
@@ -122,6 +99,15 @@ class ClientComplianceController extends Controller
                 } elseif ($matchingDoc->isExpired()) {
                     $status = 'expired';
                 }
+            } elseif ($linkedSignedDoc) {
+                if ($linkedStatus === 'validated') {
+                    $status = 'valid';
+                    $isValid = true;
+                } elseif ($linkedStatus === 'pending') {
+                    $status = 'pending';
+                } elseif ($linkedStatus === 'rejected') {
+                    $status = 'rejected';
+                }
             }
 
             if ($requirement->is_mandatory) {
@@ -130,6 +116,33 @@ class ClientComplianceController extends Controller
                     $validCount++;
                 }
             }
+
+            // Calculer les infos d'expiration
+            $isExpiringSoon = $matchingDoc && $matchingDoc->isExpiringSoon(90);
+            $daysUntilExpiration = $matchingDoc ? $matchingDoc->days_until_expiration : null;
+
+            // Trouver les documents signés disponibles pour cette exigence (non encore liés)
+            $availableSignedDocs = $signedDocs
+                ->filter(function ($doc) use ($requirement) {
+                    // Le document doit avoir le tag correspondant au besoin
+                    $tags = $doc->tags ?? [];
+                    if (!in_array($requirement->besoin, $tags)) {
+                        return false;
+                    }
+                    // Le document ne doit pas déjà être lié à cette exigence
+                    return !$doc->linkedRequirements->contains('id', $requirement->id);
+                })
+                ->map(function ($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'file_name' => $doc->file_name,
+                        'custom_label' => $doc->custom_label,
+                        'display_label' => $doc->display_label,
+                        'tags' => $doc->tags,
+                        'uploaded_at' => $doc->created_at,
+                    ];
+                })
+                ->values();
 
             $checklistItems[] = [
                 'requirement_id' => $requirement->id,
@@ -141,6 +154,8 @@ class ClientComplianceController extends Controller
                 'is_mandatory' => $requirement->is_mandatory,
                 'status' => $status,
                 'is_valid' => $isValid,
+                'is_expiring_soon' => $isExpiringSoon,
+                'days_until_expiration' => $daysUntilExpiration,
                 'document' => $matchingDoc ? [
                     'id' => $matchingDoc->id,
                     'file_name' => $matchingDoc->file_name,
@@ -151,12 +166,24 @@ class ClientComplianceController extends Controller
                     'notes' => $matchingDoc->notes,
                     'rejection_reason' => $matchingDoc->rejection_reason,
                 ] : null,
+                'linked_signed_doc' => $linkedSignedDoc ? [
+                    'id' => $linkedSignedDoc->id,
+                    'file_name' => $linkedSignedDoc->file_name,
+                    'custom_label' => $linkedSignedDoc->custom_label,
+                    'display_label' => $linkedSignedDoc->display_label,
+                    'status' => $linkedStatus,
+                ] : null,
+                'available_signed_docs' => $availableSignedDocs,
             ];
         }
 
         // Calculer le score global
         $complianceScore = $totalMandatory > 0 ? round(($validCount / $totalMandatory) * 100) : 0;
         $isFullyCompliant = $validCount === $totalMandatory && $totalMandatory > 0;
+
+        // Calculer les statistiques globales d'expiration
+        $expiredCount = collect($checklistItems)->where('status', 'expired')->count();
+        $expiringSoonCount = collect($checklistItems)->where('is_expiring_soon', true)->count();
 
         // Grouper par catégorie pour l'affichage
         $groupedByCategory = collect($checklistItems)->groupBy('category')->map(function ($items, $category) {
@@ -173,17 +200,106 @@ class ClientComplianceController extends Controller
             ];
         })->values();
 
+        // Préparer la liste des documents signés pour la section dédiée
+        $signedDocuments = $signedDocs->map(function ($doc) {
+            return [
+                'id' => $doc->id,
+                'file_name' => $doc->file_name,
+                'custom_label' => $doc->custom_label,
+                'display_label' => $doc->display_label,
+                'tags' => $doc->tags,
+                'status' => $doc->status,
+                'uploaded_at' => $doc->created_at,
+                'expires_at' => $doc->expires_at,
+                'linked_requirements' => $doc->linkedRequirements->map(function ($req) {
+                    return [
+                        'id' => $req->id,
+                        'label' => $req->document_label,
+                        'besoin' => $req->besoin,
+                        'status' => $req->pivot->status,
+                    ];
+                }),
+            ];
+        })->values();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'client_id' => $client->id,
-                'besoins' => $besoins,
+                'tags_from_signed_docs' => $tagsFromSignedDocs,
                 'compliance_score' => $complianceScore,
                 'is_fully_compliant' => $isFullyCompliant,
                 'valid_count' => $validCount,
                 'total_mandatory' => $totalMandatory,
+                'expired_count' => $expiredCount,
+                'expiring_soon_count' => $expiringSoonCount,
                 'checklist' => $checklistItems,
                 'grouped_by_category' => $groupedByCategory,
+                'signed_documents' => $signedDocuments,
+                'available_tags' => ClientComplianceDocument::AVAILABLE_TAGS,
+            ],
+        ]);
+    }
+
+    /**
+     * Retourne les alertes d'expiration pour un client
+     */
+    public function alerts(Client $client): JsonResponse
+    {
+        $alerts = [];
+
+        // Documents expirés
+        $expiredDocs = $client->complianceDocuments()
+            ->expired()
+            ->where('status', 'validated')
+            ->get();
+
+        foreach ($expiredDocs as $doc) {
+            $alerts[] = [
+                'type' => 'expired',
+                'severity' => 'high',
+                'document_id' => $doc->id,
+                'document_type' => $doc->document_type,
+                'document_label' => $doc->document_label,
+                'expires_at' => $doc->expires_at,
+                'days_overdue' => abs($doc->days_until_expiration),
+                'message' => "Le document \"{$doc->document_label}\" est expiré depuis " . abs($doc->days_until_expiration) . " jours",
+            ];
+        }
+
+        // Documents expirant bientôt
+        $expiringSoonDocs = $client->complianceDocuments()
+            ->expiringSoon(90)
+            ->where('status', 'validated')
+            ->get();
+
+        foreach ($expiringSoonDocs as $doc) {
+            $alerts[] = [
+                'type' => 'expiring_soon',
+                'severity' => $doc->days_until_expiration <= 30 ? 'medium' : 'low',
+                'document_id' => $doc->id,
+                'document_type' => $doc->document_type,
+                'document_label' => $doc->document_label,
+                'expires_at' => $doc->expires_at,
+                'days_until_expiration' => $doc->days_until_expiration,
+                'message' => "Le document \"{$doc->document_label}\" expire dans {$doc->days_until_expiration} jours",
+            ];
+        }
+
+        // Trier par sévérité (high en premier)
+        usort($alerts, function ($a, $b) {
+            $severityOrder = ['high' => 0, 'medium' => 1, 'low' => 2];
+            return $severityOrder[$a['severity']] - $severityOrder[$b['severity']];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'client_id' => $client->id,
+                'total_alerts' => count($alerts),
+                'has_expired' => count($expiredDocs) > 0,
+                'has_expiring_soon' => count($expiringSoonDocs) > 0,
+                'alerts' => $alerts,
             ],
         ]);
     }
@@ -194,11 +310,11 @@ class ClientComplianceController extends Controller
     public function upload(Request $request, Client $client): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
-            'document_type' => 'required|string',
-            'expires_at' => 'nullable|date',
+            'file'          => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
+            'document_type' => ['required', 'string', Rule::in(array_keys(ClientComplianceDocument::DOCUMENT_LABELS))],
+            'expires_at'    => 'nullable|date',
             'document_date' => 'nullable|date',
-            'notes' => 'nullable|string|max:1000',
+            'notes'         => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -362,42 +478,199 @@ class ClientComplianceController extends Controller
     }
 
     /**
-     * Normalise les besoins du client pour le matching
+     * Upload un document signé avec tags
      */
-    private function normalizeBesoins(?array $besoins): array
+    public function uploadSigned(Request $request, Client $client): JsonResponse
     {
-        if (empty($besoins)) {
-            return [];
+        $request->validate([
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'tags' => 'required|array|min:1',
+            'tags.*' => ['string', Rule::in(array_keys(ClientComplianceDocument::AVAILABLE_TAGS))],
+            'custom_label' => 'nullable|string|max:255',
+            'expires_at' => 'nullable|date',
+        ]);
+
+        try {
+            $file = $request->file('file');
+
+            // Stocker le fichier sur S3
+            $path = $file->store("compliance/{$client->id}");
+
+            // Créer le document avec type "signed_document" et tags
+            $document = ClientComplianceDocument::create([
+                'client_id' => $client->id,
+                'uploaded_by' => auth()->id(),
+                'document_type' => 'signed_document',
+                'category' => 'signed',
+                'tags' => $request->tags,
+                'custom_label' => $request->custom_label,
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'status' => 'pending',
+                'expires_at' => $request->expires_at,
+            ]);
+
+            Log::info("📄 [COMPLIANCE] Document signé uploadé pour client #{$client->id}", [
+                'document_id' => $document->id,
+                'tags' => $request->tags,
+                'custom_label' => $request->custom_label,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document signé uploadé avec succès',
+                'data' => $document->load('linkedRequirements'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ [COMPLIANCE] Erreur upload document signé", ['message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload du document signé',
+            ], 500);
+        }
+    }
+
+    /**
+     * Lie un document signé à une ou plusieurs exigences
+     */
+    public function linkToRequirements(Client $client, ClientComplianceDocument $document, Request $request): JsonResponse
+    {
+        if ($document->client_id !== $client->id) {
+            return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
 
-        $normalized = [];
-        $mapping = [
-            'prévoyance' => 'prevoyance',
-            'prevoyance' => 'prevoyance',
-            'retraite' => 'retraite',
-            'épargne' => 'epargne',
-            'epargne' => 'epargne',
-            'santé' => 'sante',
-            'sante' => 'sante',
-            'immobilier' => 'immobilier',
-            'fiscalité' => 'fiscalite',
-            'fiscalite' => 'fiscalite',
-            'défiscalisation' => 'fiscalite',
-            'placement' => 'epargne',
-            'assurance vie' => 'epargne',
-            'per' => 'retraite',
-            'mutuelle' => 'sante',
-            'complémentaire santé' => 'sante',
-        ];
-
-        foreach ($besoins as $besoin) {
-            $key = mb_strtolower(trim($besoin));
-            if (isset($mapping[$key])) {
-                $normalized[] = $mapping[$key];
-            }
+        if ($document->document_type !== 'signed_document') {
+            return response()->json(['success' => false, 'message' => 'Seuls les documents signés peuvent être liés à des exigences'], 400);
         }
 
-        return array_unique($normalized);
+        $request->validate([
+            'requirement_ids' => 'required|array|min:1',
+            'requirement_ids.*' => 'exists:compliance_requirements,id',
+        ]);
+
+        try {
+            // Attache les requirements avec status "pending" (sans détacher les existants)
+            $syncData = collect($request->requirement_ids)->mapWithKeys(function ($id) {
+                return [$id => ['status' => 'pending']];
+            })->toArray();
+
+            $document->linkedRequirements()->syncWithoutDetaching($syncData);
+
+            Log::info("🔗 [COMPLIANCE] Document signé #{$document->id} lié à des exigences", [
+                'client_id' => $client->id,
+                'requirement_ids' => $request->requirement_ids,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document lié aux exigences avec succès',
+                'data' => $document->fresh()->load('linkedRequirements'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ [COMPLIANCE] Erreur liaison document", ['message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la liaison du document',
+            ], 500);
+        }
+    }
+
+    /**
+     * Retire la liaison d'un document signé avec une exigence
+     */
+    public function unlinkFromRequirement(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse
+    {
+        if ($document->client_id !== $client->id) {
+            return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
+        }
+
+        try {
+            $document->linkedRequirements()->detach($requirement->id);
+
+            Log::info("🔗 [COMPLIANCE] Liaison retirée document #{$document->id} - exigence #{$requirement->id}", [
+                'client_id' => $client->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Liaison retirée avec succès',
+                'data' => $document->fresh()->load('linkedRequirements'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ [COMPLIANCE] Erreur retrait liaison", ['message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du retrait de la liaison',
+            ], 500);
+        }
+    }
+
+    /**
+     * Valide une liaison document-exigence
+     */
+    public function validateLink(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse
+    {
+        if ($document->client_id !== $client->id) {
+            return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
+        }
+
+        try {
+            $document->linkedRequirements()->updateExistingPivot($requirement->id, [
+                'status' => 'validated',
+                'validated_at' => now(),
+                'validated_by' => auth()->id(),
+            ]);
+
+            Log::info("✅ [COMPLIANCE] Liaison validée document #{$document->id} - exigence #{$requirement->id}", [
+                'client_id' => $client->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Liaison validée avec succès',
+                'data' => $document->fresh()->load('linkedRequirements'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ [COMPLIANCE] Erreur validation liaison", ['message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la validation de la liaison',
+            ], 500);
+        }
+    }
+
+    /**
+     * Rejette une liaison document-exigence
+     */
+    public function rejectLink(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse
+    {
+        if ($document->client_id !== $client->id) {
+            return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
+        }
+
+        try {
+            $document->linkedRequirements()->updateExistingPivot($requirement->id, [
+                'status' => 'rejected',
+            ]);
+
+            Log::info("❌ [COMPLIANCE] Liaison rejetée document #{$document->id} - exigence #{$requirement->id}", [
+                'client_id' => $client->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Liaison rejetée',
+                'data' => $document->fresh()->load('linkedRequirements'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("❌ [COMPLIANCE] Erreur rejet liaison", ['message' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du rejet de la liaison',
+            ], 500);
+        }
     }
 
     /**

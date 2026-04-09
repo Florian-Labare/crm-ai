@@ -1,0 +1,68 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    image: rg.fr-par.scw.cloud/crm-courtier/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - app_temp:/var/www/html/storage/app/temp
+      - app_recordings:/var/www/html/storage/app/recordings
+      - app_logs:/var/www/html/storage/logs
+      - hf_cache:/var/www/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/audio"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - gotenberg
+
+  finalize-worker:
+    image: rg.fr-par.scw.cloud/crm-courtier/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env.production
+    stop_grace_period: 950s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    command: >
+      php artisan queue:work redis --queue=finalize
+        --verbose --tries=1 --timeout=900 --sleep=3
+        --max-jobs=100 --max-time=3600
+    volumes:
+      - app_temp:/var/www/html/storage/app/temp
+      - app_recordings:/var/www/html/storage/app/recordings
+      - app_logs:/var/www/html/storage/logs
+      - hf_cache:/var/www/.cache
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    command:
+      - "gotenberg"
+      - "--api-timeout=30s"
+      - "--api-port=3000"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  app_temp:
+  app_recordings:
+  app_logs:
+  hf_cache:
