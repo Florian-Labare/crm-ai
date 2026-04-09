@@ -25,7 +25,7 @@ class DerService
         Log::info("📄 Génération du DER pour le client #{$client->id}");
 
         // 1. Copier le template vers un fichier temporaire
-        $templatePath = storage_path('app/templates/Template DER.docx');
+        $templatePath = storage_path('app/templates/template-der.docx');
 
         if (!file_exists($templatePath)) {
             throw new \Exception("Template DER introuvable : {$templatePath}");
@@ -82,7 +82,43 @@ class DerService
         // Date du jour
         $templateProcessor->setValue('date_aujourd_hui', Carbon::now()->format('d/m/Y'));
 
+        // Logo du cabinet
+        $team = $chargeClientele->currentTeam();
+        if ($team && $team->logo_path) {
+            try {
+                $logoTempPath = $this->downloadLogoToTemp($team->logo_path);
+                $templateProcessor->setImageValue('logo_cabinet', [
+                    'path'   => $logoTempPath,
+                    'width'  => 150,
+                    'height' => 60,
+                    'ratio'  => true,
+                ]);
+                @unlink($logoTempPath);
+            } catch (\Throwable $e) {
+                Log::warning("⚠️ Impossible d'injecter le logo dans le DER : " . $e->getMessage());
+                $templateProcessor->setValue('logo_cabinet', '');
+            }
+        } else {
+            $templateProcessor->setValue('logo_cabinet', '');
+        }
+
         Log::info("🔄 Variables remplacées dans le template DER");
+    }
+
+    /**
+     * Télécharge le logo depuis S3 vers un fichier temporaire local
+     */
+    private function downloadLogoToTemp(string $s3Path): string
+    {
+        $content = Storage::disk('s3')->get($s3Path);
+        $tempPath = storage_path('app/temp/logo_' . uniqid() . '.png');
+
+        if (!file_exists(storage_path('app/temp'))) {
+            mkdir(storage_path('app/temp'), 0755, true);
+        }
+
+        file_put_contents($tempPath, $content);
+        return $tempPath;
     }
 
     /**

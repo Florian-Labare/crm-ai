@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Save, Loader2, User, MapPin, Briefcase, Heart, Building2, Users, Baby, Coins, Stethoscope, Shield, Clock } from "lucide-react";
+import { X, Save, Loader2, User, MapPin, Briefcase, Heart, Building2, Users, Baby, Coins, Stethoscope, Shield, Clock, FileText, ExternalLink } from "lucide-react";
 import api from "../api/apiClient";
 import { toast } from "react-toastify";
 
@@ -18,7 +18,8 @@ export type SectionType =
   | "epargne"
   | "sante"
   | "prevoyance"
-  | "retraite";
+  | "retraite"
+  | "contrat";
 
 interface SectionEditModalProps {
   sectionType: SectionType;
@@ -26,7 +27,8 @@ interface SectionEditModalProps {
   clientId: number;
   onClose: () => void;
   onSaved: () => void;
-  isNew?: boolean; // Pour les items ajoutés (enfant, revenu, etc.)
+  onRefresh?: () => void; // Refresh sans fermer la modal
+  isNew?: boolean;
 }
 
 const sectionConfig: Record<SectionType, { title: string; icon: React.ReactNode }> = {
@@ -45,7 +47,14 @@ const sectionConfig: Record<SectionType, { title: string; icon: React.ReactNode 
   sante: { title: "Santé", icon: <Stethoscope size={20} /> },
   prevoyance: { title: "Prévoyance", icon: <Shield size={20} /> },
   retraite: { title: "Retraite", icon: <Clock size={20} /> },
+  contrat: { title: "Contrat", icon: <FileText size={20} /> },
 };
+
+interface Assureur {
+  id: number;
+  nom: string;
+  lien_espace_client: string | null;
+}
 
 export const SectionEditModal: React.FC<SectionEditModalProps> = ({
   sectionType,
@@ -53,14 +62,49 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
   clientId,
   onClose,
   onSaved,
+  onRefresh,
   isNew = false,
 }) => {
   const [formData, setFormData] = useState<any>(initialData || {});
   const [saving, setSaving] = useState(false);
+  const [assureurs, setAssureurs] = useState<Assureur[]>([]);
+  const [lienEspaceClient, setLienEspaceClient] = useState('');
+  const [savingLien, setSavingLien] = useState(false);
 
   useEffect(() => {
     setFormData(initialData || {});
   }, [initialData]);
+
+  useEffect(() => {
+    if (sectionType === "contrat") {
+      api.get("/assureurs").then((res) => {
+        setAssureurs(res.data?.data || []);
+      }).catch(() => {});
+    }
+  }, [sectionType]);
+
+  // Sync lienEspaceClient when assureur changes
+  useEffect(() => {
+    if (sectionType === "contrat") {
+      const selected = assureurs.find((a) => a.id === Number(formData.assureur_id));
+      setLienEspaceClient(selected?.lien_espace_client || '');
+    }
+  }, [formData.assureur_id, assureurs, sectionType]);
+
+  const handleSaveLien = async (assureurId: number) => {
+    setSavingLien(true);
+    try {
+      const res = await api.patch(`/assureurs/${assureurId}/lien`, { lien_espace_client: lienEspaceClient || null });
+      // Update local assureurs list so the link is immediately reflected
+      setAssureurs((prev) => prev.map((a) => a.id === assureurId ? { ...a, lien_espace_client: res.data.data.lien_espace_client } : a));
+      onRefresh?.();
+      toast.success('Lien mis à jour');
+    } catch {
+      toast.error('Erreur lors de la mise à jour du lien');
+    } finally {
+      setSavingLien(false);
+    }
+  };
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [field]: value }));
@@ -152,12 +196,28 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
           endpoint = `/clients/${clientId}/bae-retraite`;
           method = initialData?.id ? "put" : "post";
           break;
+        case "contrat":
+          if (isNew || !initialData?.id) {
+            endpoint = `/clients/${clientId}/contrats`;
+            method = "post";
+          } else {
+            endpoint = `/clients/${clientId}/contrats/${initialData.id}`;
+            method = "put";
+          }
+          break;
       }
 
       if (method === "post") {
         await api.post(endpoint, payload);
       } else {
         await api.put(endpoint, payload);
+      }
+
+      // Pour les contrats : sauvegarder aussi le lien espace client de l'assureur
+      if (sectionType === "contrat" && formData.assureur_id) {
+        await api.patch(`/assureurs/${formData.assureur_id}/lien`, {
+          lien_espace_client: lienEspaceClient || null,
+        });
       }
 
       toast.success("Modifications enregistrées");
@@ -1201,6 +1261,146 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
             </FormField>
           </>
         );
+
+      case "contrat": {
+        const contratType = formData.type as string;
+        const selectedAssureur = assureurs.find((a) => a.id === Number(formData.assureur_id));
+        const showMensualite = ['sante', 'prevoyance'].includes(contratType);
+        const showEnCours = ['per', 'assurance_vie'].includes(contratType);
+        const showFondEuro = ['per', 'assurance_vie'].includes(contratType);
+        const showUc = ['per', 'assurance_vie'].includes(contratType);
+        const showVersement = ['per', 'assurance_vie', 'vie_entiere'].includes(contratType);
+
+        const typeLabels: Record<string, string> = {
+          sante: 'Santé',
+          prevoyance: 'Prévoyance',
+          per: 'PER',
+          assurance_vie: 'Assurance Vie',
+          emprunteur: 'Emprunteur',
+          vie_entiere: 'Vie Entière',
+        };
+
+        return (
+          <>
+            <FormField label="Type de contrat" fullWidth>
+              <div className="px-3 py-2.5 bg-[#F3F2F7] rounded-lg text-sm font-semibold text-[#5E5873]">
+                {typeLabels[contratType] || contratType}
+              </div>
+            </FormField>
+
+            <FormField label="Assureur" fullWidth>
+              <select
+                value={formData.assureur_id || ""}
+                onChange={(e) => handleChange("assureur_id", e.target.value ? Number(e.target.value) : null)}
+                className="form-input"
+              >
+                <option value="">Aucun assureur</option>
+                {assureurs.map((a) => (
+                  <option key={a.id} value={a.id}>{a.nom}</option>
+                ))}
+              </select>
+            </FormField>
+
+            {selectedAssureur && (
+              <FormField label="Lien espace client" fullWidth>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={lienEspaceClient}
+                    onChange={(e) => setLienEspaceClient(e.target.value)}
+                    placeholder="https://extranet.swisslife.fr/..."
+                    className="form-input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveLien(selectedAssureur.id)}
+                    disabled={savingLien}
+                    className="px-3 py-2 rounded-lg bg-[#7367F0] text-white text-sm font-medium hover:bg-[#6558E8] disabled:opacity-50 transition-colors flex-shrink-0"
+                  >
+                    {savingLien ? '...' : 'Enregistrer'}
+                  </button>
+                </div>
+                {lienEspaceClient && (
+                  <a
+                    href={lienEspaceClient}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#7367F0] hover:underline"
+                  >
+                    <ExternalLink size={12} />
+                    Ouvrir l'espace assureur
+                  </a>
+                )}
+              </FormField>
+            )}
+
+            {showMensualite && (
+              <FormField label="Mensualité (€)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.mensualite ?? ""}
+                  onChange={(e) => handleChange("mensualite", e.target.value)}
+                  className="form-input"
+                />
+              </FormField>
+            )}
+
+            {showEnCours && (
+              <FormField label="En-cours (€)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.en_cours ?? ""}
+                  onChange={(e) => handleChange("en_cours", e.target.value)}
+                  className="form-input"
+                />
+              </FormField>
+            )}
+
+            {showFondEuro && (
+              <FormField label="Fonds euro (€)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.fond_euro ?? ""}
+                  onChange={(e) => handleChange("fond_euro", e.target.value)}
+                  className="form-input"
+                />
+              </FormField>
+            )}
+
+            {showUc && (
+              <FormField label="Unités de compte (€)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.uc ?? ""}
+                  onChange={(e) => handleChange("uc", e.target.value)}
+                  className="form-input"
+                />
+              </FormField>
+            )}
+
+            {showVersement && (
+              <FormField label="Versement programmé (€)">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.versement_programme ?? ""}
+                  onChange={(e) => handleChange("versement_programme", e.target.value)}
+                  className="form-input"
+                />
+              </FormField>
+            )}
+          </>
+        );
+      }
 
       default:
         return null;

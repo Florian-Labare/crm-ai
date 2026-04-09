@@ -13,6 +13,7 @@ import {
   FileText,
   CreditCard,
   Receipt,
+  Landmark,
   Award,
   RefreshCw,
   X,
@@ -160,6 +161,18 @@ const categoryIcons: Record<string, typeof Shield> = {
   identity: CreditCard,
   fiscal: Receipt,
   regulatory: FileText,
+  banking: Landmark,
+};
+
+const TEMPLATE_HINTS: Record<string, { label: string; templateId?: number; external?: boolean }> = {
+  mandat_recherche:          { label: 'Template Mandat', templateId: 2 },
+  recueil_global:            { label: 'Recueil Global PP', templateId: 1 },
+  lettre_mission_prevoyance: { label: 'RC Prévoyance', templateId: 6 },
+  lettre_mission_retraite:   { label: 'RC Plan Épargne Retraite (PER)', templateId: 5 },
+  lettre_mission_epargne:    { label: 'RC Assurance Vie / Capitalisation', templateId: 3 },
+  lettre_mission_sante:      { label: 'RC Santé / Complémentaire Santé', templateId: 7 },
+  lettre_mission_emprunteur: { label: 'RC Prévoyance Emprunteur', templateId: 4 },
+  recueil_ade:               { label: 'Recueil ADE', templateId: 8 },
 };
 
 export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
@@ -169,6 +182,7 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
     identity: true,
     fiscal: true,
     regulatory: true,
+    banking: true,
   });
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -308,11 +322,11 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      toast.success('Document signe importe avec succes');
+      toast.success('Document signé importé avec succès');
       fetchComplianceStatus();
     } catch (err) {
-      console.error('Erreur upload document signe:', err);
-      toast.error("Erreur lors de l'import du document signe");
+      console.error('Erreur upload document signé:', err);
+      toast.error("Erreur lors de l'import du document signé");
     } finally {
       setIsUploadingSigned(false);
     }
@@ -525,9 +539,9 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
               <FileSignature size={20} />
             </div>
             <div>
-              <h3 className="font-semibold text-[#5E5873]">Documents signes importes</h3>
+              <h3 className="font-semibold text-[#5E5873]">Documents signés importés</h3>
               <p className="text-xs text-[#6E6B7B]">
-                {signed_documents?.length || 0} document{(signed_documents?.length || 0) > 1 ? 's' : ''} importe{(signed_documents?.length || 0) > 1 ? 's' : ''}
+                {signed_documents?.length || 0} document{(signed_documents?.length || 0) > 1 ? 's' : ''} importé{(signed_documents?.length || 0) > 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -536,7 +550,7 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00CFE8] text-white hover:bg-[#00B8CF] transition-all text-sm font-medium"
           >
             <Upload size={16} />
-            Importer un document signe
+            Importer un document signé
           </button>
         </div>
 
@@ -553,7 +567,7 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-[#5E5873] truncate">{doc.display_label}</p>
                       <p className="text-xs text-[#6E6B7B] mt-0.5">
-                        Importe le {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
+                        Importé le {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
                       </p>
                       {/* Tags */}
                       <div className="flex flex-wrap gap-1.5 mt-2">
@@ -635,8 +649,8 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
         ) : (
           <div className="p-8 text-center text-[#6E6B7B]">
             <FileSignature size={40} className="mx-auto mb-3 text-[#B9B9C3]" />
-            <p>Aucun document signe importe</p>
-            <p className="text-xs mt-1">Importez des documents signes et taggez-les par besoin</p>
+            <p>Aucun document signé importé</p>
+            <p className="text-xs mt-1">Importez des documents signés et taguez-les par besoin</p>
           </div>
         )}
       </div>
@@ -763,7 +777,7 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
                                 className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#00CFE8]/10 text-[#00CFE8] hover:bg-[#00CFE8] hover:text-white transition-all"
                               >
                                 <Link2 size={12} />
-                                {item.available_signed_docs.length} document{item.available_signed_docs.length > 1 ? 's' : ''} signe{item.available_signed_docs.length > 1 ? 's' : ''} disponible{item.available_signed_docs.length > 1 ? 's' : ''}
+                                {item.available_signed_docs.length} document{item.available_signed_docs.length > 1 ? 's' : ''} signé{item.available_signed_docs.length > 1 ? 's' : ''} disponible{item.available_signed_docs.length > 1 ? 's' : ''}
                               </button>
                             )}
                           </div>
@@ -869,6 +883,19 @@ export const VuexyReglementaireSection: React.FC<Props> = ({ clientId }) => {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Hint template */}
+              {uploadModalItem && TEMPLATE_HINTS[uploadModalItem.document_type] && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#7367F0]/5 border border-[#7367F0]/20 text-xs text-[#5E5873]">
+                  <FileText size={13} className="text-[#7367F0] flex-shrink-0" />
+                  <span>
+                    {TEMPLATE_HINTS[uploadModalItem.document_type].external
+                      ? <>Document <strong>{TEMPLATE_HINTS[uploadModalItem.document_type].label}</strong></>
+                      : <>Généré depuis l'onglet Documents → <strong className="text-[#7367F0]">{TEMPLATE_HINTS[uploadModalItem.document_type].label}</strong></>
+                    }
+                  </span>
+                </div>
+              )}
+
               {/* Zone de drop avec drag & drop */}
               <FileDropZone
                 onFileSelect={(file) => setSelectedFile(file)}

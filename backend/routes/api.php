@@ -19,9 +19,25 @@ use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\MeetingSummaryController;
 use App\Http\Controllers\ClientComplianceController;
 use App\Http\Controllers\ComplianceDashboardController;
+use App\Http\Controllers\AssureurController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProductionController;
+
+// OAuth Social Login (sans auth)
+Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+    ->where('provider', 'google|azure');
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->where('provider', 'google|azure');
+
+// Invitations (token public pour voir/décliner)
+Route::get('/invitations/{token}', [\App\Http\Controllers\TeamController::class, 'showInvitation']);
+Route::delete('/invitations/{token}', [\App\Http\Controllers\TeamController::class, 'declineInvitation']);
 
 // Routes publiques d'authentification
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 
 // Health check endpoints (publics pour monitoring externe) - avec rate limiting
@@ -35,12 +51,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::put('/user/profile', [ProfileController::class, 'update']);
+    Route::put('/user/password', [ProfileController::class, 'updatePassword']);
+    Route::post('/user/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::delete('/user/avatar', [ProfileController::class, 'deleteAvatar']);
+    Route::get('/user/oauth/{provider}/initiate', [SocialAuthController::class, 'initiateLink'])
+        ->where('provider', 'google|azure');
+
+    // Dashboard
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
     // DER - Document d'Entrée en Relation
     Route::get('/der/create', [DerController::class, 'create']);
     Route::post('/der', [DerController::class, 'store']);
 
     // CRUD Client
+    Route::get('/clients/check-duplicate', [ClientController::class, 'checkDuplicate']);
     Route::get('/clients', [ClientController::class, 'index']);
     Route::get('/clients/{id}', [ClientController::class, 'show']);
     Route::post('/clients', [ClientController::class, 'store']);
@@ -82,6 +108,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/clients/{client}/charges', [ClientController::class, 'storeCharge']);
     Route::put('/clients/{client}/charges/{charge}', [ClientController::class, 'updateCharge']);
     Route::delete('/clients/{client}/charges/{charge}', [ClientController::class, 'deleteCharge']);
+
+    // Contrats
+    Route::post('/clients/{client}/contrats', [ClientController::class, 'storeContrat']);
+    Route::put('/clients/{client}/contrats/{contrat}', [ClientController::class, 'updateContrat']);
+    Route::delete('/clients/{client}/contrats/{contrat}', [ClientController::class, 'deleteContrat']);
+
+    // Assureurs
+    Route::get('/assureurs', [AssureurController::class, 'index']);
+    Route::patch('/assureurs/{assureur}/lien', [AssureurController::class, 'updateLien']);
 
     // Conjoint
     Route::post('/clients/{client}/conjoint', [ClientController::class, 'storeConjoint']);
@@ -154,6 +189,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/documents/{documentId}/download', [DocumentController::class, 'downloadDocument']);
     Route::post('/documents/{documentId}/send-email', [DocumentController::class, 'sendDocumentByEmail']);
     Route::delete('/documents/{documentId}', [DocumentController::class, 'deleteDocument']);
+    Route::post('/clients/{clientId}/documents/{documentId}/send-to-compliance', [DocumentController::class, 'sendToCompliance']);
 
     // Compliance / Documents réglementaires signés
     Route::get('/clients/{client}/compliance/status', [ClientComplianceController::class, 'status']);
@@ -213,6 +249,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/questionnaire-risque/live', [QuestionnaireRisqueController::class, 'live']);
     Route::get('/questionnaire-risque/client/{clientId}', [QuestionnaireRisqueController::class, 'show']);
 
+    // Invitation accept (auth required)
+    Route::post('/invitations/{token}/accept', [\App\Http\Controllers\TeamController::class, 'acceptInvitation']);
+
     // Team Management
     Route::prefix('teams')->group(function () {
         Route::get('/', [\App\Http\Controllers\TeamController::class, 'index']);
@@ -221,11 +260,40 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/{team}', [\App\Http\Controllers\TeamController::class, 'update']);
         Route::delete('/{team}', [\App\Http\Controllers\TeamController::class, 'destroy']);
 
+        // Logo upload
+        Route::post('/{teamId}/logo', [\App\Http\Controllers\TeamController::class, 'uploadLogo']);
+
         // Team members management
         Route::get('/{team}/members', [\App\Http\Controllers\TeamController::class, 'members']);
         Route::post('/{team}/members', [\App\Http\Controllers\TeamController::class, 'inviteMember']);
         Route::put('/{team}/members/{user}', [\App\Http\Controllers\TeamController::class, 'updateMemberRole']);
         Route::delete('/{team}/members/{user}', [\App\Http\Controllers\TeamController::class, 'removeMember']);
+
+        // Team invitations
+        Route::get('/{team}/invitations', [\App\Http\Controllers\TeamController::class, 'pendingInvitations']);
+        Route::delete('/{team}/invitations/{invitation}', [\App\Http\Controllers\TeamController::class, 'cancelInvitation']);
+    });
+
+    // ============================================
+    // 💰 PRODUCTION - Commissions par MIA
+    // ============================================
+    Route::prefix('productions')->group(function () {
+        Route::get('/stats',              [ProductionController::class, 'stats']);
+        Route::post('/import/preview',    [ProductionController::class, 'importPreview']);
+        Route::post('/import/execute',    [ProductionController::class, 'importExecute']);
+        Route::get('/',                   [ProductionController::class, 'index']);
+        Route::post('/',                  [ProductionController::class, 'store']);
+        Route::put('/{production}',       [ProductionController::class, 'update']);
+        Route::delete('/{production}',    [ProductionController::class, 'destroy']);
+    });
+
+    // Super Admin
+    Route::prefix('admin')->group(function () {
+        Route::get('/users', [SuperAdminController::class, 'index']);
+        Route::put('/users/{user}/super-admin', [SuperAdminController::class, 'toggleSuperAdmin']);
+        Route::get('/teams', [SuperAdminController::class, 'allTeams']);
+        Route::post('/teams', [SuperAdminController::class, 'createTeam']);
+        Route::delete('/teams/{team}', [SuperAdminController::class, 'deleteTeam']);
     });
 
     // Debug routes (dev only)

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         DeduplicateClients::class,
     ])
     ->withExceptions(function (Exceptions $exceptions) {
+        // API-only app : retourner 401 JSON au lieu de rediriger vers route('login')
+        $exceptions->render(function (AuthenticationException $e, \Illuminate\Http\Request $request) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        });
+
         $exceptions->respond(function (\Symfony\Component\HttpFoundation\Response $response, \Throwable $exception, \Illuminate\Http\Request $request) {
             $allowedOrigins = config('cors.allowed_origins', ['http://localhost:5173']);
             $origin = $request->headers->get('Origin');

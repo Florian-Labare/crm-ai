@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePage } from '../contexts/PageContext';
 import {
   Shield,
   Users,
@@ -45,6 +46,7 @@ type FilterType = 'all' | 'fully_compliant' | 'partially_compliant' | 'non_compl
 
 export const ComplianceDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { setPage } = usePage();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -63,6 +65,13 @@ export const ComplianceDashboard: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    setPage('Dashboard conformité', [], [
+      { label: 'Conformité' },
+      { label: 'Dashboard' },
+    ]);
+  }, [setPage]);
 
   useEffect(() => {
     fetchDashboard();
@@ -137,8 +146,8 @@ export const ComplianceDashboard: React.FC = () => {
   const filteredAlerts = getFilteredAlerts();
 
   return (
-    <div className="min-h-screen bg-[#F8F8F8]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
+      <div className="w-full max-w-7xl mx-auto px-4 lg:px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">

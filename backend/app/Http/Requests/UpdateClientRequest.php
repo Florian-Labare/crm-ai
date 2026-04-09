@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Update Client Request
@@ -52,7 +53,13 @@ class UpdateClientRequest extends FormRequest
             'ville' => ['nullable', 'string', 'max:255'],
             'residence_fiscale' => ['nullable', 'string', 'max:255'],
             'telephone' => ['nullable', 'string', 'max:20'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => [
+                'nullable', 'email', 'max:255',
+                Rule::unique('clients', 'email')
+                    ->where('team_id', auth()->user()?->currentTeam()?->id)
+                    ->whereNotNull('email')
+                    ->ignore($this->route('id')),
+            ],
 
             // Mode de vie
             'fumeur' => ['sometimes', 'boolean'],

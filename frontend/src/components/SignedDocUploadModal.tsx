@@ -73,8 +73,8 @@ export const SignedDocUploadModal: React.FC<SignedDocUploadModalProps> = ({
               <Upload size={20} />
             </div>
             <div>
-              <h3 className="font-semibold text-[#5E5873]">Importer un document signe</h3>
-              <p className="text-sm text-[#6E6B7B]">Document taggue par besoin</p>
+              <h3 className="font-semibold text-[#5E5873]">Importer un document signé</h3>
+              <p className="text-sm text-[#6E6B7B]">Document tagué par besoin</p>
             </div>
           </div>
           <button
@@ -92,7 +92,7 @@ export const SignedDocUploadModal: React.FC<SignedDocUploadModalProps> = ({
             onFileSelect={(file) => setSelectedFile(file)}
             accept={['pdf', 'jpg', 'jpeg', 'png']}
             maxSize={10485760}
-            label="Glissez un document signe ici ou cliquez pour selectionner"
+            label="Glissez un document signé ici ou cliquez pour sélectionner"
             selectedFile={selectedFile}
             onClear={() => setSelectedFile(null)}
           />
@@ -106,7 +106,7 @@ export const SignedDocUploadModal: React.FC<SignedDocUploadModalProps> = ({
               type="text"
               value={customLabel}
               onChange={(e) => setCustomLabel(e.target.value)}
-              placeholder="Ex: Lettre de mission sante signee"
+              placeholder="Ex: Lettre de mission santé signée"
               className="w-full px-4 py-2.5 border border-[#EBE9F1] rounded-lg focus:ring-2 focus:ring-[#7367F0]/20 focus:border-[#7367F0] outline-none transition-all text-[#5E5873]"
             />
           </div>
@@ -115,7 +115,7 @@ export const SignedDocUploadModal: React.FC<SignedDocUploadModalProps> = ({
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-[#5E5873] mb-2">
               <Tag size={16} />
-              Besoins concernes *
+              Besoins concernés *
             </label>
             <div className="flex flex-wrap gap-2">
               {Object.entries(availableTags).map(([key, label]) => (
@@ -135,7 +135,7 @@ export const SignedDocUploadModal: React.FC<SignedDocUploadModalProps> = ({
             </div>
             {selectedTags.length === 0 && (
               <p className="text-xs text-[#EA5455] mt-2">
-                Selectionnez au moins un besoin
+                Sélectionnez au moins un besoin
               </p>
             )}
           </div>

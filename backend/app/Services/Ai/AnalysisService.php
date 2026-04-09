@@ -61,12 +61,59 @@ class AnalysisService
      * @param string $transcription Transcription vocale
      * @return array Données extraites et normalisées
      */
+    /**
+     * Patterns de hallucinations Whisper connus : l'audio était silencieux ou corrompu.
+     * Whisper génère ces textes quand il n'a rien à transcrire.
+     */
+    private const WHISPER_HALLUCINATION_PATTERNS = [
+        'Sous-titres réalisés para la communauté d\'Amara.org',
+        'Subtitles by the Amara.org community',
+        'Amara.org',
+        'Merci d\'avoir regardé cette vidéo',
+        'Sous-titres réalisés par la communauté',
+    ];
+
+    /**
+     * Seuil minimal de caractères pour une transcription exploitable.
+     * En dessous, rien de significatif ne peut être extrait.
+     */
+    private const MIN_TRANSCRIPTION_LENGTH = 80;
+
+    /**
+     * Vérifie si la transcription est du garbage (hallucination Whisper, trop courte, etc.)
+     */
+    private function isGarbageTranscription(string $transcription): bool
+    {
+        $trimmed = trim($transcription);
+
+        if (strlen($trimmed) < self::MIN_TRANSCRIPTION_LENGTH) {
+            return true;
+        }
+
+        foreach (self::WHISPER_HALLUCINATION_PATTERNS as $pattern) {
+            if (stripos($trimmed, $pattern) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function extractClientData(string $transcription): array
     {
         try {
             Log::info('🚀 [AnalysisService] Début extraction modulaire', [
                 'transcription_length' => strlen($transcription),
             ]);
+
+            // 🛑 GARDE-FOU : Transcription trop courte ou hallucination Whisper connue
+            if ($this->isGarbageTranscription($transcription)) {
+                Log::warning('⚠️ [AnalysisService] Transcription invalide ou trop courte — extraction annulée', [
+                    'transcription' => $transcription,
+                    'length' => strlen($transcription),
+                ]);
+                return [];
+            }
 
             // 1️⃣ ROUTING - Détecter les sections concernées
             $sections = $this->router->detectSections($transcription);

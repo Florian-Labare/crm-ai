@@ -68,6 +68,11 @@ class Client extends Model
         'is_archived' => 'boolean',
     ];
 
+    public function setEmailAttribute(?string $value): void
+    {
+        $this->attributes['email'] = $value ? strtolower(trim($value)) : null;
+    }
+
     /**
      * The "booted" method of the model.
      */
@@ -213,5 +218,10 @@ class Client extends Model
     public function meetingSummaries(): HasMany
     {
         return $this->hasMany(MeetingSummary::class);
+    }
+
+    public function contrats(): HasMany
+    {
+        return $this->hasMany(ClientContrat::class);
     }
 }

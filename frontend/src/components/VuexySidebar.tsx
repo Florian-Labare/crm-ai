@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   LayoutGrid,
@@ -8,21 +8,15 @@ import {
   Calendar,
   ChevronDown,
   Upload,
-  FileText,
-  FileStack,
-  FolderOpen,
-  ClipboardList,
   ShieldCheck,
   Sliders,
-  Landmark,
-  Building2,
-  Coins,
-  Database,
-  History,
-  Mic,
-  ListChecks,
   Menu,
   ChevronLeft,
+  LogOut,
+  User,
+  ChevronUp,
+  Shield,
+  TrendingUp,
 } from "lucide-react";
 
 type MenuItem = {
@@ -31,26 +25,67 @@ type MenuItem = {
   icon?: React.ReactNode;
   children?: MenuItem[];
   adminOnly?: boolean;
+  hideForRoles?: string[];
   isComingSoon?: boolean;
 };
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar_collapsed";
+const AVATAR_COLOR_KEY = "profile_avatar_color";
+
+const AVATAR_GRADIENTS: Record<string, string> = {
+  purple: "from-[#7367F0] to-[#9055FD]",
+  blue:   "from-[#00CFE8] to-[#1E9BCE]",
+  green:  "from-[#28C76F] to-[#48DA89]",
+  orange: "from-[#FF9F43] to-[#FFBE76]",
+  rose:   "from-[#EA5455] to-[#F08182]",
+  slate:  "from-[#82868B] to-[#A8AAAE]",
+};
 
 export const VuexySidebar: React.FC = () => {
   const location = useLocation();
-  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { isAdmin, isSuperAdmin, user, logout } = useAuth();
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
 
-  // Etat pour le mode collapsed
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
     return saved === "true";
   });
 
-  // Sauvegarder l'etat collapsed dans localStorage
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  const [avatarColor, setAvatarColor] = useState<string>(
+    () => localStorage.getItem(AVATAR_COLOR_KEY) ?? "purple"
+  );
+  const avatarGradient = AVATAR_GRADIENTS[avatarColor] ?? AVATAR_GRADIENTS.purple;
+
+  // Sync avatar color if changed in ProfilePage (same tab via custom event)
+  useEffect(() => {
+    const handler = () => setAvatarColor(localStorage.getItem(AVATAR_COLOR_KEY) ?? "purple");
+    window.addEventListener("avatar-color-changed", handler);
+    return () => window.removeEventListener("avatar-color-changed", handler);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
   }, [collapsed]);
+
+  // Close profile popover on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const menu: MenuItem[] = useMemo(
     () => [
@@ -63,79 +98,41 @@ export const VuexySidebar: React.FC = () => {
         label: "Clients",
         icon: <Users size={20} />,
         children: [
-          { label: "Liste des clients", path: "/" },
-          { label: "Prospects", isComingSoon: true },
-          { label: "Tags / Segments", isComingSoon: true },
+          { label: "Liste des clients", path: "/clients", icon: <Users size={16} /> },
           { label: "Nouveau client", path: "/clients/new", icon: <UserPlus size={16} /> },
           { label: "Imports", path: "/import", adminOnly: true, icon: <Upload size={16} /> },
         ],
       },
       {
         label: "Rendez-vous",
+        path: "/der/new",
         icon: <Calendar size={20} />,
-        children: [
-          { label: "Historique des RDV", isComingSoon: true, icon: <History size={16} /> },
-          { label: "Enregistrements audio", isComingSoon: true, icon: <Mic size={16} /> },
-          { label: "Résumés de rendez-vous", isComingSoon: true, icon: <ListChecks size={16} /> },
-          { label: "Nouveau RDV", path: "/der/new" },
-        ],
-      },
-      {
-        label: "Documents",
-        icon: <FileText size={20} />,
-        children: [
-          { label: "Génération de documents", isComingSoon: true, icon: <FileStack size={16} /> },
-          { label: "Documents envoyés", isComingSoon: true, icon: <FolderOpen size={16} /> },
-          { label: "Templates", isComingSoon: true, adminOnly: true },
-        ],
-      },
-      {
-        label: "Questionnaires",
-        icon: <ClipboardList size={20} />,
-        children: [
-          { label: "Risque (MiFID)", path: "/clients/1/questionnaire-risque", isComingSoon: true },
-          { label: "Autres questionnaires", isComingSoon: true },
-        ],
-      },
-      {
-        label: "Patrimoine",
-        icon: <Landmark size={20} />,
-        children: [
-          { label: "Épargne & placements", isComingSoon: true, icon: <Coins size={16} /> },
-          { label: "Immobilier", isComingSoon: true, icon: <Building2 size={16} /> },
-          { label: "Passifs", isComingSoon: true, icon: <Database size={16} /> },
-        ],
       },
       {
         label: "Conformité",
+        path: "/compliance-dashboard",
         icon: <ShieldCheck size={20} />,
-        children: [
-          { label: "Dashboard conformité", path: "/compliance-dashboard" },
-          { label: "RGPD / consentements", isComingSoon: true },
-          { label: "Logs d'audit", isComingSoon: true },
-        ],
+      },
+      {
+        label: "Production",
+        path: "/production",
+        icon: <TrendingUp size={20} />,
+        adminOnly: true,
       },
       {
         label: "Paramètres",
         icon: <Sliders size={20} />,
         children: [
-          { label: "Utilisateurs & rôles", isComingSoon: true, adminOnly: true },
-          { label: "Équipe / Cabinet", isComingSoon: true },
-          { label: "Intégrations", isComingSoon: true },
-          { label: "IA / Transcription", isComingSoon: true, adminOnly: true },
+          { label: "Mon cabinet", path: "/settings/cabinet" },
         ],
+        adminOnly: true,
       },
     ],
-    []
+    [isSuperAdmin]
   );
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Clients: true,
-    "Rendez-vous": true,
-    Documents: false,
-    Questionnaires: false,
-    Patrimoine: false,
-    Conformité: false,
     Paramètres: false,
   });
 
@@ -143,7 +140,6 @@ export const VuexySidebar: React.FC = () => {
 
   const toggleSection = (label: string) => {
     if (collapsed) {
-      // En mode collapsed, on expand d'abord la sidebar
       setCollapsed(false);
       setOpenSections((prev) => ({ ...prev, [label]: true }));
     } else {
@@ -153,6 +149,7 @@ export const VuexySidebar: React.FC = () => {
 
   const renderLink = (item: MenuItem, depth = 0) => {
     if (item.adminOnly && !isAdmin) return null;
+    if (item.hideForRoles && user?.team_role && item.hideForRoles.includes(user.team_role)) return null;
     if (!item.path) return null;
     return (
       <NavLink
@@ -183,6 +180,7 @@ export const VuexySidebar: React.FC = () => {
 
   const renderComingSoon = (item: MenuItem, depth = 0) => {
     if (item.adminOnly && !isAdmin) return null;
+    if (item.hideForRoles && user?.team_role && item.hideForRoles.includes(user.team_role)) return null;
     if (collapsed && depth > 0) return null;
     return (
       <div
@@ -204,52 +202,61 @@ export const VuexySidebar: React.FC = () => {
     );
   };
 
+  const initials = user
+    ? `${user.firstname?.charAt(0) ?? ""}${user.name?.charAt(0) ?? ""}`.toUpperCase() || "U"
+    : "U";
+  const displayName = user ? `${user.firstname ?? ""} ${user.name ?? ""}`.trim() : "";
+  const displayEmail = user?.email ?? "";
+
   return (
     <aside
-      className={`hidden lg:flex lg:flex-col bg-white border-r border-[#EBE9F1] min-h-screen sticky top-0 transition-all duration-300 ${
+      className={`hidden lg:flex lg:flex-col bg-white border-r border-[#EBE9F1] h-screen sticky top-0 transition-all duration-300 ${
         collapsed ? "lg:w-20" : "lg:w-64"
       }`}
     >
-      {/* Header avec bouton menu */}
-      <div className={`px-4 py-4 border-b border-[#EBE9F1] ${collapsed ? "px-3" : "px-6 py-6"}`}>
-        <div className="flex items-center justify-between">
-          <div className={`flex items-center gap-3 ${collapsed ? "justify-center w-full" : ""}`}>
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-xl font-bold shadow-md shadow-purple-500/30 flex-shrink-0">
+      {/* Logo */}
+      <div className={`flex-shrink-0 border-b border-[#EBE9F1] ${collapsed ? "px-3 py-4" : "px-6 py-5"}`}>
+        <div className="flex items-center gap-3">
+          {user?.current_team_logo_url ? (
+            <img
+              src={user.current_team_logo_url}
+              alt="Logo cabinet"
+              className="w-9 h-9 object-contain rounded-lg flex-shrink-0"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#7367F0] to-[#9055FD] flex items-center justify-center text-white text-lg font-bold shadow-md shadow-purple-500/30 flex-shrink-0">
               🎧
             </div>
-            {!collapsed && (
-              <div>
-                <div className="text-lg font-bold text-[#5E5873]">Whisper CRM</div>
-                <div className="text-xs text-[#6E6B7B]">CRM vocal intelligent</div>
+          )}
+          {!collapsed && (
+            <div>
+              <div className="text-base font-bold text-[#5E5873] leading-tight">
+                {user?.current_team_name ?? "Whisper CRM"}
               </div>
-            )}
-          </div>
+              <div className="text-xs text-[#B9B9C3]">CRM vocal intelligent</div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Bouton collapse/expand */}
-      <div className={`px-3 py-3 border-b border-[#EBE9F1] ${collapsed ? "flex justify-center" : ""}`}>
+      {/* Bouton collapse */}
+      <div className={`flex-shrink-0 border-b border-[#EBE9F1] px-3 py-2`}>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[#6E6B7B] hover:bg-[#F3F2F7] hover:text-[#7367F0] transition-all duration-200 ${
-            collapsed ? "justify-center w-full" : "w-full"
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[#6E6B7B] hover:bg-[#F3F2F7] hover:text-[#7367F0] transition-all duration-200 w-full ${
+            collapsed ? "justify-center" : ""
           }`}
-          title={collapsed ? "Ouvrir le menu" : "Reduire le menu"}
+          title={collapsed ? "Ouvrir le menu" : "Réduire le menu"}
         >
-          {collapsed ? (
-            <Menu size={20} />
-          ) : (
-            <>
-              <ChevronLeft size={20} />
-              <span className="text-sm font-medium">Reduire</span>
-            </>
-          )}
+          {collapsed ? <Menu size={18} /> : <><ChevronLeft size={18} /><span className="text-sm font-medium">Réduire</span></>}
         </button>
       </div>
 
-      <div className={`flex-1 overflow-y-auto py-4 space-y-2 ${collapsed ? "px-2" : "px-4"}`}>
+      {/* Menu — scrollable, limité à la hauteur disponible */}
+      <div className={`flex-1 overflow-y-auto py-3 space-y-1 min-h-0 ${collapsed ? "px-2" : "px-3"}`}>
         {menu.map((section) => {
           if (section.adminOnly && !isAdmin) return null;
+          if (section.hideForRoles && user?.team_role && section.hideForRoles.includes(user.team_role)) return null;
 
           if (!section.children?.length) {
             return (
@@ -261,7 +268,6 @@ export const VuexySidebar: React.FC = () => {
 
           const isOpen = openSections[section.label] ?? false;
 
-          // Mode collapsed : afficher seulement l'icone avec tooltip
           if (collapsed) {
             return (
               <div key={section.label} className="relative group">
@@ -272,7 +278,6 @@ export const VuexySidebar: React.FC = () => {
                 >
                   {section.icon}
                 </button>
-                {/* Tooltip au hover */}
                 <div className="absolute left-full top-0 ml-2 hidden group-hover:block z-50">
                   <div className="bg-[#5E5873] text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
                     {section.label}
@@ -282,9 +287,8 @@ export const VuexySidebar: React.FC = () => {
             );
           }
 
-          // Mode expanded : afficher le menu complet
           return (
-            <div key={section.label} className="space-y-1">
+            <div key={section.label} className="space-y-0.5">
               <button
                 onClick={() => toggleSection(section.label)}
                 className="w-full flex items-center justify-between text-left px-3 py-2 rounded-lg hover:bg-[#F3F2F7] transition-colors"
@@ -294,13 +298,13 @@ export const VuexySidebar: React.FC = () => {
                   <span>{section.label}</span>
                 </div>
                 <ChevronDown
-                  size={16}
-                  className={`text-[#6E6B7B] transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  size={15}
+                  className={`text-[#B9B9C3] transition-transform ${isOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
               {isOpen && (
-                <div className="ml-4 space-y-1">
+                <div className="ml-4 space-y-0.5">
                   {section.children.map((child) =>
                     child.isComingSoon || !child.path ? renderComingSoon(child, 1) : renderLink(child, 1)
                   )}
@@ -309,6 +313,145 @@ export const VuexySidebar: React.FC = () => {
             </div>
           );
         })}
+      </div>
+
+      {/* Section Administration (super admin uniquement) */}
+      {isSuperAdmin && (
+        <div className="space-y-0.5">
+          {collapsed ? (
+            <div className="relative group">
+              <NavLink
+                to="/admin"
+                title="Administration"
+                className={({ isActive }) =>
+                  `w-full flex items-center justify-center p-3 rounded-lg transition-colors ${isActive ? 'text-red-600 bg-red-50' : 'text-red-500 hover:bg-red-50'}`
+                }
+              >
+                <Shield size={20} />
+              </NavLink>
+              <div className="absolute left-full top-0 ml-2 hidden group-hover:block z-50">
+                <div className="bg-[#5E5873] text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                  Administration
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="px-3 pt-3 pb-1">
+                <div className="text-[10px] font-bold text-[#B9B9C3] uppercase tracking-widest">Administration</div>
+              </div>
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                    isActive ? 'bg-red-50 text-red-600' : 'text-red-500 hover:bg-red-50 hover:text-red-600'
+                  }`
+                }
+              >
+                <Shield size={16} className="text-red-500" />
+                <span>Panneau admin</span>
+              </NavLink>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Profil utilisateur — sticky en bas */}
+      <div className="flex-shrink-0 border-t border-[#EBE9F1] p-3 relative" ref={profileRef}>
+        {/* Popover au-dessus */}
+        {profileOpen && (
+          <div className="absolute bottom-full mb-2 left-3 right-3 bg-white border border-[#EBE9F1] rounded-xl shadow-2xl z-50 overflow-hidden">
+            {/* Header */}
+            <div className="px-4 pt-4 pb-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 shadow-md ${!user?.avatar_url ? `bg-gradient-to-br ${avatarGradient}` : ''}`}>
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">{initials}</div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-[#5E5873] truncate leading-tight">{displayName}</div>
+                  <div className="text-xs text-[#B9B9C3] truncate">{displayEmail}</div>
+                </div>
+              </div>
+              {user?.current_team_name && (
+                <div className="mt-2.5 flex items-center gap-1.5 px-2.5 py-1.5 bg-[#F3F2F7] rounded-lg">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#28C76F] flex-shrink-0" />
+                  <span className="text-xs text-[#6E6B7B] font-medium truncate">{user.current_team_name}</span>
+                  {user?.team_role && (
+                    <span className="ml-auto text-[10px] font-semibold text-[#B9B9C3] uppercase tracking-wide flex-shrink-0">
+                      {({ owner: 'Propriétaire', admin: 'Admin', mia: 'MIA', secretaire: 'Secrétaire' } as Record<string, string>)[user.team_role] ?? user.team_role}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-[#EBE9F1]" />
+
+            <div className="py-1.5">
+              <button
+                onClick={() => { setProfileOpen(false); navigate('/profile'); }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#5E5873] hover:bg-[#F3F2F7] hover:text-[#7367F0] transition-colors font-medium"
+              >
+                <User size={15} className="text-[#7367F0]" />
+                Mon profil
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => { setProfileOpen(false); navigate('/settings/cabinet'); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#5E5873] hover:bg-[#F3F2F7] hover:text-[#7367F0] transition-colors font-medium"
+                >
+                  <ChevronDown size={15} className="text-[#7367F0] -rotate-90" />
+                  Paramètres du cabinet
+                </button>
+              )}
+            </div>
+
+            <div className="border-t border-[#EBE9F1]" />
+
+            <div className="py-1.5">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#EA5455] hover:bg-[#EA5455]/10 transition-colors font-medium"
+              >
+                <LogOut size={15} />
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Trigger */}
+        <button
+          onClick={() => setProfileOpen((v) => !v)}
+          className={`w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[#F3F2F7] transition-colors ${
+            collapsed ? "justify-center" : ""
+          } ${profileOpen ? "bg-[#F3F2F7]" : ""}`}
+          title={collapsed ? displayName : undefined}
+        >
+          <div className={`w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 ${!user?.avatar_url ? `bg-gradient-to-br ${avatarGradient}` : ''}`}>
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">{initials}</div>
+            )}
+          </div>
+          {!collapsed && (
+            <>
+              <div className="flex-1 text-left min-w-0">
+                <div className="text-sm font-semibold text-[#5E5873] truncate leading-tight">{displayName}</div>
+                <div className="text-xs text-[#B9B9C3] truncate">{displayEmail}</div>
+              </div>
+              <ChevronUp
+                size={15}
+                className={`text-[#B9B9C3] flex-shrink-0 transition-transform ${profileOpen ? "rotate-180" : ""}`}
+              />
+            </>
+          )}
+        </button>
       </div>
     </aside>
   );

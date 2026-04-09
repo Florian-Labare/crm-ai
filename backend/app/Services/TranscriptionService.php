@@ -60,10 +60,13 @@ class TranscriptionService
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $apiKey,
             ])
+                ->withOptions([
+                    'connect_timeout' => 30,
+                    'timeout'         => 180,
+                ])
                 ->asMultipart()
                 ->attach('file', file_get_contents($audioPath), basename($audioPath))
                 ->attach('model', config('mistral.stt.model', 'voxtral-mini-latest'))
-                ->timeout(300)
                 ->post(config('mistral.stt.endpoint'));
 
             if (!$response->successful()) {

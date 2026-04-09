@@ -192,8 +192,15 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Choisir le mimeType supporté par le navigateur
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : '';
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
+        ...(mimeType ? { mimeType } : {}),
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -206,8 +213,9 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
         }
       };
 
-      // Démarrer l'enregistrement
-      mediaRecorder.start();
+      // Démarrer l'enregistrement avec un timeslice de 1s pour collecter les données en continu
+      // (sans timeslice, ondataavailable ne se déclenche qu'au stop() → race condition)
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setPartIndex(0);
       setRecordingTime(0);
@@ -218,11 +226,11 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       // Créer et envoyer un chunk toutes les 10 minutes
       chunkIntervalRef.current = setInterval(async () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          // Arrêter temporairement pour récupérer les données
-          mediaRecorderRef.current.stop();
-
-          // Attendre que les données soient disponibles
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // Arrêter et attendre le flush des données via onstop
+          await new Promise<void>((resolve) => {
+            mediaRecorderRef.current!.onstop = () => resolve();
+            mediaRecorderRef.current!.stop();
+          });
 
           // Créer et envoyer le chunk
           const currentIndex = partIndex;
@@ -232,14 +240,14 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
           // Redémarrer l'enregistrement pour le chunk suivant
           if (stream.active) {
             const newMediaRecorder = new MediaRecorder(stream, {
-              mimeType: 'audio/webm',
+              ...(mimeType ? { mimeType } : {}),
             });
             newMediaRecorder.ondataavailable = (event) => {
               if (event.data.size > 0) {
                 chunksRef.current.push(event.data);
               }
             };
-            newMediaRecorder.start();
+            newMediaRecorder.start(1000);
             mediaRecorderRef.current = newMediaRecorder;
           }
         }
@@ -263,13 +271,14 @@ export const LongRecorder: React.FC<LongRecorderProps> = ({
       chunkIntervalRef.current = null;
     }
 
-    // Arrêter le MediaRecorder
-    mediaRecorderRef.current.stop();
+    // Arrêter le MediaRecorder et attendre l'événement onstop
+    // (garantit que ondataavailable a fini de flush avant d'uploader)
+    await new Promise<void>((resolve) => {
+      mediaRecorderRef.current!.onstop = () => resolve();
+      mediaRecorderRef.current!.stop();
+    });
 
-    // Attendre que les dernières données soient disponibles
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Envoyer le dernier chunk
+    // Envoyer le dernier chunk (chunksRef est maintenant garanti non-vide)
     const lastIndex = partIndex;
     await createAndUploadChunk(lastIndex);
 

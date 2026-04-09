@@ -249,6 +249,14 @@ class DatabaseConnectionController extends Controller
      */
     public function columns(DatabaseConnection $databaseConnection, string $table): JsonResponse
     {
+        // Validate table name early (also validated inside getTableColumns, but explicit here for a clean 422)
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nom de table invalide',
+            ], 422);
+        }
+
         try {
             $columns = $this->connector->getTableColumns(
                 $databaseConnection->getConnectionConfig(),

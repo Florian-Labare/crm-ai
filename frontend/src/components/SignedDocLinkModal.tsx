@@ -69,7 +69,7 @@ export const SignedDocLinkModal: React.FC<SignedDocLinkModalProps> = ({
               <Link2 size={20} />
             </div>
             <div>
-              <h3 className="font-semibold text-[#5E5873]">Lier un document signe</h3>
+              <h3 className="font-semibold text-[#5E5873]">Lier un document signé</h3>
               <p className="text-sm text-[#6E6B7B] truncate max-w-[250px]">{requirement.label}</p>
             </div>
           </div>
@@ -86,12 +86,12 @@ export const SignedDocLinkModal: React.FC<SignedDocLinkModalProps> = ({
           {availableDocs.length === 0 ? (
             <div className="text-center py-8 text-[#6E6B7B]">
               <FileText size={40} className="mx-auto mb-3 text-[#B9B9C3]" />
-              <p>Aucun document signe disponible avec le tag "{requirement.besoin_label}"</p>
+              <p>Aucun document signé disponible avec le tag "{requirement.besoin_label}"</p>
             </div>
           ) : (
             <>
               <p className="text-sm text-[#6E6B7B] mb-4">
-                Selectionnez le document a lier a cette exigence :
+                Sélectionnez le document à lier à cette exigence :
               </p>
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {availableDocs.map((doc) => (
@@ -114,7 +114,7 @@ export const SignedDocLinkModal: React.FC<SignedDocLinkModalProps> = ({
                         {doc.display_label}
                       </p>
                       <p className="text-xs text-[#6E6B7B]">
-                        Importe le {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
+                        Importé le {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
                       </p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {doc.tags.map((tag) => (

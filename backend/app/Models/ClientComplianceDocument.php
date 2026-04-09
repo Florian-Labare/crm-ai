@@ -41,11 +41,10 @@ class ClientComplianceDocument extends Model
      */
     public const AVAILABLE_TAGS = [
         'prevoyance' => 'Prévoyance',
-        'retraite' => 'Retraite',
-        'epargne' => 'Épargne',
-        'sante' => 'Santé',
-        'immobilier' => 'Immobilier',
-        'fiscalite' => 'Fiscalité',
+        'retraite'   => 'Retraite',
+        'epargne'    => 'Épargne',
+        'sante'      => 'Santé',
+        'emprunteur' => 'Emprunteur',
     ];
 
     /**
@@ -66,30 +65,37 @@ class ClientComplianceDocument extends Model
         'avis_imposition_n2' => "Avis d'imposition N-2",
 
         // Documents réglementaires par besoin
-        'lettre_mission_prevoyance' => 'Lettre de mission - Prévoyance',
+        'lettre_mission_prevoyance' => "Rapport d'adéquation - Prévoyance",
         'der_prevoyance' => 'DER - Prévoyance',
         'fiche_conseil_prevoyance' => 'Fiche conseil - Prévoyance',
 
-        'lettre_mission_retraite' => 'Lettre de mission - Retraite',
+        'lettre_mission_retraite' => "Rapport d'adéquation - Retraite",
         'der_retraite' => 'DER - Retraite',
         'fiche_conseil_retraite' => 'Fiche conseil - Retraite',
 
-        'lettre_mission_epargne' => 'Lettre de mission - Épargne',
+        'lettre_mission_epargne' => "Rapport d'adéquation - Épargne",
         'der_epargne' => 'DER - Épargne',
         'fiche_conseil_epargne' => 'Fiche conseil - Épargne',
 
-        'lettre_mission_sante' => 'Lettre de mission - Santé',
+        'lettre_mission_sante' => "Rapport d'adéquation - Santé",
         'fiche_ipid_sante' => 'Fiche IPID - Santé',
         'devis_sante' => 'Devis - Santé',
 
-        'lettre_mission_immobilier' => 'Lettre de mission - Immobilier',
+        'lettre_mission_immobilier' => "Rapport d'adéquation - Immobilier",
         'der_immobilier' => 'DER - Immobilier',
 
-        'lettre_mission_fiscalite' => 'Lettre de mission - Fiscalité',
+        'lettre_mission_fiscalite' => "Rapport d'adéquation - Fiscalité",
         'der_fiscalite' => 'DER - Fiscalité',
 
+        // Documents any_besoin
+        'mandat_recherche'            => 'Mandat de recherche',
+        'recueil_global'              => 'Recueil Global PP',
+
+        // Documents emprunteur
+        'lettre_mission_emprunteur'   => "Rapport d'adéquation - Emprunteur",
+        'recueil_ade'                 => 'Recueil ADE',
+
         // Documents généraux
-        'mandat_recherche' => 'Mandat de recherche',
         'rgpd_consentement' => 'Consentement RGPD',
         'autre' => 'Autre document',
         'signed_document' => 'Document signé',

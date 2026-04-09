@@ -29,6 +29,7 @@ interface VuexyClientInfoSectionProps {
     field: 'actifs_financiers_details' | 'actifs_immo_details' | 'actifs_autres_details' | 'passifs_details',
     index: number
   ) => void;
+  onToggleBesoin?: (slug: string) => void;
 }
 
 // Helper pour afficher les valeurs booléennes sous forme de badges
@@ -51,6 +52,14 @@ const BooleanBadge: React.FC<{
   );
 };
 
+const BESOINS_OPTIONS = [
+  { value: 'prevoyance', label: 'Prévoyance' },
+  { value: 'retraite',   label: 'Retraite' },
+  { value: 'epargne',    label: 'Épargne' },
+  { value: 'sante',      label: 'Santé' },
+  { value: 'emprunteur', label: 'Emprunteur' },
+];
+
 export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   client,
   formatDate,
@@ -58,6 +67,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   onEditSection,
   onDeleteItem,
   onDeleteBaeDetail,
+  onToggleBesoin,
 }) => {
   // Calcul des revenus annuels depuis le tableau client.revenus (prioritaire)
   // Fallback sur les champs uniques pour compatibilité avec anciennes données
@@ -211,21 +221,58 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
   };
 
   const besoinLabels = buildBesoinLabels();
+
+  // Slugs effectifs : client.besoins + inférés des sections BAE
+  const effectiveBesoins = (() => {
+    const slugs: string[] = Array.isArray(client.besoins) ? [...client.besoins] : [];
+    if (client.bae_prevoyance && !slugs.includes('prevoyance')) slugs.push('prevoyance');
+    if (client.bae_retraite   && !slugs.includes('retraite'))   slugs.push('retraite');
+    if (client.bae_epargne    && !slugs.includes('epargne'))    slugs.push('epargne');
+    if (client.sante_souhait  && !slugs.includes('sante'))      slugs.push('sante');
+    return slugs;
+  })();
+
   const renderBesoinBadges = () => {
+    // Mode édition inline : chips toggleables
+    if (onToggleBesoin) {
+      return (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {BESOINS_OPTIONS.map((opt) => {
+            const selected = effectiveBesoins.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onToggleBesoin(opt.value)}
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${
+                  selected
+                    ? 'bg-gradient-to-br from-[#9055FD] to-[#B085FF] text-white border-transparent shadow-sm'
+                    : 'bg-white text-[#6E6B7B] border-[#D8D6DE] hover:border-[#9055FD] hover:text-[#9055FD]'
+                }`}
+              >
+                {opt.label}
+                {selected && <span className="opacity-60 text-[9px] leading-none">✕</span>}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Mode lecture : badges statiques
     if (besoinLabels.length === 0) {
       return (
-        <span className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]">
+        <span className="inline-flex items-center rounded-full bg-[#F2F0FF] px-2.5 py-0.5 text-[11px] font-semibold text-[#9055FD]">
           0 besoins
         </span>
       );
     }
-
     return (
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-1.5">
         {besoinLabels.map((label) => (
           <span
             key={label}
-            className="inline-flex items-center rounded-full bg-[#F2F0FF] px-4 py-1 text-xs font-semibold text-[#6F67F4]"
+            className="inline-flex items-center rounded-full bg-gradient-to-br from-[#9055FD] to-[#B085FF] px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm"
           >
             {label}
           </span>
@@ -240,11 +287,15 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <VuexyStatCard
           label="Âge"
-          value={
-            client.date_naissance
-              ? `${new Date().getFullYear() - new Date(client.date_naissance).getFullYear()} ans`
-              : 'N/A'
-          }
+          value={(() => {
+            if (!client.date_naissance) return 'N/A';
+            const birth = new Date(client.date_naissance);
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const m = today.getMonth() - birth.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+            return `${age} ans`;
+          })()}
           icon={<Calendar size={20} />}
           color="blue"
           delay={0.1}
@@ -258,7 +309,7 @@ export const VuexyClientInfoSection: React.FC<VuexyClientInfoSectionProps> = ({
         />
         <VuexyStatCard
           label="Besoins"
-          value={client.besoins?.length || 0}
+          value={besoinLabels.length}
           footer={renderBesoinBadges()}
           icon={<TrendingUp size={20} />}
           color="purple"

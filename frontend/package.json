@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.96.2",
     "@types/uuid": "^10.0.0",
     "axios": "^1.12.2",
     "lucide-react": "^0.555.0",
@@ -17,6 +18,7 @@
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.4",
     "react-toastify": "^11.0.5",
+    "recharts": "^3.8.0",
     "recordrtc": "^5.6.2",
     "uuid": "^13.0.0"
   },

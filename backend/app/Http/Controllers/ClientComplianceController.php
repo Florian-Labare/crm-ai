@@ -6,6 +6,8 @@ use App\Models\Client;
 use App\Models\ClientComplianceDocument;
 use App\Models\ComplianceRequirement;
 use App\Models\ComplianceDocumentRequirement;
+use App\Services\BesoinService;
+use App\Services\ComplianceStatusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,85 +16,21 @@ use Illuminate\Validation\Rule;
 
 class ClientComplianceController extends Controller
 {
+    public function __construct(
+        private readonly BesoinService $besoinService,
+        private readonly ComplianceStatusService $complianceStatusService,
+    ) {}
+
     /**
-     * Retourne un badge simplifié (feu tricolore) pour le statut compliance
-     * Rouge = Documents manquants, Orange = En attente de validation, Vert = Complet
+     * Retourne un badge simplifié (feu tricolore) pour le statut compliance.
      */
     public function badge(Client $client): JsonResponse
     {
-        // Documents globaux obligatoires (CNI, Avis imposition, RIB)
-        $globalRequirements = ComplianceRequirement::where('besoin', 'global')
-            ->where('is_mandatory', true)
-            ->pluck('document_type')
-            ->toArray();
-
-        // Documents fournis et validés
-        $validDocuments = $client->complianceDocuments()
-            ->where('status', 'validated')
-            ->whereIn('document_type', $globalRequirements)
-            ->pluck('document_type')
-            ->toArray();
-
-        // Documents en attente
-        $pendingDocuments = $client->complianceDocuments()
-            ->where('status', 'pending')
-            ->whereIn('document_type', $globalRequirements)
-            ->pluck('document_type')
-            ->toArray();
-
-        $totalRequired = count($globalRequirements);
-        $validCount = count(array_intersect($globalRequirements, $validDocuments));
-        $pendingCount = count(array_intersect($globalRequirements, $pendingDocuments));
-        $missingCount = $totalRequired - $validCount - $pendingCount;
-
-        // Déterminer la couleur du feu
-        $color = 'red'; // Par défaut rouge
-        $label = 'Incomplet';
-
-        if ($validCount === $totalRequired) {
-            $color = 'green';
-            $label = 'Complet';
-        } elseif ($pendingCount > 0 && $missingCount === 0) {
-            $color = 'orange';
-            $label = 'En attente';
-        } elseif ($validCount > 0 || $pendingCount > 0) {
-            $color = 'orange';
-            $label = 'Partiel';
-        }
-
-        // Liste des documents manquants
-        $allProvided = array_unique(array_merge($validDocuments, $pendingDocuments));
-        $missing = array_diff($globalRequirements, $allProvided);
-        $missingLabels = [];
-        foreach ($missing as $type) {
-            $missingLabels[] = ClientComplianceDocument::DOCUMENT_LABELS[$type] ?? $type;
-        }
-
-        // Compter les documents expirés et expirant bientôt
-        $expiredCount = $client->complianceDocuments()
-            ->expired()
-            ->where('status', 'validated')
-            ->count();
-
-        $expiringSoonCount = $client->complianceDocuments()
-            ->expiringSoon(90)
-            ->where('status', 'validated')
-            ->count();
+        $badge = $this->complianceStatusService->computeBadge($client);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'color' => $color,
-                'label' => $label,
-                'score' => $totalRequired > 0 ? round(($validCount / $totalRequired) * 100) : 0,
-                'valid_count' => $validCount,
-                'pending_count' => $pendingCount,
-                'missing_count' => $missingCount,
-                'total_required' => $totalRequired,
-                'missing_documents' => $missingLabels,
-                'expired_count' => $expiredCount,
-                'expiring_soon_count' => $expiringSoonCount,
-            ],
+            'data'    => $badge,
         ]);
     }
 
@@ -120,12 +58,8 @@ class ClientComplianceController extends Controller
             ->values()
             ->toArray();
 
-        // Récupérer les exigences correspondant à ces tags + documents globaux
-        // Les exigences n'apparaissent que si un document signé avec le tag correspondant a été importé
-        $requirements = ComplianceRequirement::whereIn('besoin', array_merge($tagsFromSignedDocs, ['global']))
-            ->orderBy('priority')
-            ->orderBy('besoin')
-            ->get();
+        // Les exigences sont pilotées par les besoins effectifs du client (déclarés + BAE)
+        $requirements = $this->complianceStatusService->getRequirements($client);
 
         // Construire le statut pour chaque exigence
         $checklistItems = [];
@@ -376,11 +310,11 @@ class ClientComplianceController extends Controller
     public function upload(Request $request, Client $client): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
-            'document_type' => 'required|string',
-            'expires_at' => 'nullable|date',
+            'file'          => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
+            'document_type' => ['required', 'string', Rule::in(array_keys(ClientComplianceDocument::DOCUMENT_LABELS))],
+            'expires_at'    => 'nullable|date',
             'document_date' => 'nullable|date',
-            'notes' => 'nullable|string|max:1000',
+            'notes'         => 'nullable|string|max:1000',
         ]);
 
         try {
@@ -737,45 +671,6 @@ class ClientComplianceController extends Controller
                 'message' => 'Erreur lors du rejet de la liaison',
             ], 500);
         }
-    }
-
-    /**
-     * Normalise les besoins du client pour le matching
-     */
-    private function normalizeBesoins(?array $besoins): array
-    {
-        if (empty($besoins)) {
-            return [];
-        }
-
-        $normalized = [];
-        $mapping = [
-            'prévoyance' => 'prevoyance',
-            'prevoyance' => 'prevoyance',
-            'retraite' => 'retraite',
-            'épargne' => 'epargne',
-            'epargne' => 'epargne',
-            'santé' => 'sante',
-            'sante' => 'sante',
-            'immobilier' => 'immobilier',
-            'fiscalité' => 'fiscalite',
-            'fiscalite' => 'fiscalite',
-            'défiscalisation' => 'fiscalite',
-            'placement' => 'epargne',
-            'assurance vie' => 'epargne',
-            'per' => 'retraite',
-            'mutuelle' => 'sante',
-            'complémentaire santé' => 'sante',
-        ];
-
-        foreach ($besoins as $besoin) {
-            $key = mb_strtolower(trim($besoin));
-            if (isset($mapping[$key])) {
-                $normalized[] = $mapping[$key];
-            }
-        }
-
-        return array_unique($normalized);
     }
 
     /**

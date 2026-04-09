@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\BesoinService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -78,6 +79,7 @@ class ClientResource extends JsonResource
 
             // Besoins et consentement
             'besoins' => $this->besoins,
+            'besoins_count' => $this->computeBesoinsCount(),
             'consentement_audio' => $this->consentement_audio,
             'charge_clientele' => $this->charge_clientele,
 
@@ -93,10 +95,34 @@ class ClientResource extends JsonResource
             'actifs_financiers' => ClientActifFinancierResource::collection($this->whenLoaded('actifsFinanciers')),
             'biens_immobiliers' => ClientBienImmobilierResource::collection($this->whenLoaded('biensImmobiliers')),
             'autres_epargnes' => ClientAutreEpargneResource::collection($this->whenLoaded('autresEpargnes')),
+            'contrats' => $this->whenLoaded('contrats', fn() => $this->contrats->map(fn($c) => [
+                'id' => $c->id,
+                'type' => $c->type,
+                'assureur_id' => $c->assureur_id,
+                'assureur' => $c->assureur ? [
+                    'id' => $c->assureur->id,
+                    'nom' => $c->assureur->nom,
+                    'lien_espace_client' => $c->assureur->lien_espace_client,
+                ] : null,
+                'mensualite' => $c->mensualite,
+                'en_cours' => $c->en_cours,
+                'fond_euro' => $c->fond_euro,
+                'uc' => $c->uc,
+                'versement_programme' => $c->versement_programme,
+            ])),
 
             // Métadonnées
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Nombre de besoins distincts : slugs déclarés + inférés des sections BAE existantes.
+     * Délègue à BesoinService (source unique de vérité).
+     */
+    private function computeBesoinsCount(): int
+    {
+        return count(app(BesoinService::class)->getEffectiveBesoins($this->resource));
     }
 }

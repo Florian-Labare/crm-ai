@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { usePage } from "../contexts/PageContext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
@@ -21,6 +22,7 @@ import type {
 export default function ClientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { setPage } = usePage();
 
   // État principal du client
   const [form, setForm] = useState({
@@ -58,7 +60,22 @@ export default function ClientEditPage() {
   });
 
   const [besoins, setBesoins] = useState<string[]>([]);
-  const [newBesoin, setNewBesoin] = useState("");
+
+  const VALID_BESOINS = ['prevoyance', 'retraite', 'epargne', 'sante', 'emprunteur'];
+  const BESOIN_NORMALIZE: Record<string, string> = {
+    'prévoyance': 'prevoyance', 'prevoyance': 'prevoyance',
+    'retraite': 'retraite',
+    'épargne': 'epargne', 'epargne': 'epargne',
+    'santé': 'sante', 'sante': 'sante',
+    'emprunteur': 'emprunteur',
+    'per': 'retraite', 'mutuelle': 'sante',
+    'assurance vie': 'epargne', 'placement': 'epargne',
+  };
+  const normalizeBesoins = (raw: string[]): string[] =>
+    [...new Set(
+      raw.map(b => BESOIN_NORMALIZE[b.toLowerCase().trim()] ?? b)
+         .filter(b => VALID_BESOINS.includes(b))
+    )];
 
   // États pour les relations
   const [conjoint, setConjoint] = useState<any | null>(null);
@@ -83,6 +100,13 @@ export default function ClientEditPage() {
   const [showModal, setShowModal] = useState<{type: string; data?: any} | null>(null);
 
   const showNomJeuneFille = form.civilite === "Madame" && form.situation_matrimoniale === "Marié(e)";
+
+  useEffect(() => {
+    setPage('Modifier le client', [], [
+      { label: 'Clients', path: '/' },
+      { label: 'Modifier le client' },
+    ]);
+  }, [setPage]);
 
   useEffect(() => {
     fetchClient();
@@ -144,7 +168,12 @@ export default function ClientEditPage() {
         niveau_activites_sportives: client.niveau_activites_sportives || "",
       });
 
-      setBesoins(client.besoins || []);
+      const initialBesoins = normalizeBesoins(client.besoins || []);
+      if (client.bae_prevoyance && !initialBesoins.includes('prevoyance')) initialBesoins.push('prevoyance');
+      if (client.bae_retraite   && !initialBesoins.includes('retraite'))   initialBesoins.push('retraite');
+      if (client.bae_epargne    && !initialBesoins.includes('epargne'))    initialBesoins.push('epargne');
+      if (client.sante_souhait  && !initialBesoins.includes('sante'))      initialBesoins.push('sante');
+      setBesoins(initialBesoins);
       setConjoint(client.conjoint || null);
       setEnfants(client.enfants || []);
       setRevenus(client.revenus || []);
@@ -539,45 +568,41 @@ export default function ClientEditPage() {
     }
   };
 
-  const handleAddBesoin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedBesoin = newBesoin.trim();
-    if (trimmedBesoin && !besoins.includes(trimmedBesoin)) {
-      setBesoins([...besoins, trimmedBesoin]);
-      setNewBesoin("");
-    }
+  const BESOINS_OPTIONS = [
+    { value: 'prevoyance', label: 'Prévoyance' },
+    { value: 'retraite',   label: 'Retraite' },
+    { value: 'epargne',    label: 'Épargne' },
+    { value: 'sante',      label: 'Santé' },
+    { value: 'emprunteur', label: 'Emprunteur' },
+  ];
+
+  const besoinToBAEMap: Record<string, string> = {
+    'sante':      'sante-souhait',
+    'prevoyance': 'bae-prevoyance',
+    'retraite':   'bae-retraite',
+    'epargne':    'bae-epargne',
   };
 
-  const handleRemoveBesoin = async (index: number) => {
-    const besoinToRemove = besoins[index].toLowerCase();
-
-    // Map besoins to BAE sections
-    const besoinToBAEMap: Record<string, string> = {
-      'santé': 'sante-souhait',
-      'prévoyance': 'bae-prevoyance',
-      'retraite': 'bae-retraite',
-      'épargne': 'bae-epargne',
-    };
-
-    // If besoin corresponds to a BAE section, delete it
-    const baeEndpoint = besoinToBAEMap[besoinToRemove];
-    if (baeEndpoint) {
-      try {
-        await api.delete(`/clients/${id}/${baeEndpoint}`);
-        // Update local state
-        if (besoinToRemove === 'santé') setSanteSouhait(null);
-        if (besoinToRemove === 'prévoyance') setBaePrevoyance(null);
-        if (besoinToRemove === 'retraite') setBaeRetraite(null);
-        if (besoinToRemove === 'épargne') setBaeEpargne(null);
-
-        toast.success(`Section ${besoins[index]} supprimée avec succès`);
-      } catch (err) {
-        console.error('Error deleting BAE section:', err);
-        toast.error(`Erreur lors de la suppression de la section ${besoins[index]}`);
+  const handleToggleBesoin = async (value: string) => {
+    if (besoins.includes(value)) {
+      // Deselect — also delete corresponding BAE section if any
+      const baeEndpoint = besoinToBAEMap[value];
+      if (baeEndpoint) {
+        try {
+          await api.delete(`/clients/${id}/${baeEndpoint}`);
+          if (value === 'sante') setSanteSouhait(null);
+          if (value === 'prevoyance') setBaePrevoyance(null);
+          if (value === 'retraite') setBaeRetraite(null);
+          if (value === 'epargne') setBaeEpargne(null);
+        } catch (err) {
+          console.error('Error deleting BAE section:', err);
+          toast.error(`Erreur lors de la suppression de la section`);
+        }
       }
+      setBesoins(besoins.filter((b) => b !== value));
+    } else {
+      setBesoins([...besoins, value]);
     }
-
-    setBesoins(besoins.filter((_, i) => i !== index));
   };
 
   if (fetching) {
@@ -613,7 +638,7 @@ export default function ClientEditPage() {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="min-h-screen bg-[#F8F8F8] py-8 px-4">
+      <div className="min-h-screen bg-[#F8F8F8] py-6 px-4 lg:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6 flex items-center space-x-4">
@@ -999,47 +1024,24 @@ export default function ClientEditPage() {
                 {/* Besoins */}
                 <div className="border-l-4 border-[#9055FD] pl-4">
                   <h4 className="text-sm font-semibold text-[#5E5873] uppercase tracking-wide mb-4">Besoins</h4>
-                  {besoins.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {besoins.map((besoin, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-[#9055FD]/10 text-[#9055FD] border border-[#9055FD]/30"
+                  <div className="flex flex-wrap gap-2">
+                    {BESOINS_OPTIONS.map((opt) => {
+                      const selected = besoins.includes(opt.value);
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleToggleBesoin(opt.value)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all border ${
+                            selected
+                              ? 'bg-[#7367F0] text-white border-[#7367F0] shadow-sm'
+                              : 'bg-white text-[#6E6B7B] border-[#D8D6DE] hover:border-[#7367F0] hover:text-[#7367F0]'
+                          }`}
                         >
-                          {besoin}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveBesoin(index)}
-                            className="ml-2 text-[#9055FD] hover:text-[#7367F0]"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Ex: mutuelle, prévoyance..."
-                      value={newBesoin}
-                      onChange={(e) => setNewBesoin(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          handleAddBesoin(e);
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 border border-[#D8D6DE] rounded-lg focus:ring-2 focus:ring-[#7367F0]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddBesoin}
-                      className="bg-gradient-to-r from-[#7367F0] to-[#9055FD] text-white px-4 py-2 rounded-lg font-medium"
-                    >
-                      Ajouter
-                    </button>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

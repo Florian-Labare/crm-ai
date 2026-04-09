@@ -14,6 +14,7 @@ use App\Services\ClientPassifsSyncService;
 use App\Services\ClientActifsFinanciersSyncService;
 use App\Services\ClientBiensImmobiliersSyncService;
 use App\Services\ClientAutresEpargnesSyncService;
+use App\Services\BesoinService;
 use App\Services\MergeService;
 use App\Services\AuditService;
 use App\Services\AssetCategorizationService;
@@ -248,6 +249,13 @@ class ProcessAudioRecording implements ShouldQueue
                                 'besoins_finaux' => $data['besoins'],
                             ]);
                             break;
+                    }
+                    // Normaliser les besoins vers des slugs propres avant stockage
+                    if (isset($data['besoins']) && is_array($data['besoins'])) {
+                        $data['besoins'] = app(BesoinService::class)->normalizeSlugs($data['besoins']);
+                        Log::info("🔧 [BESOINS] Besoins normalisés en slugs", [
+                            'besoins_slugs' => $data['besoins'],
+                        ]);
                     }
                     unset($data['besoins_action']);
                 }

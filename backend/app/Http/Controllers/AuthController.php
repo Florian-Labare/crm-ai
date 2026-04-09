@@ -99,10 +99,15 @@ class AuthController extends Controller
             'name' => $user->name,
             'firstname' => $user->firstname,
             'email' => $user->email,
+            'avatar_url' => $user->avatar_url,
             'current_team_id' => $currentTeam?->id,
             'current_team_name' => $currentTeam?->name,
+            'current_team_logo_url' => $currentTeam?->logo_url,
             'team_role' => $teamRole,
             'is_admin' => $currentTeam ? $user->isTeamAdmin($currentTeam) : false,
+            'is_super_admin' => $user->isSuperAdmin(),
+            'has_team'         => $currentTeam !== null,
+            'linked_providers' => $user->socialAccounts()->pluck('provider')->toArray(),
         ]);
     }
 

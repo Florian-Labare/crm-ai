@@ -19,11 +19,7 @@ class TeamScope implements Scope
 
             // Only apply scope if user has a team
             if ($currentTeam) {
-                // Allow both team-specific records AND global records (team_id = null)
-                $builder->where(function ($query) use ($currentTeam) {
-                    $query->where('team_id', $currentTeam->id)
-                          ->orWhereNull('team_id');
-                });
+                $builder->where('team_id', $currentTeam->id);
             }
         }
     }

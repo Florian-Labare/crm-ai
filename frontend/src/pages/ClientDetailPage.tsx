@@ -15,8 +15,10 @@ import { DocumentFormModal } from "../components/DocumentFormModal";
 import { SectionEditModal, type SectionType } from "../components/SectionEditModal";
 import { LongRecorder } from "../components/LongRecorder";
 import { VuexyReglementaireSection } from "../components/VuexyReglementaireSection";
-import { Info, ClipboardList, Folder, AlertTriangle, FileText, X, Mic, Shield } from "lucide-react";
+import { VuexyContratsSection } from "../components/VuexyContratsSection";
+import { Info, ClipboardList, Folder, AlertTriangle, FileText, X, Mic, Shield, Edit, FileDown, Archive, CheckCircle, Trash2 } from "lucide-react";
 import { extractData } from "../utils/apiHelpers";
+import { usePage } from "../contexts/PageContext";
 import type { Client } from "../types/api";
 
 interface SanteSouhait {
@@ -106,9 +108,10 @@ interface MeetingSummary {
 const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { setPage } = usePage();
   const [client, setClient] = useState<ExtendedClient | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents" | "reglementaire" | "summary">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "questionnaires" | "documents" | "reglementaire" | "summary" | "contrats">("info");
   const [documents, setDocuments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -367,10 +370,74 @@ const ClientDetailPage: React.FC = () => {
     });
   };
 
+  const handleSendToCompliance = async (documentId: number) => {
+    try {
+      await api.post(`/clients/${id}/documents/${documentId}/send-to-compliance`);
+      toast.success("Document envoyé en conformité");
+      fetchDocuments();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Erreur lors de l'envoi en conformité";
+      toast.error(msg);
+    }
+  };
+
   useEffect(() => {
     fetchClient();
     fetchPendingChanges();
   }, [id]);
+
+  useEffect(() => {
+    if (!client) return;
+    const name = `${client.prenom ?? ''} ${client.nom?.toUpperCase() ?? ''}`.trim() || 'Fiche client';
+
+    // Action primaire contextuelle selon l'onglet
+    const primaryActions = [];
+    if (activeTab === 'info') {
+      primaryActions.push({
+        label: 'Enregistrer',
+        icon: <Mic size={15} />,
+        onClick: () => setRecordingModalOpen(true),
+        variant: 'primary' as const,
+      });
+    } else if (activeTab === 'questionnaires') {
+      primaryActions.push({
+        label: 'Export questionnaire PDF',
+        icon: <FileText size={15} />,
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        onClick: () => handleExportQuestionnairePdf(),
+        variant: 'outline' as const,
+      });
+    }
+
+    // Actions secondaires toujours visibles
+    const visibleActions = [
+      ...primaryActions,
+      {
+        label: 'Éditer',
+        icon: <Edit size={15} />,
+        onClick: () => navigate(`/clients/${id}/edit`),
+        variant: 'outline' as const,
+      },
+    ];
+
+    // Actions dans le dropdown "..."
+    const dropdown = [
+      { label: 'Exporter PDF', icon: <FileText size={14} />, onClick: () => handleExportPDF() },
+      { label: 'Exporter Word', icon: <FileDown size={14} />, onClick: () => handleExportWord(), separator: false },
+      ...(!client.is_archived
+        ? [{ label: 'Archiver', icon: <Archive size={14} />, onClick: () => handleArchive(), separator: true }]
+        : [{ label: 'Restaurer', icon: <CheckCircle size={14} />, onClick: () => handleRestore(), separator: true }]),
+      { label: 'Supprimer', icon: <Trash2 size={14} />, onClick: () => handleDelete(), danger: true, separator: true },
+    ];
+
+    setPage(
+      name,
+      visibleActions,
+      [{ label: 'Clients', path: '/' }, { label: name }],
+      dropdown
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, id, activeTab, navigate, setPage]);
 
   useEffect(() => {
     if (activeTab === "documents") {
@@ -615,6 +682,44 @@ const ClientDetailPage: React.FC = () => {
     });
   };
 
+  const BAE_ENDPOINTS: Record<string, string> = {
+    prevoyance: 'bae-prevoyance',
+    retraite:   'bae-retraite',
+    epargne:    'bae-epargne',
+    sante:      'sante-souhait',
+  };
+
+  const handleToggleBesoin = async (slug: string) => {
+    if (!client) return;
+    const currentSlugs: string[] = Array.isArray(client.besoins) ? [...client.besoins] : [];
+    // Inclure les besoins inférés des BAE dans la liste courante
+    if (client.bae_prevoyance && !currentSlugs.includes('prevoyance')) currentSlugs.push('prevoyance');
+    if (client.bae_retraite   && !currentSlugs.includes('retraite'))   currentSlugs.push('retraite');
+    if (client.bae_epargne    && !currentSlugs.includes('epargne'))    currentSlugs.push('epargne');
+    if (client.sante_souhait  && !currentSlugs.includes('sante'))      currentSlugs.push('sante');
+
+    const isSelected = currentSlugs.includes(slug);
+    const newBesoins = isSelected
+      ? currentSlugs.filter((s) => s !== slug)
+      : [...currentSlugs, slug];
+
+    try {
+      await api.put(`/clients/${id}`, { besoins: newBesoins });
+      // Si on retire un besoin, supprimer aussi la section BAE correspondante
+      if (isSelected && BAE_ENDPOINTS[slug]) {
+        try {
+          await api.delete(`/clients/${id}/${BAE_ENDPOINTS[slug]}`);
+        } catch {
+          // Section BAE absente ou déjà supprimée — pas critique
+        }
+      }
+      fetchClient();
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la mise à jour des besoins');
+    }
+  };
+
   if (loading) return <div className="text-center mt-10">Chargement...</div>;
   if (!client) return <div className="text-center mt-10">Client introuvable.</div>;
 
@@ -637,35 +742,15 @@ const ClientDetailPage: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="min-h-screen bg-[#F8F8F8] py-8 px-4">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Vuexy Client Header */}
-          <VuexyClientHeader
-            client={client}
-            onEdit={() => navigate(`/clients/${client.id}/edit`)}
-            onExportPDF={handleExportPDF}
-            onExportWord={handleExportWord}
-            onDelete={handleDelete}
-            showEditButton={activeTab === "info"}
-            showExportQuestionnaireButton={activeTab === "questionnaires"}
-            onExportQuestionnairePDF={handleExportQuestionnairePdf}
-            onStatusChange={handleStatusChange}
-            onArchive={handleArchive}
-            onRestore={handleRestore}
-          />
 
-          {/* Bouton Enregistrer une conversation */}
-          {activeTab === "info" && (
-            <div className="flex justify-end">
-              <button
-                onClick={() => setRecordingModalOpen(true)}
-                className="bg-gradient-to-r from-[#7367F0] to-[#9055FD] hover:from-[#5E50EE] hover:to-[#7E3FF2] text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-              >
-                <Mic size={20} />
-                Enregistrer une conversation
-              </button>
-            </div>
-          )}
+      {/* Bande d'identité client — pleine largeur sous le header global */}
+      <VuexyClientHeader
+        client={client}
+        onStatusChange={handleStatusChange}
+      />
+
+      <div className="min-h-screen bg-[#F8F8F8] py-6 px-4 lg:px-6">
+        <div className="w-full max-w-7xl mx-auto space-y-6">
 
           {/* Pending Changes Banner */}
           {pendingChanges.length > 0 && (
@@ -707,7 +792,7 @@ const ClientDetailPage: React.FC = () => {
           {/* Vuexy Tabs */}
           <VuexyTabs
             defaultTab={activeTab}
-            onTabChange={(tabId) => setActiveTab(tabId as "info" | "questionnaires" | "documents" | "reglementaire" | "summary")}
+            onTabChange={(tabId) => setActiveTab(tabId as "info" | "questionnaires" | "documents" | "reglementaire" | "summary" | "contrats")}
             tabs={[
               {
                 id: "info",
@@ -721,6 +806,7 @@ const ClientDetailPage: React.FC = () => {
                     onEditSection={handleEditSection}
                     onDeleteItem={handleDeleteItem}
                     onDeleteBaeDetail={handleDeleteBaeDetail}
+                    onToggleBesoin={handleToggleBesoin}
                   />
                 ),
               },
@@ -745,6 +831,7 @@ const ClientDetailPage: React.FC = () => {
                     onDownload={handleDownloadDocument}
                     onSendEmail={handleSendDocumentByEmail}
                     onDelete={handleDeleteDocument}
+                    onSendToCompliance={handleSendToCompliance}
                   />
                 ),
               },
@@ -756,6 +843,17 @@ const ClientDetailPage: React.FC = () => {
                   <VuexyReglementaireSection
                     clientId={parseInt(id!, 10)}
                     clientBesoins={client.besoins || []}
+                  />
+                ),
+              },
+              {
+                id: "contrats",
+                label: "Contrats",
+                icon: <FileText size={18} />,
+                content: (
+                  <VuexyContratsSection
+                    client={client}
+                    onEditSection={handleEditSection}
                   />
                 ),
               },
@@ -1003,6 +1101,7 @@ const ClientDetailPage: React.FC = () => {
           clientId={parseInt(id!, 10)}
           isNew={editModal.isNew}
           onClose={() => setEditModal({ isOpen: false, sectionType: null, data: null, isNew: false })}
+          onRefresh={() => fetchClient()}
           onSaved={() => {
             setEditModal({ isOpen: false, sectionType: null, data: null, isNew: false });
             fetchClient();

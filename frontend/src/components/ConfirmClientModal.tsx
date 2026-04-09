@@ -56,11 +56,11 @@ export const ConfirmClientModal: React.FC<ConfirmClientModalProps> = ({
             <ul className="space-y-2">
               <li className="flex items-start gap-2 text-sm text-[#6E6B7B]">
                 <CheckCircle size={18} className="text-[#FF9F43] flex-shrink-0 mt-0.5" />
-                <span>Un mandat ou contrat d'assurance a ete signe</span>
+                <span>Un mandat ou contrat d'assurance a été signé</span>
               </li>
               <li className="flex items-start gap-2 text-sm text-[#6E6B7B]">
                 <CheckCircle size={18} className="text-[#FF9F43] flex-shrink-0 mt-0.5" />
-                <span>Le document signe a ete importe dans le dossier</span>
+                <span>Le document signé a été importé dans le dossier</span>
               </li>
             </ul>
           </div>
