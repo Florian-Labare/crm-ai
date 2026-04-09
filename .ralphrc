@@ -1,5 +1,0 @@
-PROJECT_NAME="crm-ai"
-PROJECT_TYPE="php"
-MAX_CALLS_PER_HOUR=100
-ALLOWED_TOOLS="Write,Read,Edit,Glob,Grep,Bash(*)"
-SESSION_CONTINUITY=true

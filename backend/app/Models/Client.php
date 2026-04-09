@@ -10,9 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Client extends Model
 {
     protected $fillable = [
-        'team_id',
-        'is_client',
-        'is_archived',
+        'team_id', // Added team_id
         'user_id',
         'der_charge_clientele_id',
         'der_lieu_rdv',
@@ -56,6 +54,7 @@ class Client extends Model
     ];
 
     protected $casts = [
+        // 'nombre_enfants' => 'integer', // SUPPRIMÉ
         'besoins' => 'array',
         'consentement_audio' => 'boolean',
         'risques_professionnels' => 'boolean',
@@ -64,14 +63,7 @@ class Client extends Model
         'chef_entreprise' => 'boolean',
         'travailleur_independant' => 'boolean',
         'mandataire_social' => 'boolean',
-        'is_client' => 'boolean',
-        'is_archived' => 'boolean',
     ];
-
-    public function setEmailAttribute(?string $value): void
-    {
-        $this->attributes['email'] = $value ? strtolower(trim($value)) : null;
-    }
 
     /**
      * The "booted" method of the model.
@@ -79,40 +71,6 @@ class Client extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new \App\Scopes\TeamScope);
-    }
-
-    // ===== SCOPES =====
-
-    /**
-     * Scope pour les prospects (non-clients, non-archivés)
-     */
-    public function scopeProspects($query)
-    {
-        return $query->where('is_client', false)->where('is_archived', false);
-    }
-
-    /**
-     * Scope pour les clients (is_client = true, non-archivés)
-     */
-    public function scopeClients($query)
-    {
-        return $query->where('is_client', true)->where('is_archived', false);
-    }
-
-    /**
-     * Scope pour les archivés (RAF)
-     */
-    public function scopeArchived($query)
-    {
-        return $query->where('is_archived', true);
-    }
-
-    /**
-     * Scope pour les actifs (non-archivés)
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_archived', false);
     }
 
     public function team(): BelongsTo
@@ -218,10 +176,5 @@ class Client extends Model
     public function meetingSummaries(): HasMany
     {
         return $this->hasMany(MeetingSummary::class);
-    }
-
-    public function contrats(): HasMany
-    {
-        return $this->hasMany(ClientContrat::class);
     }
 }

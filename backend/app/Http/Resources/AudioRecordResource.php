@@ -18,7 +18,6 @@ class AudioRecordResource extends JsonResource
             'id' => $this->id,
             'status' => $this->status,
             'path' => $this->path,
-            'has_transcription' => !empty($this->transcription),
             'transcription' => $this->when($this->status === 'done', $this->transcription),
             'error_message' => $this->when($this->status === 'failed', $this->transcription),
             'processed_at' => $this->processed_at?->toISOString(),

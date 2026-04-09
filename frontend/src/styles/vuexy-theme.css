@@ -1,7 +1,5 @@
 /* Vuexy Theme Variables */
 :root {
-  /* Override react-toastify font pour hériter de la police du body */
-  --toastify-font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   /* Primary Colors */
   --vx-primary: #7367F0;
   --vx-primary-dark: #5E50EE;

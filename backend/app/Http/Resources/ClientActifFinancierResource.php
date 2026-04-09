@@ -15,7 +15,7 @@ class ClientActifFinancierResource extends JsonResource
             'nature' => $this->nature,
             'etablissement' => $this->etablissement,
             'detenteur' => $this->detenteur,
-            'date_ouverture_souscription' => $this->date_ouverture_souscription?->format('Y-m-d'),
+            'date_ouverture_souscription' => $this->date_ouverture_souscription,
             'valeur_actuelle' => $this->valeur_actuelle,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

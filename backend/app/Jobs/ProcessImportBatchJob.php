@@ -21,8 +21,6 @@ class ProcessImportBatchJob implements ShouldQueue
 
     public $backoff = [10, 30, 60];
 
-    public $queue = 'import';
-
     protected ImportSession $session;
 
     protected int $offset;

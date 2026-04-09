@@ -28,9 +28,9 @@ class ComplianceRequirement extends Model
         'retraite' => 'Retraite',
         'epargne' => 'Épargne',
         'sante' => 'Santé',
-        'emprunteur' => 'Emprunteur',
-        'any_besoin' => 'Mandat & Mission',
-        'global' => 'Documents généraux',
+        'immobilier' => 'Immobilier',
+        'fiscalite' => 'Fiscalité',
+        'global' => 'Documents généraux', // Pour CNI, avis d'imposition, etc.
     ];
 
     /**
@@ -38,13 +38,10 @@ class ComplianceRequirement extends Model
      */
     public static function getRequirementsForBesoins(array $besoins): \Illuminate\Database\Eloquent\Collection
     {
-        $toInclude = ['global'];
-        if (!empty($besoins)) {
-            $toInclude[] = 'any_besoin';
-            $toInclude = array_merge($toInclude, $besoins);
-        }
+        // Toujours inclure les documents globaux (CNI, avis imposition)
+        $besoins[] = 'global';
 
-        return self::whereIn('besoin', $toInclude)
+        return self::whereIn('besoin', $besoins)
             ->orderBy('priority')
             ->orderBy('besoin')
             ->get();

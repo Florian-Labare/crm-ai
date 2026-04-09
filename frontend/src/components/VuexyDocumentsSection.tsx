@@ -1,21 +1,8 @@
 import React from "react";
-import { Download, Mail, Trash2, Plus, FileText, Calendar, User, ShieldCheck, Shield } from "lucide-react";
-
-// Mapping template_id → document_type compliance (doit rester sync avec le backend)
-const TEMPLATE_COMPLIANCE_MAP: Record<number, string> = {
-  1: 'recueil_global',
-  2: 'mandat_recherche',
-  3: 'lettre_mission_epargne',
-  4: 'lettre_mission_emprunteur',
-  5: 'lettre_mission_retraite',
-  6: 'lettre_mission_prevoyance',
-  7: 'lettre_mission_sante',
-  8: 'recueil_ade',
-};
+import { Download, Mail, Trash2, Plus, FileText, Calendar, User } from "lucide-react";
 
 interface Document {
   id: number;
-  document_template_id?: number;
   document_template?: {
     name: string;
     description: string;
@@ -25,7 +12,6 @@ interface Document {
     name: string;
   };
   sent_by_email?: boolean;
-  sent_to_compliance?: boolean;
   format?: string;
 }
 
@@ -35,7 +21,6 @@ interface VuexyDocumentsSectionProps {
   onDownload: (documentId: number) => void;
   onSendEmail: (documentId: number) => void;
   onDelete: (documentId: number) => void;
-  onSendToCompliance?: (documentId: number) => void;
 }
 
 export const VuexyDocumentsSection: React.FC<VuexyDocumentsSectionProps> = ({
@@ -44,7 +29,6 @@ export const VuexyDocumentsSection: React.FC<VuexyDocumentsSectionProps> = ({
   onDownload,
   onSendEmail,
   onDelete,
-  onSendToCompliance,
 }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR", {
@@ -127,26 +111,6 @@ export const VuexyDocumentsSection: React.FC<VuexyDocumentsSectionProps> = ({
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Compliance Button — affiché uniquement pour les templates mappés */}
-                    {doc.document_template_id && TEMPLATE_COMPLIANCE_MAP[doc.document_template_id] && (
-                      doc.sent_to_compliance ? (
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center bg-[rgba(40,199,111,0.12)] text-[#28C76F] cursor-default"
-                          title="Déjà envoyé en conformité"
-                        >
-                          <ShieldCheck size={18} />
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => onSendToCompliance?.(doc.id)}
-                          className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 bg-[rgba(115,103,240,0.12)] text-[#7367F0] hover:bg-[#7367F0] hover:text-white hover:scale-105"
-                          title="Envoyer en conformité"
-                        >
-                          <Shield size={18} />
-                        </button>
-                      )
-                    )}
-
                     {/* Download Button */}
                     <button
                       onClick={() => onDownload(doc.id)}

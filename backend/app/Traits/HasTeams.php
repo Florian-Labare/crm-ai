@@ -92,7 +92,7 @@ trait HasTeams
      */
     public function canManageResources(Team $team): bool
     {
-        return $this->hasTeamRole($team, ['owner', 'admin', 'mia']);
+        return $this->hasTeamRole($team, ['owner', 'admin', 'member']);
     }
 
     /**

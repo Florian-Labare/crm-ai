@@ -21,8 +21,6 @@ class ProcessImportSessionJob implements ShouldQueue
 
     public $backoff = [30, 60, 120];
 
-    public $queue = 'import';
-
     protected ImportSession $session;
 
     public function __construct(ImportSession $session)

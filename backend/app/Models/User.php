@@ -6,7 +6,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
@@ -26,19 +25,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'firstname',
-        'avatar_path',
         'email',
         'password',
-        // 'is_super_admin' intentionally excluded — set only via direct DB update or SuperAdminController::toggleSuperAdmin
     ];
-
-    protected $appends = ['avatar_url'];
-
-    public function getAvatarUrlAttribute(): ?string
-    {
-        if (!$this->avatar_path) return null;
-        return Storage::disk('s3')->url($this->avatar_path);
-    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -63,22 +52,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
-            'is_super_admin' => 'boolean',
         ];
-    }
-
-    public function isSuperAdmin(): bool
-    {
-        return (bool) $this->is_super_admin;
-    }
-
-    public function setEmailAttribute(string $value): void
-    {
-        $this->attributes['email'] = strtolower(trim($value));
-    }
-
-    public function socialAccounts()
-    {
-        return $this->hasMany(\App\Models\SocialAccount::class);
     }
 }

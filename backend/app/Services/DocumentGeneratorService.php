@@ -6,7 +6,6 @@ use App\Models\Client;
 use App\Models\DocumentTemplate;
 use App\Models\GeneratedDocument;
 use GuzzleHttp\Client as HttpClient;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -81,26 +80,6 @@ class DocumentGeneratorService
         // Remplacer toutes les variables dans le template
         foreach ($variables as $key => $value) {
             $templateProcessor->setValue($key, $this->normalizeTemplateValue($value));
-        }
-
-        // Injecter le logo du cabinet
-        $team = Auth::user()?->currentTeam();
-        if ($team && $team->logo_path) {
-            try {
-                $logoTempPath = $this->downloadLogoToTemp($team->logo_path);
-                $templateProcessor->setImageValue('logo_cabinet', [
-                    'path'   => $logoTempPath,
-                    'width'  => 150,
-                    'height' => 60,
-                    'ratio'  => true,
-                ]);
-                @unlink($logoTempPath);
-            } catch (\Throwable $e) {
-                Log::warning('⚠️ Impossible d\'injecter le logo dans le document : ' . $e->getMessage());
-                $templateProcessor->setValue('logo_cabinet', '');
-            }
-        } else {
-            $templateProcessor->setValue('logo_cabinet', '');
         }
 
         // Générer un nom de fichier unique (toujours en .docx d'abord)
@@ -273,22 +252,6 @@ class DocumentGeneratorService
         }
 
         return $variables;
-    }
-
-    /**
-     * Télécharge le logo depuis S3 vers un fichier temporaire local
-     */
-    private function downloadLogoToTemp(string $s3Path): string
-    {
-        $content = Storage::disk('s3')->get($s3Path);
-        $tempPath = storage_path('app/temp/logo_' . uniqid() . '.png');
-
-        if (!file_exists(storage_path('app/temp'))) {
-            mkdir(storage_path('app/temp'), 0755, true);
-        }
-
-        file_put_contents($tempPath, $content);
-        return $tempPath;
     }
 
     /**

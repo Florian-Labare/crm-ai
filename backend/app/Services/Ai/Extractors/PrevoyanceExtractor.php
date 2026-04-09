@@ -2,12 +2,12 @@
 
 namespace App\Services\Ai\Extractors;
 
-use App\Services\Ai\Traits\LlmClientTrait;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Extracteur spécialisé pour PRÉVOYANCE.
- *
+ * 
  * Responsabilité :
  * - Détection du besoin "prévoyance"
  * - Extraction des données bae_prevoyance
@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\Log;
  */
 class PrevoyanceExtractor
 {
-    use LlmClientTrait;
-
     /**
      * Extrait les données de prévoyance depuis la transcription.
      *
@@ -29,16 +27,28 @@ class PrevoyanceExtractor
         $prompt = $this->buildPrompt($transcription);
 
         try {
-            $data = $this->callLlm(
-                $this->getSystemPrompt(),
-                $prompt,
-                0.1,
-                true
-            );
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('OPENAI_API_KEY'),
+                'OpenAI-Organization' => env('OPENAI_ORG_ID'),
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                        'model' => 'gpt-4o-mini',
+                        'messages' => [
+                            ['role' => 'system', 'content' => $this->getSystemPrompt()],
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'temperature' => 0.1,
+                        'response_format' => ['type' => 'json_object'],
+                    ]);
+
+            $json = $response->json();
+            $raw = $json['choices'][0]['message']['content'] ?? '';
+
+            Log::info('[PrevoyanceExtractor] Réponse OpenAI', ['raw' => $raw]);
+
+            $data = json_decode($raw, true);
 
             if (!is_array($data)) {
-                Log::warning('[PrevoyanceExtractor] Impossible de parser la réponse LLM');
-
+                Log::warning('[PrevoyanceExtractor] Impossible de parser la réponse GPT', ['content' => $raw]);
                 return [];
             }
 
@@ -46,7 +56,6 @@ class PrevoyanceExtractor
 
         } catch (\Throwable $e) {
             Log::error('[PrevoyanceExtractor] Erreur lors de l\'extraction', ['message' => $e->getMessage()]);
-
             return [];
         }
     }
@@ -70,28 +79,34 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de besoins PRÉVOYANCE.
 
-[OBJECTIF]
+🎯 OBJECTIF :
 Détecter si le client exprime un besoin de prévoyance et extraire les données associées.
 
-[RÈGLE ABSOLUE]
+🔤 EPPELLATION / DICTÉE :
+- Si une valeur est épelée lettre par lettre (ex: "D U P O N T" ou "D comme David"), reconstruis le mot complet en collant les lettres dans l'ordre.
+- Ignore les séparateurs (espaces, tirets, points, pauses).
+- Pour email/adresse : "arobase" → "@", "point" → ".", "tiret" → "-", "underscore" → "_".
+- Pour téléphone : concatène tous les chiffres en une seule chaîne.
+
+🚫 RÈGLE ABSOLUE :
 - Ignore toutes les phrases du conseiller
 - Ne tiens compte QUE des phrases du client
 
-[MOTS-CLÉS PRÉVOYANCE]
+🔍 MOTS-CLÉS PRÉVOYANCE :
 Invalidité, ITT, incapacité, arrêt de travail, décès, capital décès, obsèques, rente conjoint, rente enfants, charges professionnelles, protection, accident, maladie grave, indemnités journalières
 
-[SI DÉTECTÉ - PRÉVOYANCE]
+✅ SI LE CLIENT PARLE DE PRÉVOYANCE :
 
 Retourne :
 {
   "besoins": ["prévoyance"],
   "besoins_action": "add",
   "bae_prevoyance": {
-    // Champs ci-dessous SEULEMENT si mentionnés
+    // Remplis les champs ci-dessous SEULEMENT si mentionnés
   }
 }
 
-[CHAMPS bae_prevoyance] (tous optionnels)
+📋 CHAMPS bae_prevoyance (optionnels) :
 - "contrat_en_place" (string) : nom du contrat existant
 - "date_effet" (string) : date d'effet du contrat
 - "cotisations" (decimal) : montant des cotisations
@@ -108,27 +123,32 @@ Retourne :
 - "rente_conjoint" (decimal)
 - "payeur" (string) : qui paie les cotisations
 
-[RÈGLE CRITIQUE - besoins_action]
+⚠️ RÈGLE CRITIQUE - besoins_action :
 - Par défaut : "add" (TOUJOURS)
 - "remove" UNIQUEMENT si le client dit : "je n'ai PLUS besoin de prévoyance", "supprimez la prévoyance"
 - NE JAMAIS utiliser "replace"
 
-[SI NON DÉTECTÉ]
-Retourne un objet vide : {}
+❌ SI LE CLIENT NE PARLE PAS DE PRÉVOYANCE :
+Retourne un objet vide :
+{}
 
-[EXEMPLES]
+📌 EXEMPLES :
 
-Input: "Je veux garantir 3000€ par mois en cas d'invalidité"
-Output: {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"souhaite_couverture_invalidite": true, "revenu_a_garantir": 3000}}
+Exemple 1 - Besoin détecté :
+"Je veux garantir 3000€ par mois en cas d'invalidité"
+→ {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {"souhaite_couverture_invalidite": true, "revenu_a_garantir": 3000}}
 
-Input: "J'ai besoin d'une prévoyance"
-Output: {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {}}
+Exemple 2 - Besoin générique :
+"J'ai besoin d'une prévoyance"
+→ {"besoins": ["prévoyance"], "besoins_action": "add", "bae_prevoyance": {}}
 
-Input: "Je n'ai plus besoin de prévoyance"
-Output: {"besoins": ["prévoyance"], "besoins_action": "remove"}
+Exemple 3 - Négation :
+"Je n'ai plus besoin de prévoyance"
+→ {"besoins": ["prévoyance"], "besoins_action": "remove"}
 
-Input: "Je veux préparer ma retraite"
-Output: {}
+Exemple 4 - Pas concerné :
+"Je veux préparer ma retraite"
+→ {}
 PROMPT;
     }
 }
