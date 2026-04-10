@@ -34,7 +34,7 @@ $testCases = [
     '51100' => '51100', // Déjà en chiffres
 ];
 
-$service = new AnalysisService();
+$service = new AnalysisService;
 $reflection = new ReflectionClass($service);
 $method = $reflection->getMethod('convertFrenchVerbalNumbers');
 $method->setAccessible(true);

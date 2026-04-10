@@ -9,18 +9,21 @@ use Illuminate\Foundation\Http\FormRequest;
  *
  * Validation pour la création d'un rendez-vous et envoi du DER
  */
-class StoreDerRequest extends FormRequest {
+class StoreDerRequest extends FormRequest
+{
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool {
+    public function authorize(): bool
+    {
         return true; // Accessible aux utilisateurs authentifiés
     }
 
     /**
      * Get the validation rules that apply to the request.
      */
-    public function rules(): array {
+    public function rules(): array
+    {
         return [
             'charge_clientele_id' => ['required', 'exists:users,id'],
             'civilite' => ['required', 'in:Monsieur,Madame'],
@@ -36,7 +39,8 @@ class StoreDerRequest extends FormRequest {
     /**
      * Get custom attributes for validator errors.
      */
-    public function attributes(): array {
+    public function attributes(): array
+    {
         return [
             'charge_clientele_id' => 'chargé de clientèle',
             'civilite' => 'civilité',
@@ -52,7 +56,8 @@ class StoreDerRequest extends FormRequest {
     /**
      * Get custom messages for validator errors.
      */
-    public function messages(): array {
+    public function messages(): array
+    {
         return [
             'charge_clientele_id.required' => 'Veuillez sélectionner un chargé de clientèle.',
             'charge_clientele_id.exists' => 'Le chargé de clientèle sélectionné n\'existe pas.',

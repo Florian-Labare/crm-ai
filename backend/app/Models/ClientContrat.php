@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClientContrat extends Model {
+class ClientContrat extends Model
+{
     protected $fillable = [
         'client_id',
         'type',
@@ -25,11 +26,13 @@ class ClientContrat extends Model {
         'versement_programme' => 'float',
     ];
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 
-    public function assureur(): BelongsTo {
+    public function assureur(): BelongsTo
+    {
         return $this->belongsTo(Assureur::class);
     }
 }

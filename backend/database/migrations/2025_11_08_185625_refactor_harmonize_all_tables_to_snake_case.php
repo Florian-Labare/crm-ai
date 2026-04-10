@@ -5,8 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class() extends Migration {
-    public function up(): void {
+return new class extends Migration
+{
+    public function up(): void
+    {
         Schema::table('clients', function (Blueprint $table) {
             foreach ([
                 'datedenaissance' => 'date_naissance',
@@ -75,7 +77,8 @@ return new class() extends Migration {
         }
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         Schema::table('clients', function (Blueprint $table) {
             $table->renameColumn('date_naissance', 'datedenaissance');
             $table->renameColumn('lieu_naissance', 'lieudenaissance');

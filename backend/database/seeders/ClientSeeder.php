@@ -7,12 +7,14 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class ClientSeeder extends Seeder {
+class ClientSeeder extends Seeder
+{
     /**
      * Run the database seeder.
      * Crée des clients de démonstration pour peupler la base
      */
-    public function run(): void {
+    public function run(): void
+    {
         // Récupérer tous les utilisateurs MIA
         $miaUsers = User::role('MIA')->get();
 

@@ -6,8 +6,10 @@ use App\Models\Client;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
-class DashboardController extends Controller {
-    public function stats(): JsonResponse {
+class DashboardController extends Controller
+{
+    public function stats(): JsonResponse
+    {
         $user = auth()->user();
         $team = $user->currentTeam();
         $teamId = $team?->id;
@@ -295,7 +297,8 @@ class DashboardController extends Controller {
         ]);
     }
 
-    private function normalizeBesoin(string $besoin): string {
+    private function normalizeBesoin(string $besoin): string
+    {
         $lower = mb_strtolower($besoin);
         if (str_contains($lower, 'retraite') || preg_match('/\bper\b/', $lower)) {
             return 'Retraite';

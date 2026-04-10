@@ -8,10 +8,12 @@ use App\Models\ClientActifFinancier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ClientActifFinancierResourceTest extends TestCase {
+class ClientActifFinancierResourceTest extends TestCase
+{
     use RefreshDatabase;
 
-    public function test_resource_returns_correct_structure(): void {
+    public function test_resource_returns_correct_structure(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -46,7 +48,8 @@ class ClientActifFinancierResourceTest extends TestCase {
         $this->assertEquals(50000.00, $array['valeur_actuelle']);
     }
 
-    public function test_resource_handles_null_values(): void {
+    public function test_resource_handles_null_values(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -67,7 +70,8 @@ class ClientActifFinancierResourceTest extends TestCase {
         $this->assertNull($array['valeur_actuelle']);
     }
 
-    public function test_date_ouverture_is_formatted_correctly(): void {
+    public function test_date_ouverture_is_formatted_correctly(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',

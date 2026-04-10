@@ -12,7 +12,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class DiarizeRecordingJob implements ShouldQueue {
+class DiarizeRecordingJob implements ShouldQueue
+{
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600;
@@ -103,7 +104,8 @@ class DiarizeRecordingJob implements ShouldQueue {
         }
     }
 
-    private function transcribeClientAudio(string $filePath, TranscriptionService $transcriptionService): ?string {
+    private function transcribeClientAudio(string $filePath, TranscriptionService $transcriptionService): ?string
+    {
         if (! file_exists($filePath)) {
             return null;
         }
@@ -124,7 +126,8 @@ class DiarizeRecordingJob implements ShouldQueue {
         }
     }
 
-    public function failed(\Throwable $exception): void {
+    public function failed(\Throwable $exception): void
+    {
         Log::error("[DIARIZE] Job echoue definitivement pour session {$this->sessionId}: {$exception->getMessage()}");
         $this->audioRecord->update(['diarization_success' => false]);
     }

@@ -4,12 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class() extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      * Ajoute les champs manquants pour supporter l'import complet des données conjoint
      */
-    public function up(): void {
+    public function up(): void
+    {
         $columnsToAdd = [
             'email' => fn (Blueprint $table) => $table->string('email')->nullable(),
             'code_postal' => fn (Blueprint $table) => $table->string('code_postal')->nullable(),
@@ -39,7 +41,8 @@ return new class() extends Migration {
     /**
      * Reverse the migrations.
      */
-    public function down(): void {
+    public function down(): void
+    {
         $columns = [
             'email',
             'code_postal',

@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class ClientComplianceDocument extends Model {
+class ClientComplianceDocument extends Model
+{
     protected $fillable = [
         'client_id',
         'uploaded_by',
@@ -111,22 +112,26 @@ class ClientComplianceDocument extends Model {
         'signed' => 'Documents signés',
     ];
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 
-    public function uploader(): BelongsTo {
+    public function uploader(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    public function validator(): BelongsTo {
+    public function validator(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'validated_by');
     }
 
     /**
      * Scope pour les documents expirant bientôt
      */
-    public function scopeExpiringSoon($query, int $days = 90) {
+    public function scopeExpiringSoon($query, int $days = 90)
+    {
         return $query->whereNotNull('expires_at')
             ->where('expires_at', '<=', now()->addDays($days))
             ->where('expires_at', '>', now());
@@ -135,7 +140,8 @@ class ClientComplianceDocument extends Model {
     /**
      * Scope pour les documents expirés
      */
-    public function scopeExpired($query) {
+    public function scopeExpired($query)
+    {
         return $query->whereNotNull('expires_at')
             ->where('expires_at', '<=', now());
     }
@@ -143,7 +149,8 @@ class ClientComplianceDocument extends Model {
     /**
      * Vérifie si le document est expiré
      */
-    public function isExpired(): bool {
+    public function isExpired(): bool
+    {
         if (! $this->expires_at) {
             return false;
         }
@@ -154,7 +161,8 @@ class ClientComplianceDocument extends Model {
     /**
      * Vérifie si le document expire bientôt
      */
-    public function isExpiringSoon(int $days = 90): bool {
+    public function isExpiringSoon(int $days = 90): bool
+    {
         if (! $this->expires_at) {
             return false;
         }
@@ -165,7 +173,8 @@ class ClientComplianceDocument extends Model {
     /**
      * Retourne le nombre de jours avant expiration (null si pas de date)
      */
-    public function getDaysUntilExpirationAttribute(): ?int {
+    public function getDaysUntilExpirationAttribute(): ?int
+    {
         if (! $this->expires_at) {
             return null;
         }
@@ -179,28 +188,32 @@ class ClientComplianceDocument extends Model {
     /**
      * Vérifie si le document est valide (validé et non expiré)
      */
-    public function isValid(): bool {
+    public function isValid(): bool
+    {
         return $this->status === 'validated' && ! $this->isExpired();
     }
 
     /**
      * Retourne le label du type de document
      */
-    public function getDocumentLabelAttribute(): string {
+    public function getDocumentLabelAttribute(): string
+    {
         return self::DOCUMENT_LABELS[$this->document_type] ?? $this->document_type;
     }
 
     /**
      * Retourne le label de la catégorie
      */
-    public function getCategoryLabelAttribute(): string {
+    public function getCategoryLabelAttribute(): string
+    {
         return self::CATEGORIES[$this->category] ?? $this->category;
     }
 
     /**
      * Relation many-to-many vers les requirements (pour documents signés liés)
      */
-    public function linkedRequirements(): BelongsToMany {
+    public function linkedRequirements(): BelongsToMany
+    {
         return $this->belongsToMany(
             ComplianceRequirement::class,
             'compliance_document_requirements',
@@ -213,14 +226,16 @@ class ClientComplianceDocument extends Model {
     /**
      * Vérifie si ce document est un document signé (taggable)
      */
-    public function isSignedDocument(): bool {
+    public function isSignedDocument(): bool
+    {
         return $this->document_type === 'signed_document';
     }
 
     /**
      * Retourne le label d'affichage (custom_label si défini, sinon file_name)
      */
-    public function getDisplayLabelAttribute(): string {
+    public function getDisplayLabelAttribute(): string
+    {
         return $this->custom_label ?: $this->file_name;
     }
 }

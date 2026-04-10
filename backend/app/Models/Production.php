@@ -6,9 +6,11 @@ use App\Scopes\TeamScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Production extends Model {
-    protected static function booted(): void {
-        static::addGlobalScope(new TeamScope());
+class Production extends Model
+{
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new TeamScope);
     }
 
     protected $fillable = [
@@ -61,19 +63,23 @@ class Production extends Model {
         'encours_commission' => 'decimal:2',
     ];
 
-    public function team(): BelongsTo {
+    public function team(): BelongsTo
+    {
         return $this->belongsTo(Team::class);
     }
 
-    public function user(): BelongsTo {
+    public function user(): BelongsTo
+    {
         return $this->belongsTo(User::class);
     }
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 
-    public function assureur(): BelongsTo {
+    public function assureur(): BelongsTo
+    {
         return $this->belongsTo(Assureur::class);
     }
 }

@@ -8,7 +8,8 @@ use Illuminate\Support\Str;
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
  */
-class UserFactory extends Factory {
+class UserFactory extends Factory
+{
     /**
      * The current password being used by the factory.
      */
@@ -19,7 +20,8 @@ class UserFactory extends Factory {
      *
      * @return array<string, mixed>
      */
-    public function definition(): array {
+    public function definition(): array
+    {
         return [
             'name' => fake()->lastName(),
             'firstname' => fake()->firstName(),
@@ -36,7 +38,8 @@ class UserFactory extends Factory {
     /**
      * Indicate that the model's email address should be unverified.
      */
-    public function unverified(): static {
+    public function unverified(): static
+    {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
@@ -45,7 +48,8 @@ class UserFactory extends Factory {
     /**
      * Indicate that the model does not have two-factor authentication configured.
      */
-    public function withoutTwoFactor(): static {
+    public function withoutTwoFactor(): static
+    {
         return $this->state(fn (array $attributes) => [
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -56,7 +60,8 @@ class UserFactory extends Factory {
     /**
      * Configure the model factory.
      */
-    public function configure(): static {
+    public function configure(): static
+    {
         return $this->afterCreating(function (\App\Models\User $user) {
             $team = \App\Models\Team::create([
                 'user_id' => $user->id,

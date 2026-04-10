@@ -30,7 +30,8 @@ use Illuminate\Support\Facades\Log;
  * - Prompts courts et ciblés (au lieu de 1038 lignes monolithiques)
  * - response_format JSON
  */
-class AnalysisService {
+class AnalysisService
+{
     public function __construct(
         private RouterService $router,
         private AiDataNormalizer $normalizer,
@@ -77,7 +78,8 @@ class AnalysisService {
     /**
      * Vérifie si la transcription est du garbage (hallucination Whisper, trop courte, etc.)
      */
-    private function isGarbageTranscription(string $transcription): bool {
+    private function isGarbageTranscription(string $transcription): bool
+    {
         $trimmed = trim($transcription);
 
         if (strlen($trimmed) < self::MIN_TRANSCRIPTION_LENGTH) {
@@ -93,7 +95,8 @@ class AnalysisService {
         return false;
     }
 
-    public function extractClientData(string $transcription): array {
+    public function extractClientData(string $transcription): array
+    {
         try {
             Log::info('🚀 [AnalysisService] Début extraction modulaire', [
                 'transcription_length' => strlen($transcription),
@@ -166,7 +169,8 @@ class AnalysisService {
     /**
      * Extrait les données pour une section donnée.
      */
-    private function extractSection(string $section, string $transcription): array {
+    private function extractSection(string $section, string $transcription): array
+    {
         return match ($section) {
             'client' => $this->clientExtractor->extract($transcription),
             'conjoint' => $this->conjointExtractor->extract($transcription),
@@ -190,7 +194,8 @@ class AnalysisService {
      * on vérifie si les données du client correspondent aux données du conjoint (erreur du GPT).
      * Si c'est le cas, on supprime ces données du client pour éviter l'écrasement.
      */
-    private function cleanClientDataIfConjointDetected(array $data, array $sections): array {
+    private function cleanClientDataIfConjointDetected(array $data, array $sections): array
+    {
         // Si la section conjoint n'a pas été détectée, pas besoin de nettoyer
         if (! in_array('conjoint', $sections)) {
             return $data;
@@ -271,7 +276,8 @@ class AnalysisService {
      * - Les objets sont fusionnés récursivement (bae_prevoyance, bae_retraite, etc.)
      * - Les valeurs scalaires : la nouvelle valeur écrase l'ancienne (si non vide)
      */
-    private function mergeData(array $existing, array $new): array {
+    private function mergeData(array $existing, array $new): array
+    {
         foreach ($new as $key => $value) {
             if (! isset($existing[$key])) {
                 // Clé n'existe pas → ajouter
@@ -315,7 +321,8 @@ class AnalysisService {
      * @param  int  $clientId  ID du client
      * @param  array  $data  Données extraites contenant potentiellement questionnaire_risque
      */
-    public function saveQuestionnaireRisque(int $clientId, array $data): void {
+    public function saveQuestionnaireRisque(int $clientId, array $data): void
+    {
         try {
             if (! isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {
                 Log::info('Aucune donnée de questionnaire de risque à sauvegarder', ['client_id' => $clientId]);

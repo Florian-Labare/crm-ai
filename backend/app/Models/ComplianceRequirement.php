@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ComplianceRequirement extends Model {
+class ComplianceRequirement extends Model
+{
     protected $fillable = [
         'besoin',
         'document_type',
@@ -35,7 +36,8 @@ class ComplianceRequirement extends Model {
     /**
      * Retourne les documents requis pour un ensemble de besoins
      */
-    public static function getRequirementsForBesoins(array $besoins): \Illuminate\Database\Eloquent\Collection {
+    public static function getRequirementsForBesoins(array $besoins): \Illuminate\Database\Eloquent\Collection
+    {
         $toInclude = ['global'];
         if (! empty($besoins)) {
             $toInclude[] = 'any_besoin';
@@ -51,7 +53,8 @@ class ComplianceRequirement extends Model {
     /**
      * Retourne le label du besoin
      */
-    public function getBesoinLabelAttribute(): string {
+    public function getBesoinLabelAttribute(): string
+    {
         return self::BESOIN_LABELS[$this->besoin] ?? $this->besoin;
     }
 }

@@ -9,11 +9,13 @@ use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\SimpleType\Jc;
 
-class ExportController extends Controller {
+class ExportController extends Controller
+{
     /**
      * Exporter la fiche client en PDF
      */
-    public function exportPdf($id) {
+    public function exportPdf($id)
+    {
         $client = Client::with(['conjoint', 'enfants', 'santeSouhait'])->findOrFail($id);
 
         $pdf = Pdf::loadView('exports.client-pdf', [
@@ -28,10 +30,11 @@ class ExportController extends Controller {
     /**
      * Exporter la fiche client en Word
      */
-    public function exportWord($id) {
+    public function exportWord($id)
+    {
         $client = Client::with(['conjoint', 'enfants', 'santeSouhait'])->findOrFail($id);
 
-        $phpWord = new PhpWord();
+        $phpWord = new PhpWord;
 
         // Configuration du document
         $phpWord->setDefaultFontName('Arial');
@@ -185,7 +188,8 @@ class ExportController extends Controller {
     /**
      * Exporter le questionnaire de risque en PDF
      */
-    public function exportQuestionnairePdf($id) {
+    public function exportQuestionnairePdf($id)
+    {
         $client = Client::findOrFail($id);
         $questionnaire = QuestionnaireRisque::with(['financier', 'connaissances', 'quiz'])
             ->where('client_id', $id)
@@ -211,13 +215,15 @@ class ExportController extends Controller {
     /**
      * Ajouter un champ au document Word
      */
-    private function addField($section, $label, $value, $labelStyle, $textStyle) {
+    private function addField($section, $label, $value, $labelStyle, $textStyle)
+    {
         if ($value !== null && $value !== '') {
             $section->addText($label.' : '.$value, array_merge($textStyle, $labelStyle), ['spaceAfter' => 100]);
         }
     }
 
-    private function formatFinancierResponses($financier): array {
+    private function formatFinancierResponses($financier): array
+    {
         if (! $financier) {
             return [];
         }
@@ -392,7 +398,8 @@ class ExportController extends Controller {
         return $responses;
     }
 
-    private function formatConnaissanceResponses($connaissances): array {
+    private function formatConnaissanceResponses($connaissances): array
+    {
         if (! $connaissances) {
             return [];
         }
@@ -426,7 +433,8 @@ class ExportController extends Controller {
         return $responses;
     }
 
-    private function formatQuizResponses($quiz): array {
+    private function formatQuizResponses($quiz): array
+    {
         if (! $quiz) {
             return [];
         }

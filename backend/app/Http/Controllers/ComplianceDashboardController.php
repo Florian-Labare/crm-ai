@@ -7,11 +7,13 @@ use App\Models\ComplianceRequirement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ComplianceDashboardController extends Controller {
+class ComplianceDashboardController extends Controller
+{
     /**
      * Retourne les statistiques globales de conformité — 2 requêtes SQL au lieu de 2N+1.
      */
-    public function index(Request $request): JsonResponse {
+    public function index(Request $request): JsonResponse
+    {
         $user = auth()->user();
 
         // 1 requête : clients avec documents pré-chargés
@@ -145,7 +147,8 @@ class ComplianceDashboardController extends Controller {
     /**
      * Retourne uniquement les alertes (paginées) — 1 requête SQL.
      */
-    public function alerts(Request $request): JsonResponse {
+    public function alerts(Request $request): JsonResponse
+    {
         $perPage = (int) $request->input('per_page', 20);
         $filter = $request->input('filter', 'all');
 

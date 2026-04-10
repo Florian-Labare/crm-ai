@@ -8,8 +8,10 @@ use App\Services\MeetingSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class MeetingSummaryController extends Controller {
-    public function showLatest(Client $client): JsonResponse {
+class MeetingSummaryController extends Controller
+{
+    public function showLatest(Client $client): JsonResponse
+    {
         $summary = $client->meetingSummaries()
             ->latest()
             ->first();
@@ -19,7 +21,8 @@ class MeetingSummaryController extends Controller {
         ]);
     }
 
-    public function regenerate(Request $request, Client $client, MeetingSummaryService $summaryService): JsonResponse {
+    public function regenerate(Request $request, Client $client, MeetingSummaryService $summaryService): JsonResponse
+    {
         $audioRecordId = $request->input('audio_record_id');
 
         $audioRecordQuery = AudioRecord::where('client_id', $client->id);

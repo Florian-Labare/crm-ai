@@ -25,7 +25,7 @@ foreach ($files as $filePath) {
 
     echo "📄 {$fileName}\n";
 
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     if ($zip->open($filePath) !== true) {
         echo "   ❌ Impossible d'ouvrir\n\n";
 

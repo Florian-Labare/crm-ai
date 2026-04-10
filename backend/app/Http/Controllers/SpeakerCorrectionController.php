@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * Controller pour la correction manuelle des speakers identifiés
  */
-class SpeakerCorrectionController extends Controller {
+class SpeakerCorrectionController extends Controller
+{
     public function __construct(
         private readonly AuditService $auditService
     ) {}
@@ -19,7 +20,8 @@ class SpeakerCorrectionController extends Controller {
     /**
      * Récupère les informations de diarisation d'un enregistrement
      */
-    public function show(AudioRecord $audioRecord): JsonResponse {
+    public function show(AudioRecord $audioRecord): JsonResponse
+    {
         if (! $audioRecord->diarization_data) {
             return response()->json([
                 'success' => false,
@@ -49,7 +51,8 @@ class SpeakerCorrectionController extends Controller {
     /**
      * Applique une correction de speaker
      */
-    public function correct(Request $request, AudioRecord $audioRecord): JsonResponse {
+    public function correct(Request $request, AudioRecord $audioRecord): JsonResponse
+    {
         $validated = $request->validate([
             'speaker_id' => 'required|string',
             'role' => 'required|in:broker,client',
@@ -103,7 +106,8 @@ class SpeakerCorrectionController extends Controller {
     /**
      * Applique plusieurs corrections en une seule fois
      */
-    public function correctBatch(Request $request, AudioRecord $audioRecord): JsonResponse {
+    public function correctBatch(Request $request, AudioRecord $audioRecord): JsonResponse
+    {
         $validated = $request->validate([
             'corrections' => 'required|array',
             'corrections.*.speaker_id' => 'required|string',
@@ -156,7 +160,8 @@ class SpeakerCorrectionController extends Controller {
     /**
      * Réinitialise les corrections d'un enregistrement
      */
-    public function reset(AudioRecord $audioRecord): JsonResponse {
+    public function reset(AudioRecord $audioRecord): JsonResponse
+    {
         if (! $audioRecord->speakers_corrected) {
             return response()->json([
                 'success' => false,
@@ -195,7 +200,8 @@ class SpeakerCorrectionController extends Controller {
     /**
      * Liste les enregistrements qui pourraient nécessiter une révision
      */
-    public function needsReview(Request $request): JsonResponse {
+    public function needsReview(Request $request): JsonResponse
+    {
         $perPage = $request->input('per_page', 20);
 
         $records = AudioRecord::with(['client:id,nom,prenom', 'user:id,name'])

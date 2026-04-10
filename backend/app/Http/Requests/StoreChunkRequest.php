@@ -12,11 +12,13 @@ use Illuminate\Foundation\Http\FormRequest;
  * Validation pour l'upload d'un chunk audio (max 10 minutes)
  * Inclut la validation de l'appartenance du client et de la session à la team
  */
-class StoreChunkRequest extends FormRequest {
+class StoreChunkRequest extends FormRequest
+{
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool {
+    public function authorize(): bool
+    {
         $user = $this->user();
         if (! $user || ! $user->currentTeam()) {
             return false;
@@ -50,7 +52,8 @@ class StoreChunkRequest extends FormRequest {
     /**
      * Get the validation rules that apply to the request.
      */
-    public function rules(): array {
+    public function rules(): array
+    {
         $teamId = $this->user()?->currentTeam()?->id;
 
         return [
@@ -78,7 +81,8 @@ class StoreChunkRequest extends FormRequest {
     /**
      * Get custom error messages.
      */
-    public function messages(): array {
+    public function messages(): array
+    {
         return [
             'session_id.required' => 'L\'identifiant de session est requis.',
             'session_id.uuid' => 'L\'identifiant de session doit être un UUID valide.',

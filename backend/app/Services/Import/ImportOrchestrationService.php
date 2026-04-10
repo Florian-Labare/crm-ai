@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ImportOrchestrationService {
+class ImportOrchestrationService
+{
     public function __construct(
         private ImportFileParserService $parser,
         private ImportMappingService $mappingService,
@@ -20,7 +21,8 @@ class ImportOrchestrationService {
         private EnfantSyncService $enfantSyncService
     ) {}
 
-    public function analyzeFile(ImportSession $session): void {
+    public function analyzeFile(ImportSession $session): void
+    {
         $session->update(['status' => ImportSession::STATUS_ANALYZING]);
 
         try {
@@ -45,7 +47,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function analyzeFileSource(ImportSession $session): void {
+    private function analyzeFileSource(ImportSession $session): void
+    {
         $filePath = $this->getLocalFilePath($session);
 
         $columns = $this->parser->detectColumns($filePath);
@@ -66,7 +69,8 @@ class ImportOrchestrationService {
         ]);
     }
 
-    private function analyzeDatabaseSource(ImportSession $session): void {
+    private function analyzeDatabaseSource(ImportSession $session): void
+    {
         $connection = $session->databaseConnection;
         if (! $connection) {
             throw new \Exception('Connexion base de données non trouvée');
@@ -103,7 +107,8 @@ class ImportOrchestrationService {
         ]);
     }
 
-    public function processSession(ImportSession $session): void {
+    public function processSession(ImportSession $session): void
+    {
         $session->update([
             'status' => ImportSession::STATUS_PROCESSING,
             'started_at' => now(),
@@ -132,7 +137,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function processFromFile(ImportSession $session, array $columnMappings): void {
+    private function processFromFile(ImportSession $session, array $columnMappings): void
+    {
         $filePath = $this->getLocalFilePath($session);
         $parsed = $this->parser->parseFile($filePath);
 
@@ -157,7 +163,8 @@ class ImportOrchestrationService {
         ]);
     }
 
-    private function processFromDatabase(ImportSession $session, array $columnMappings): void {
+    private function processFromDatabase(ImportSession $session, array $columnMappings): void
+    {
         $connection = $session->databaseConnection;
         if (! $connection) {
             throw new \Exception('Connexion base de données non trouvée');
@@ -214,7 +221,8 @@ class ImportOrchestrationService {
      * Télécharge le fichier depuis S3 vers temp local si nécessaire
      * et retourne le chemin local pour traitement
      */
-    private function getLocalFilePath(ImportSession $session): string {
+    private function getLocalFilePath(ImportSession $session): string
+    {
         $tempPath = Storage::disk('temp')->path('imports/'.basename($session->file_path));
 
         // Si le fichier temp existe déjà, le réutiliser
@@ -240,7 +248,8 @@ class ImportOrchestrationService {
         return $tempPath;
     }
 
-    public function processBatch(ImportSession $session, int $offset, int $limit = 50): array {
+    public function processBatch(ImportSession $session, int $offset, int $limit = 50): array
+    {
         $mapping = $session->mapping;
         if (! $mapping) {
             throw new \Exception('Aucun mapping configuré');
@@ -320,7 +329,8 @@ class ImportOrchestrationService {
         return $results;
     }
 
-    public function importRow(ImportRow $row, string $action = 'create'): ?Client {
+    public function importRow(ImportRow $row, string $action = 'create'): ?Client
+    {
         if (! in_array($row->status, [ImportRow::STATUS_VALID, ImportRow::STATUS_DUPLICATE])) {
             throw new \Exception('La ligne doit être valide ou doublon pour être importée');
         }
@@ -409,7 +419,8 @@ class ImportOrchestrationService {
         });
     }
 
-    public function importValidRows(ImportSession $session): int {
+    public function importValidRows(ImportSession $session): int
+    {
         $validRows = ImportRow::where('import_session_id', $session->id)
             ->where('status', ImportRow::STATUS_VALID)
             ->get();
@@ -431,7 +442,8 @@ class ImportOrchestrationService {
         return $imported;
     }
 
-    public function getSessionStats(ImportSession $session): array {
+    public function getSessionStats(ImportSession $session): array
+    {
         $statusCounts = ImportRow::where('import_session_id', $session->id)
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
@@ -453,7 +465,8 @@ class ImportOrchestrationService {
         ];
     }
 
-    private function createClient(array $data, int $teamId, int $userId): Client {
+    private function createClient(array $data, int $teamId, int $userId): Client
+    {
         $clientData = array_filter([
             // Required fields
             'team_id' => $teamId,
@@ -501,7 +514,8 @@ class ImportOrchestrationService {
         return Client::create($clientData);
     }
 
-    private function mergeWithExisting(int $clientId, array $data): Client {
+    private function mergeWithExisting(int $clientId, array $data): Client
+    {
         $client = Client::findOrFail($clientId);
 
         $updateData = [];
@@ -533,7 +547,8 @@ class ImportOrchestrationService {
         return $client->fresh();
     }
 
-    private function createOrUpdateConjoint(Client $client, array $conjointData): void {
+    private function createOrUpdateConjoint(Client $client, array $conjointData): void
+    {
         $conjoint = $client->conjoint;
 
         $data = array_filter([
@@ -583,7 +598,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function createOrUpdateSanteSouhait(Client $client, array $santeData): void {
+    private function createOrUpdateSanteSouhait(Client $client, array $santeData): void
+    {
         $santeSouhait = $client->santeSouhait;
 
         $data = array_filter([
@@ -612,7 +628,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function normalizeImportValue(mixed $value): mixed {
+    private function normalizeImportValue(mixed $value): mixed
+    {
         if (is_string($value)) {
             $trimmed = trim($value);
 
@@ -622,7 +639,8 @@ class ImportOrchestrationService {
         return $value;
     }
 
-    private function normalizeNumericImportValue(mixed $value): ?float {
+    private function normalizeNumericImportValue(mixed $value): ?float
+    {
         if ($value === null || $value === '') {
             return null;
         }
@@ -665,7 +683,8 @@ class ImportOrchestrationService {
         return (float) $normalized;
     }
 
-    private function normalizeIntegerImportValue(mixed $value): ?int {
+    private function normalizeIntegerImportValue(mixed $value): ?int
+    {
         $numeric = $this->normalizeNumericImportValue($value);
         if ($numeric === null) {
             return null;
@@ -674,7 +693,8 @@ class ImportOrchestrationService {
         return (int) round($numeric);
     }
 
-    private function normalizeDateImportValue(mixed $value): ?string {
+    private function normalizeDateImportValue(mixed $value): ?string
+    {
         if ($value instanceof \DateTimeInterface) {
             return $value->format('Y-m-d');
         }
@@ -699,7 +719,8 @@ class ImportOrchestrationService {
         return null;
     }
 
-    private function createOrUpdateBaePrevoyance(Client $client, array $prevoyanceData): void {
+    private function createOrUpdateBaePrevoyance(Client $client, array $prevoyanceData): void
+    {
         $baePrevoyance = $client->baePrevoyance;
 
         $data = array_filter([
@@ -732,7 +753,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function createOrUpdateBaeRetraite(Client $client, array $retraiteData): void {
+    private function createOrUpdateBaeRetraite(Client $client, array $retraiteData): void
+    {
         $baeRetraite = $client->baeRetraite;
 
         $data = array_filter([
@@ -765,7 +787,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function createOrUpdateBaeEpargne(Client $client, array $epargneData): void {
+    private function createOrUpdateBaeEpargne(Client $client, array $epargneData): void
+    {
         $baeEpargne = $client->baeEpargne;
 
         $data = array_filter([
@@ -805,7 +828,8 @@ class ImportOrchestrationService {
         }
     }
 
-    private function createClientRevenu(Client $client, array $revenuData): void {
+    private function createClientRevenu(Client $client, array $revenuData): void
+    {
         $data = array_filter([
             'client_id' => $client->id,
             'nature' => $this->normalizeImportValue($revenuData['nature'] ?? null),
@@ -821,7 +845,8 @@ class ImportOrchestrationService {
         $client->revenus()->create($data);
     }
 
-    private function createClientActifFinancier(Client $client, array $actifData): void {
+    private function createClientActifFinancier(Client $client, array $actifData): void
+    {
         $data = array_filter([
             'client_id' => $client->id,
             'nature' => $this->normalizeImportValue($actifData['nature'] ?? null),
@@ -838,7 +863,8 @@ class ImportOrchestrationService {
         $client->actifsFinanciers()->create($data);
     }
 
-    private function createClientBienImmobilier(Client $client, array $bienData): void {
+    private function createClientBienImmobilier(Client $client, array $bienData): void
+    {
         $data = array_filter([
             'client_id' => $client->id,
             'designation' => $this->normalizeImportValue($bienData['designation'] ?? null),
@@ -856,7 +882,8 @@ class ImportOrchestrationService {
         $client->biensImmobiliers()->create($data);
     }
 
-    private function createClientPassif(Client $client, array $passifData): void {
+    private function createClientPassif(Client $client, array $passifData): void
+    {
         $data = array_filter([
             'client_id' => $client->id,
             'nature' => $this->normalizeImportValue($passifData['nature'] ?? null),
@@ -874,7 +901,8 @@ class ImportOrchestrationService {
         $client->passifs()->create($data);
     }
 
-    private function createClientAutreEpargne(Client $client, array $epargneData): void {
+    private function createClientAutreEpargne(Client $client, array $epargneData): void
+    {
         $data = array_filter([
             'client_id' => $client->id,
             'designation' => $this->normalizeImportValue($epargneData['designation'] ?? null),

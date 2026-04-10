@@ -4,11 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class() extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
-    public function up(): void {
+    public function up(): void
+    {
         // 1. Table principale : questionnaire_risques
         Schema::table('questionnaire_risques', function (Blueprint $table) {
             if (! Schema::hasColumn('questionnaire_risques', 'client_id')) {
@@ -105,7 +107,8 @@ return new class() extends Migration {
     /**
      * Reverse the migrations.
      */
-    public function down(): void {
+    public function down(): void
+    {
         // Supprimer les colonnes de questionnaire_risques
         Schema::table('questionnaire_risques', function (Blueprint $table) {
             $table->dropForeign(['client_id']);

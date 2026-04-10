@@ -4,8 +4,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-return new class() extends Migration {
-    private function getMapping(): array {
+return new class extends Migration
+{
+    private function getMapping(): array
+    {
         return [
             'prévoyance' => 'prevoyance',
             'prevoyance' => 'prevoyance',
@@ -56,7 +58,8 @@ return new class() extends Migration {
         ];
     }
 
-    public function up(): void {
+    public function up(): void
+    {
         $mapping = $this->getMapping();
 
         $clients = DB::table('clients')
@@ -108,7 +111,8 @@ return new class() extends Migration {
         ]);
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         // Irreversible : normalisation de données textuelles
     }
 };

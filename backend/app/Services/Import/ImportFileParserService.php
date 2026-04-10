@@ -4,12 +4,14 @@ namespace App\Services\Import;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
-class ImportFileParserService {
+class ImportFileParserService
+{
     private const SUPPORTED_EXTENSIONS = ['xlsx', 'xls', 'csv', 'json', 'xml', 'sql'];
 
     private const CHUNK_SIZE = 100;
 
-    public function getSupportedFormats(): array {
+    public function getSupportedFormats(): array
+    {
         return [
             'xlsx' => 'Microsoft Excel (.xlsx)',
             'xls' => 'Microsoft Excel 97-2003 (.xls)',
@@ -20,13 +22,15 @@ class ImportFileParserService {
         ];
     }
 
-    public function isSupported(string $filePath): bool {
+    public function isSupported(string $filePath): bool
+    {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         return in_array($extension, self::SUPPORTED_EXTENSIONS);
     }
 
-    public function parseFile(string $filePath): array {
+    public function parseFile(string $filePath): array
+    {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         if (! in_array($extension, self::SUPPORTED_EXTENSIONS)) {
@@ -42,7 +46,8 @@ class ImportFileParserService {
         };
     }
 
-    public function detectColumns(string $filePath): array {
+    public function detectColumns(string $filePath): array
+    {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         return match ($extension) {
@@ -54,7 +59,8 @@ class ImportFileParserService {
         };
     }
 
-    public function getRowCount(string $filePath): int {
+    public function getRowCount(string $filePath): int
+    {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         return match ($extension) {
@@ -66,7 +72,8 @@ class ImportFileParserService {
         };
     }
 
-    public function parseChunk(string $filePath, int $offset, int $limit = self::CHUNK_SIZE): array {
+    public function parseChunk(string $filePath, int $offset, int $limit = self::CHUNK_SIZE): array
+    {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         return match ($extension) {
@@ -80,7 +87,8 @@ class ImportFileParserService {
 
     // ==================== EXCEL ====================
 
-    private function parseExcel(string $filePath): array {
+    private function parseExcel(string $filePath): array
+    {
         $spreadsheet = IOFactory::load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
         $data = $worksheet->toArray(null, true, true, true);
@@ -108,7 +116,8 @@ class ImportFileParserService {
         return ['headers' => array_filter($headers), 'rows' => $rows];
     }
 
-    private function detectExcelColumns(string $filePath): array {
+    private function detectExcelColumns(string $filePath): array
+    {
         $spreadsheet = IOFactory::load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
         $firstRow = $worksheet->rangeToArray('A1:AZ1', null, true, true, true)[1] ?? [];
@@ -116,14 +125,16 @@ class ImportFileParserService {
         return array_values(array_filter(array_map(fn ($h) => trim((string) $h), $firstRow)));
     }
 
-    private function getExcelRowCount(string $filePath): int {
+    private function getExcelRowCount(string $filePath): int
+    {
         $spreadsheet = IOFactory::load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
 
         return max(0, $worksheet->getHighestRow() - 1);
     }
 
-    private function parseExcelChunk(string $filePath, int $offset, int $limit): array {
+    private function parseExcelChunk(string $filePath, int $offset, int $limit): array
+    {
         $spreadsheet = IOFactory::load($filePath);
         $worksheet = $spreadsheet->getActiveSheet();
 
@@ -154,7 +165,8 @@ class ImportFileParserService {
 
     // ==================== CSV ====================
 
-    private function parseCsv(string $filePath): array {
+    private function parseCsv(string $filePath): array
+    {
         $encoding = $this->detectEncoding($filePath);
         $delimiter = $this->detectCsvDelimiter($filePath);
 
@@ -191,7 +203,8 @@ class ImportFileParserService {
         return ['headers' => array_filter($headers), 'rows' => $rows];
     }
 
-    private function detectCsvColumns(string $filePath): array {
+    private function detectCsvColumns(string $filePath): array
+    {
         $encoding = $this->detectEncoding($filePath);
         $delimiter = $this->detectCsvDelimiter($filePath);
 
@@ -213,7 +226,8 @@ class ImportFileParserService {
         )));
     }
 
-    private function getCsvRowCount(string $filePath): int {
+    private function getCsvRowCount(string $filePath): int
+    {
         $handle = fopen($filePath, 'r');
         if ($handle === false) {
             return 0;
@@ -231,7 +245,8 @@ class ImportFileParserService {
         return $count;
     }
 
-    private function parseCsvChunk(string $filePath, int $offset, int $limit): array {
+    private function parseCsvChunk(string $filePath, int $offset, int $limit): array
+    {
         $encoding = $this->detectEncoding($filePath);
         $delimiter = $this->detectCsvDelimiter($filePath);
 
@@ -277,7 +292,8 @@ class ImportFileParserService {
 
     // ==================== JSON ====================
 
-    private function parseJson(string $filePath): array {
+    private function parseJson(string $filePath): array
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             throw new \RuntimeException("Impossible de lire le fichier: {$filePath}");
@@ -301,7 +317,8 @@ class ImportFileParserService {
         return ['headers' => $headers, 'rows' => $rows];
     }
 
-    private function normalizeJsonData(mixed $data): array {
+    private function normalizeJsonData(mixed $data): array
+    {
         // If it's already an array of objects
         if (is_array($data) && ! empty($data)) {
             // Check if it's an array of arrays/objects
@@ -326,7 +343,8 @@ class ImportFileParserService {
         return [];
     }
 
-    private function detectJsonColumns(string $filePath): array {
+    private function detectJsonColumns(string $filePath): array
+    {
         $content = file_get_contents($filePath, false, null, 0, 65536); // Read first 64KB
         if ($content === false) {
             return [];
@@ -351,7 +369,8 @@ class ImportFileParserService {
         return array_values(array_unique($headers));
     }
 
-    private function getJsonRowCount(string $filePath): int {
+    private function getJsonRowCount(string $filePath): int
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             return 0;
@@ -367,7 +386,8 @@ class ImportFileParserService {
         return count($rows);
     }
 
-    private function parseJsonChunk(string $filePath, int $offset, int $limit): array {
+    private function parseJsonChunk(string $filePath, int $offset, int $limit): array
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             return [];
@@ -385,7 +405,8 @@ class ImportFileParserService {
 
     // ==================== XML ====================
 
-    private function parseXml(string $filePath): array {
+    private function parseXml(string $filePath): array
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             throw new \RuntimeException("Impossible de lire le fichier: {$filePath}");
@@ -411,7 +432,8 @@ class ImportFileParserService {
         return ['headers' => $headers, 'rows' => $rows];
     }
 
-    private function normalizeXmlData(\SimpleXMLElement $xml): array {
+    private function normalizeXmlData(\SimpleXMLElement $xml): array
+    {
         $rows = [];
 
         // Try to find record elements (first level children)
@@ -425,7 +447,8 @@ class ImportFileParserService {
         return $rows;
     }
 
-    private function xmlElementToArray(\SimpleXMLElement $element): array {
+    private function xmlElementToArray(\SimpleXMLElement $element): array
+    {
         $result = [];
 
         // Get attributes
@@ -454,7 +477,8 @@ class ImportFileParserService {
         return $result;
     }
 
-    private function detectXmlColumns(string $filePath): array {
+    private function detectXmlColumns(string $filePath): array
+    {
         $content = file_get_contents($filePath, false, null, 0, 65536);
         if ($content === false) {
             return [];
@@ -481,7 +505,8 @@ class ImportFileParserService {
         return array_values(array_unique($headers));
     }
 
-    private function getXmlRowCount(string $filePath): int {
+    private function getXmlRowCount(string $filePath): int
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             return 0;
@@ -498,7 +523,8 @@ class ImportFileParserService {
         return count($xml->children());
     }
 
-    private function parseXmlChunk(string $filePath, int $offset, int $limit): array {
+    private function parseXmlChunk(string $filePath, int $offset, int $limit): array
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             return [];
@@ -519,7 +545,8 @@ class ImportFileParserService {
 
     // ==================== SQL ====================
 
-    private function parseSql(string $filePath): array {
+    private function parseSql(string $filePath): array
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             throw new \RuntimeException("Impossible de lire le fichier: {$filePath}");
@@ -536,7 +563,8 @@ class ImportFileParserService {
         return ['headers' => $headers, 'rows' => $rows];
     }
 
-    private function extractInsertStatements(string $sql): array {
+    private function extractInsertStatements(string $sql): array
+    {
         $rows = [];
 
         // Match INSERT INTO statements
@@ -562,7 +590,8 @@ class ImportFileParserService {
         return $rows;
     }
 
-    private function parseSqlColumns(string $columnsStr): array {
+    private function parseSqlColumns(string $columnsStr): array
+    {
         $columns = [];
         $parts = explode(',', $columnsStr);
 
@@ -577,7 +606,8 @@ class ImportFileParserService {
         return $columns;
     }
 
-    private function parseSqlValueSets(string $valuesStr): array {
+    private function parseSqlValueSets(string $valuesStr): array
+    {
         $sets = [];
         $current = '';
         $inString = false;
@@ -625,7 +655,8 @@ class ImportFileParserService {
         return $sets;
     }
 
-    private function parseSqlValues(string $valuesStr): array {
+    private function parseSqlValues(string $valuesStr): array
+    {
         $values = [];
         $current = '';
         $inString = false;
@@ -660,7 +691,8 @@ class ImportFileParserService {
         return $values;
     }
 
-    private function cleanSqlValue(string $value): ?string {
+    private function cleanSqlValue(string $value): ?string
+    {
         $value = trim($value);
 
         if (strtoupper($value) === 'NULL') {
@@ -676,7 +708,8 @@ class ImportFileParserService {
         return $value;
     }
 
-    private function detectSqlColumns(string $filePath): array {
+    private function detectSqlColumns(string $filePath): array
+    {
         $content = file_get_contents($filePath, false, null, 0, 65536);
         if ($content === false) {
             return [];
@@ -691,7 +724,8 @@ class ImportFileParserService {
         return [];
     }
 
-    private function getSqlRowCount(string $filePath): int {
+    private function getSqlRowCount(string $filePath): int
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             return 0;
@@ -702,7 +736,8 @@ class ImportFileParserService {
         return count($rows);
     }
 
-    private function parseSqlChunk(string $filePath, int $offset, int $limit): array {
+    private function parseSqlChunk(string $filePath, int $offset, int $limit): array
+    {
         $content = file_get_contents($filePath);
         if ($content === false) {
             return [];
@@ -715,7 +750,8 @@ class ImportFileParserService {
 
     // ==================== HELPERS ====================
 
-    private function detectEncoding(string $filePath): string {
+    private function detectEncoding(string $filePath): string
+    {
         $content = file_get_contents($filePath, false, null, 0, 1024);
 
         if ($content === false) {
@@ -732,7 +768,8 @@ class ImportFileParserService {
         return $encoding ?: 'UTF-8';
     }
 
-    private function detectCsvDelimiter(string $filePath): string {
+    private function detectCsvDelimiter(string $filePath): string
+    {
         $handle = fopen($filePath, 'r');
         if ($handle === false) {
             return ',';
@@ -755,7 +792,8 @@ class ImportFileParserService {
         return array_search(max($delimiters), $delimiters) ?: ',';
     }
 
-    private function convertEncoding(string $value, string $fromEncoding): string {
+    private function convertEncoding(string $value, string $fromEncoding): string
+    {
         if ($fromEncoding === 'UTF-8') {
             return $value;
         }
@@ -765,7 +803,8 @@ class ImportFileParserService {
         return $converted !== false ? $converted : $value;
     }
 
-    private function isRowNotEmpty(array $row): bool {
+    private function isRowNotEmpty(array $row): bool
+    {
         foreach ($row as $value) {
             if ($value !== null && $value !== '') {
                 return true;

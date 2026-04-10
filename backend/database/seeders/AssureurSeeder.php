@@ -5,8 +5,10 @@ namespace Database\Seeders;
 use App\Models\Assureur;
 use Illuminate\Database\Seeder;
 
-class AssureurSeeder extends Seeder {
-    public function run(): void {
+class AssureurSeeder extends Seeder
+{
+    public function run(): void
+    {
         $assureurs = [
             'Allianz',
             'AXA',

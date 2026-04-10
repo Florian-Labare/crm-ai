@@ -10,14 +10,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
-class SocialAuthController extends Controller {
+class SocialAuthController extends Controller
+{
     private const ALLOWED_PROVIDERS = ['google', 'azure'];
 
     /**
      * Initie le flux OAuth pour lier un compte social à un user déjà authentifié.
      * Retourne l'URL de redirection OAuth (le frontend navigue vers cette URL).
      */
-    public function initiateLink(string $provider): JsonResponse {
+    public function initiateLink(string $provider): JsonResponse
+    {
         if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
         }
@@ -57,7 +59,8 @@ class SocialAuthController extends Controller {
         abort(404);
     }
 
-    public function redirect(string $provider) {
+    public function redirect(string $provider)
+    {
         if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
         }
@@ -78,7 +81,8 @@ class SocialAuthController extends Controller {
         return Socialite::driver($provider)->stateless()->redirect();
     }
 
-    public function callback(string $provider) {
+    public function callback(string $provider)
+    {
         if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
         }
@@ -175,7 +179,8 @@ class SocialAuthController extends Controller {
      * Gère le callback en mode "link" : attache ou met à jour le SocialAccount
      * du user identifié par l'état signé, sans créer de nouvelle session.
      */
-    private function handleLinkCallback(string $provider, $socialUser, int $userId, string $frontendUrl): \Illuminate\Http\RedirectResponse {
+    private function handleLinkCallback(string $provider, $socialUser, int $userId, string $frontendUrl): \Illuminate\Http\RedirectResponse
+    {
         $user = User::find($userId);
 
         if (! $user) {

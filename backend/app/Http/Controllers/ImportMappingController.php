@@ -8,13 +8,15 @@ use App\Services\Import\ImportMappingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ImportMappingController extends Controller {
+class ImportMappingController extends Controller
+{
     public function __construct(
         private ImportMappingService $mappingService,
         private ImportFieldsService $fieldsService
     ) {}
 
-    public function index(Request $request): JsonResponse {
+    public function index(Request $request): JsonResponse
+    {
         $teamId = $request->user()->currentTeam()?->id;
 
         $mappings = $this->mappingService->getTeamMappings($teamId);
@@ -25,7 +27,8 @@ class ImportMappingController extends Controller {
         ]);
     }
 
-    public function store(Request $request): JsonResponse {
+    public function store(Request $request): JsonResponse
+    {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'source_type' => 'required|string|in:excel,csv,sql',
@@ -57,14 +60,16 @@ class ImportMappingController extends Controller {
         ], 201);
     }
 
-    public function show(ImportMapping $mapping): JsonResponse {
+    public function show(ImportMapping $mapping): JsonResponse
+    {
         return response()->json([
             'success' => true,
             'data' => $mapping,
         ]);
     }
 
-    public function update(Request $request, ImportMapping $mapping): JsonResponse {
+    public function update(Request $request, ImportMapping $mapping): JsonResponse
+    {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'source_type' => 'sometimes|string|in:excel,csv,sql',
@@ -92,7 +97,8 @@ class ImportMappingController extends Controller {
         ]);
     }
 
-    public function destroy(ImportMapping $mapping): JsonResponse {
+    public function destroy(ImportMapping $mapping): JsonResponse
+    {
         $mapping->delete();
 
         return response()->json([
@@ -101,7 +107,8 @@ class ImportMappingController extends Controller {
         ]);
     }
 
-    public function availableFields(): JsonResponse {
+    public function availableFields(): JsonResponse
+    {
         // Augmenter temporairement la limite mémoire pour cette opération
         ini_set('memory_limit', '512M');
 

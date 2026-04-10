@@ -4,15 +4,18 @@ namespace App\Services;
 
 use Illuminate\Support\Str;
 
-class DocumentTemplateFieldService {
-    public function tableNameForPath(string $filePath): string {
+class DocumentTemplateFieldService
+{
+    public function tableNameForPath(string $filePath): string
+    {
         $baseName = pathinfo($filePath, PATHINFO_FILENAME);
         $slug = Str::slug($baseName, '_');
 
         return "document_{$slug}_entries";
     }
 
-    public function normalizeVariableToColumn(string $variable): string {
+    public function normalizeVariableToColumn(string $variable): string
+    {
         $normalized = str_replace(['.', '[', ']'], '_', $variable);
         $normalized = preg_replace('/_+/', '_', $normalized);
         $normalized = Str::of($normalized)->lower()->ascii()->toString();
@@ -30,7 +33,8 @@ class DocumentTemplateFieldService {
      * @param  string[]  $variables
      * @return array<string, string>
      */
-    public function mapVariablesToColumns(array $variables): array {
+    public function mapVariablesToColumns(array $variables): array
+    {
         $mapping = [];
         $used = [];
 
@@ -51,7 +55,8 @@ class DocumentTemplateFieldService {
         return $mapping;
     }
 
-    private function limitColumnLength(string $column, string $variable): string {
+    private function limitColumnLength(string $column, string $variable): string
+    {
         $maxLength = 64;
         if (strlen($column) <= $maxLength) {
             return $column;
@@ -64,7 +69,8 @@ class DocumentTemplateFieldService {
         return substr($column, 0, $trimLength).$suffix;
     }
 
-    public function labelForVariable(string $variable): string {
+    public function labelForVariable(string $variable): string
+    {
         $label = $variable;
         $suffix = '';
 
@@ -103,7 +109,8 @@ class DocumentTemplateFieldService {
     /**
      * Parse les variables au format legacy pour extraire le label et le suffixe contextuel
      */
-    private function parseLegacyVariable(string $variable): array {
+    private function parseLegacyVariable(string $variable): array
+    {
         $lower = strtolower($variable);
 
         // Champs spécifiques avec labels clairs
@@ -203,7 +210,8 @@ class DocumentTemplateFieldService {
     /**
      * Retourne un label spécifique pour certaines variables connues
      */
-    private function getSpecificLabel(string $variable): ?array {
+    private function getSpecificLabel(string $variable): ?array
+    {
         $map = [
             // Client - Identité
             'nom' => ['label' => 'Nom', 'suffix' => ''],
@@ -283,7 +291,8 @@ class DocumentTemplateFieldService {
     /**
      * Retourne un suffixe de type de champ pour les champs composés
      */
-    private function getFieldTypeSuffix(string $fieldName): string {
+    private function getFieldTypeSuffix(string $fieldName): string
+    {
         $lower = strtolower($fieldName);
 
         if (str_contains($lower, 'datenaissance')) {

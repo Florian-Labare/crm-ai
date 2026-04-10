@@ -17,7 +17,8 @@ use RecursiveIteratorIterator;
  * Identifie et supprime les fichiers présents sur le système de fichiers
  * mais non référencés en base de données.
  */
-class CleanupOrphanFiles extends Command {
+class CleanupOrphanFiles extends Command
+{
     protected $signature = 'storage:cleanup-orphans
                             {--dry-run : Affiche les fichiers orphelins sans les supprimer}
                             {--delete : Supprime les fichiers orphelins (confirmation requise)}
@@ -33,7 +34,8 @@ class CleanupOrphanFiles extends Command {
 
     private array $dbReferences = [];
 
-    public function handle(): int {
+    public function handle(): int
+    {
         $dryRun = $this->option('dry-run');
         $delete = $this->option('delete');
         $force = $this->option('force');
@@ -151,7 +153,8 @@ class CleanupOrphanFiles extends Command {
     /**
      * Charge toutes les références de fichiers en base de données
      */
-    private function loadDatabaseReferences(): void {
+    private function loadDatabaseReferences(): void
+    {
         $this->info('📚 Chargement des références en base de données...');
 
         // Audio records
@@ -192,7 +195,8 @@ class CleanupOrphanFiles extends Command {
     /**
      * Scanner un répertoire pour trouver les fichiers orphelins
      */
-    private function scanDirectory(string $dir): array {
+    private function scanDirectory(string $dir): array
+    {
         $orphans = [];
         $path = storage_path("app/{$dir}");
 
@@ -241,7 +245,8 @@ class CleanupOrphanFiles extends Command {
     /**
      * Nettoyer les répertoires vides
      */
-    private function cleanupEmptyDirectories(string $dir): void {
+    private function cleanupEmptyDirectories(string $dir): void
+    {
         $path = storage_path("app/{$dir}");
 
         if (! is_dir($path)) {
@@ -263,7 +268,8 @@ class CleanupOrphanFiles extends Command {
     /**
      * Vérifie si un répertoire est vide
      */
-    private function isEmptyDirectory(string $dir): bool {
+    private function isEmptyDirectory(string $dir): bool
+    {
         $handle = opendir($dir);
         while (false !== ($entry = readdir($handle))) {
             if ($entry !== '.' && $entry !== '..') {
@@ -280,7 +286,8 @@ class CleanupOrphanFiles extends Command {
     /**
      * Formate une taille en bytes
      */
-    private function formatBytes(int $bytes): string {
+    private function formatBytes(int $bytes): string
+    {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {

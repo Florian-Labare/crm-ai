@@ -5,8 +5,10 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class TranscriptionService {
-    public function transcribe(string $audioPath): ?string {
+class TranscriptionService
+{
+    public function transcribe(string $audioPath): ?string
+    {
         // 1. Voxtral (Mistral) si activé
         if (config('mistral.features.use_for_transcription', false)) {
             $transcription = $this->transcribeVoxtral($audioPath);
@@ -34,7 +36,8 @@ class TranscriptionService {
     /**
      * Transcription via Voxtral (Mistral AI).
      */
-    private function transcribeVoxtral(string $audioPath): ?string {
+    private function transcribeVoxtral(string $audioPath): ?string
+    {
         try {
             if (! file_exists($audioPath)) {
                 throw new \Exception("Fichier audio introuvable : {$audioPath}");
@@ -85,7 +88,8 @@ class TranscriptionService {
         }
     }
 
-    private function transcribeLocal(string $audioPath): ?string {
+    private function transcribeLocal(string $audioPath): ?string
+    {
         try {
             if (! file_exists($audioPath)) {
                 throw new \Exception("Fichier audio introuvable : {$audioPath}");
@@ -155,7 +159,8 @@ class TranscriptionService {
         }
     }
 
-    private function transcribeOpenAI(string $audioPath): ?string {
+    private function transcribeOpenAI(string $audioPath): ?string
+    {
         try {
             if (! file_exists($audioPath)) {
                 throw new \Exception("Fichier audio introuvable : {$audioPath}");

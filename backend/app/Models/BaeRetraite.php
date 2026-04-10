@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class BaeRetraite extends Model {
+class BaeRetraite extends Model
+{
     use HasFactory;
 
     protected $table = 'bae_retraite';
@@ -47,7 +48,8 @@ class BaeRetraite extends Model {
     /**
      * Relation avec le client
      */
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 }

@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Storage;
  * Migre les fichiers stockés localement vers le bucket S3 configuré.
  * Les chemins en base de données restent inchangés (ils sont relatifs).
  */
-class MigrateStorageToS3 extends Command {
+class MigrateStorageToS3 extends Command
+{
     protected $signature = 'storage:migrate-to-s3
                             {--dry-run : Affiche ce qui serait migré sans migrer}
                             {--type= : Migrer un type spécifique (audio|compliance|documents|imports)}
@@ -33,7 +34,8 @@ class MigrateStorageToS3 extends Command {
 
     private int $migratedBytes = 0;
 
-    public function handle(): int {
+    public function handle(): int
+    {
         $dryRun = $this->option('dry-run');
         $type = $this->option('type');
         $cleanup = $this->option('cleanup');
@@ -117,7 +119,8 @@ class MigrateStorageToS3 extends Command {
     /**
      * Migre les fichiers audio
      */
-    private function migrateAudio(bool $dryRun, bool $cleanup): void {
+    private function migrateAudio(bool $dryRun, bool $cleanup): void
+    {
         $records = AudioRecord::withoutGlobalScopes()
             ->whereNotNull('path')
             ->get();
@@ -183,7 +186,8 @@ class MigrateStorageToS3 extends Command {
     /**
      * Migre les documents de compliance
      */
-    private function migrateCompliance(bool $dryRun, bool $cleanup): void {
+    private function migrateCompliance(bool $dryRun, bool $cleanup): void
+    {
         $docs = ClientComplianceDocument::all();
 
         if ($docs->count() === 0) {
@@ -245,7 +249,8 @@ class MigrateStorageToS3 extends Command {
     /**
      * Migre les documents générés
      */
-    private function migrateDocuments(bool $dryRun, bool $cleanup): void {
+    private function migrateDocuments(bool $dryRun, bool $cleanup): void
+    {
         $docs = GeneratedDocument::all();
 
         if ($docs->count() === 0) {
@@ -307,7 +312,8 @@ class MigrateStorageToS3 extends Command {
     /**
      * Migre les fichiers d'import
      */
-    private function migrateImports(bool $dryRun, bool $cleanup): void {
+    private function migrateImports(bool $dryRun, bool $cleanup): void
+    {
         $sessions = ImportSession::whereNotNull('file_path')->get();
 
         if ($sessions->count() === 0) {
@@ -369,7 +375,8 @@ class MigrateStorageToS3 extends Command {
     /**
      * Formate une taille en bytes
      */
-    private function formatBytes(int $bytes): string {
+    private function formatBytes(int $bytes): string
+    {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {

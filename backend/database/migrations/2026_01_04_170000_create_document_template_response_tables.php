@@ -6,7 +6,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class() extends Migration {
+return new class extends Migration
+{
     private array $templates = [
         'templates/recueil-global-pp-2025.docx',
         'templates/Template Mandat.docx',
@@ -18,9 +19,10 @@ return new class() extends Migration {
         'templates/recueil-ade.docx',
     ];
 
-    public function up(): void {
-        $mapper = new DirectTemplateMapper();
-        $fieldService = new DocumentTemplateFieldService();
+    public function up(): void
+    {
+        $mapper = new DirectTemplateMapper;
+        $fieldService = new DocumentTemplateFieldService;
 
         foreach ($this->templates as $filePath) {
             $absolutePath = storage_path('app/'.$filePath);
@@ -63,8 +65,9 @@ return new class() extends Migration {
         }
     }
 
-    public function down(): void {
-        $fieldService = new DocumentTemplateFieldService();
+    public function down(): void
+    {
+        $fieldService = new DocumentTemplateFieldService;
 
         foreach ($this->templates as $filePath) {
             $tableName = $fieldService->tableNameForPath($filePath);

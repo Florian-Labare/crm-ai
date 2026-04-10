@@ -4,13 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class() extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      *
      * RGPD Compliance: Audit trail, source tracking, and data retention
      */
-    public function up(): void {
+    public function up(): void
+    {
         // 1. Audit logs table - Traçabilité complète des opérations
         Schema::create('import_audit_logs', function (Blueprint $table) {
             $table->id();
@@ -74,7 +76,8 @@ return new class() extends Migration {
     /**
      * Reverse the migrations.
      */
-    public function down(): void {
+    public function down(): void
+    {
         Schema::table('import_sessions', function (Blueprint $table) {
             $table->dropColumn(['rgpd_consent_given', 'legal_basis', 'legal_basis_details', 'consent_timestamp', 'retention_until']);
         });

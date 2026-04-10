@@ -16,7 +16,7 @@ if (! file_exists($templatePath)) {
 
 echo "🔧 Nettoyage SAFE du template : {$templateName}\n\n";
 
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 $zip->open($templatePath);
 $xml = $zip->getFromName('word/document.xml');
 
@@ -81,7 +81,7 @@ $zip->addFromString('word/document.xml', $xml);
 $zip->close();
 
 // Vérification
-$zipCheck = new ZipArchive();
+$zipCheck = new ZipArchive;
 $zipCheck->open($templatePath);
 $xmlCheck = $zipCheck->getFromName('word/document.xml');
 preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/s', $xmlCheck, $matchesAfter);

@@ -12,7 +12,8 @@ use Illuminate\Http\Request;
  * Utilisé par ClientController pour éliminer la duplication
  * des blocs store/update/delete identiques.
  */
-trait HasClientSubresources {
+trait HasClientSubresources
+{
     /**
      * Crée un item dans une relation HasMany du client.
      */
@@ -96,7 +97,8 @@ trait HasClientSubresources {
     /**
      * Supprime un singleton HasOne du client.
      */
-    protected function deleteSingleton(Client $client, string $relation): JsonResponse {
+    protected function deleteSingleton(Client $client, string $relation): JsonResponse
+    {
         $this->authorize('update', $client);
         $client->{$relation}?->delete();
 

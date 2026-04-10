@@ -13,13 +13,15 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @property-read \App\Models\Client $resource
  */
-class ClientResource extends JsonResource {
+class ClientResource extends JsonResource
+{
     /**
      * Transform the resource into an array.
      *
      * @return array<string, mixed>
      */
-    public function toArray(Request $request): array {
+    public function toArray(Request $request): array
+    {
         return [
             'id' => $this->id,
 
@@ -119,7 +121,8 @@ class ClientResource extends JsonResource {
      * Nombre de besoins distincts : slugs déclarés + inférés des sections BAE existantes.
      * Délègue à BesoinService (source unique de vérité).
      */
-    private function computeBesoinsCount(): int {
+    private function computeBesoinsCount(): int
+    {
         return count(app(BesoinService::class)->getEffectiveBesoins($this->resource));
     }
 }

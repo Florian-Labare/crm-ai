@@ -4,11 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class() extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
-    public function up(): void {
+    public function up(): void
+    {
         Schema::table('questionnaire_risque_connaissances', function (Blueprint $table) {
             if (! Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
                 $table->unsignedBigInteger('questionnaire_risque_id')->nullable()->after('id');
@@ -47,7 +49,8 @@ return new class() extends Migration {
     /**
      * Reverse the migrations.
      */
-    public function down(): void {
+    public function down(): void
+    {
         Schema::table('questionnaire_risque_connaissances', function (Blueprint $table) {
             //
         });

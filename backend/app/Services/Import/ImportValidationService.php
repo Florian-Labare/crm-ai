@@ -4,7 +4,8 @@ namespace App\Services\Import;
 
 use Carbon\Carbon;
 
-class ImportValidationService {
+class ImportValidationService
+{
     private const REQUIRED_FIELDS = ['nom', 'prenom'];
 
     /**
@@ -83,7 +84,8 @@ class ImportValidationService {
         'situation_actuelle' => 'normalizeSituationActuelle',
     ];
 
-    public function validate(array $data): array {
+    public function validate(array $data): array
+    {
         $errors = [];
 
         // Check required fields
@@ -111,7 +113,8 @@ class ImportValidationService {
         return $errors;
     }
 
-    public function normalize(array $data): array {
+    public function normalize(array $data): array
+    {
         $normalized = $data;
 
         // Convert empty strings to null for all fields
@@ -158,7 +161,8 @@ class ImportValidationService {
         return $normalized;
     }
 
-    public function validateAndNormalize(array $data): array {
+    public function validateAndNormalize(array $data): array
+    {
         $normalized = $this->normalize($data);
         $errors = $this->validate($normalized);
 
@@ -172,7 +176,8 @@ class ImportValidationService {
     /**
      * Get validator for a field based on patterns
      */
-    private function getValidatorForField(string $field): ?string {
+    private function getValidatorForField(string $field): ?string
+    {
         // Direct match
         if (isset(self::FIELD_VALIDATORS[$field])) {
             return self::FIELD_VALIDATORS[$field];
@@ -200,7 +205,8 @@ class ImportValidationService {
     /**
      * Get normalizer for a field based on patterns
      */
-    private function getNormalizerForField(string $field): ?string {
+    private function getNormalizerForField(string $field): ?string
+    {
         // Direct match
         if (isset(self::FIELD_NORMALIZERS[$field])) {
             return self::FIELD_NORMALIZERS[$field];
@@ -227,7 +233,8 @@ class ImportValidationService {
 
     // ==================== VALIDATORS ====================
 
-    private function validateEmail(string $value): ?string {
+    private function validateEmail(string $value): ?string
+    {
         $normalized = strtolower(trim($value));
 
         if (! filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
@@ -237,7 +244,8 @@ class ImportValidationService {
         return null;
     }
 
-    private function validatePhone(string $value): ?string {
+    private function validatePhone(string $value): ?string
+    {
         $cleaned = preg_replace('/[\s.\-()]/', '', $value);
         $cleaned = preg_replace('/[^0-9+]/', '', $cleaned);
 
@@ -248,7 +256,8 @@ class ImportValidationService {
         return null;
     }
 
-    private function validateDate(string $value): ?string {
+    private function validateDate(string $value): ?string
+    {
         try {
             $this->parseDate($value);
 
@@ -258,7 +267,8 @@ class ImportValidationService {
         }
     }
 
-    private function validatePostalCode(string $value): ?string {
+    private function validatePostalCode(string $value): ?string
+    {
         $cleaned = preg_replace('/[^0-9]/', '', $value);
 
         if (! preg_match('/^\d{5}$/', $cleaned)) {
@@ -268,7 +278,8 @@ class ImportValidationService {
         return null;
     }
 
-    private function validateCivilite(string $value): ?string {
+    private function validateCivilite(string $value): ?string
+    {
         $normalized = $this->normalizeStringForComparison($value);
         $valid = ['m', 'mr', 'monsieur', 'mme', 'madame', 'mlle', 'mademoiselle', 'm.'];
 
@@ -279,7 +290,8 @@ class ImportValidationService {
         return null;
     }
 
-    private function validateSituationMatrimoniale(string $value): ?string {
+    private function validateSituationMatrimoniale(string $value): ?string
+    {
         $normalized = $this->normalizeStringForComparison($value);
 
         // Accept both input variants and normalized output values
@@ -306,14 +318,16 @@ class ImportValidationService {
     /**
      * Normalize string for comparison (lowercase, no accents)
      */
-    private function normalizeStringForComparison(string $value): string {
+    private function normalizeStringForComparison(string $value): string
+    {
         $normalized = mb_strtolower(trim($value), 'UTF-8');
         $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
 
         return $normalized;
     }
 
-    private function validateNumeric($value): ?string {
+    private function validateNumeric($value): ?string
+    {
         if (is_numeric($value)) {
             return null;
         }
@@ -330,13 +344,15 @@ class ImportValidationService {
 
     // ==================== NORMALIZERS ====================
 
-    private function normalizeEmail(string $value): ?string {
+    private function normalizeEmail(string $value): ?string
+    {
         $normalized = strtolower(trim($value));
 
         return filter_var($normalized, FILTER_VALIDATE_EMAIL) ? $normalized : null;
     }
 
-    private function normalizePhone(string $value): ?string {
+    private function normalizePhone(string $value): ?string
+    {
         $cleaned = preg_replace('/[\s.\-()]/', '', $value);
         $cleaned = preg_replace('/[^0-9+]/', '', $cleaned);
 
@@ -347,7 +363,8 @@ class ImportValidationService {
         return null;
     }
 
-    private function normalizeDate(string $value): ?string {
+    private function normalizeDate(string $value): ?string
+    {
         try {
             $date = $this->parseDate($value);
 
@@ -357,24 +374,28 @@ class ImportValidationService {
         }
     }
 
-    private function normalizePostalCode(string $value): ?string {
+    private function normalizePostalCode(string $value): ?string
+    {
         $cleaned = preg_replace('/[^0-9]/', '', $value);
 
         return preg_match('/^\d{5}$/', $cleaned) ? $cleaned : null;
     }
 
-    private function normalizeName(string $value): string {
+    private function normalizeName(string $value): string
+    {
         $name = trim($value);
         $name = mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
 
         return $name;
     }
 
-    private function normalizeAddress(string $value): string {
+    private function normalizeAddress(string $value): string
+    {
         return trim($value);
     }
 
-    private function normalizeCivilite(string $value): ?string {
+    private function normalizeCivilite(string $value): ?string
+    {
         $normalized = strtolower(trim($value));
 
         if (empty($normalized)) {
@@ -388,7 +409,8 @@ class ImportValidationService {
         };
     }
 
-    private function normalizeSituationMatrimoniale(string $value): ?string {
+    private function normalizeSituationMatrimoniale(string $value): ?string
+    {
         $normalized = strtolower(trim($value));
 
         if (empty($normalized)) {
@@ -407,7 +429,8 @@ class ImportValidationService {
         };
     }
 
-    private function normalizeSituationActuelle(string $value): ?string {
+    private function normalizeSituationActuelle(string $value): ?string
+    {
         $normalized = strtolower(trim($value));
 
         if (empty($normalized)) {
@@ -425,7 +448,8 @@ class ImportValidationService {
         };
     }
 
-    private function normalizeNumber($value): ?float {
+    private function normalizeNumber($value): ?float
+    {
         if (is_numeric($value)) {
             return (float) $value;
         }
@@ -442,13 +466,15 @@ class ImportValidationService {
         return is_numeric($cleaned) ? (float) $cleaned : null;
     }
 
-    private function normalizeInteger($value): ?int {
+    private function normalizeInteger($value): ?int
+    {
         $number = $this->normalizeNumber($value);
 
         return $number !== null ? (int) round($number) : null;
     }
 
-    private function normalizeYear($value): ?int {
+    private function normalizeYear($value): ?int
+    {
         $number = $this->normalizeInteger($value);
 
         // If it's a valid year (between 1900 and 2100)
@@ -466,7 +492,8 @@ class ImportValidationService {
         }
     }
 
-    private function normalizeBoolean($value): ?bool {
+    private function normalizeBoolean($value): ?bool
+    {
         if (is_bool($value)) {
             return $value;
         }
@@ -491,7 +518,8 @@ class ImportValidationService {
         return null;
     }
 
-    private function normalizeConjoint(array $conjoint): array {
+    private function normalizeConjoint(array $conjoint): array
+    {
         $normalized = [];
 
         foreach ($conjoint as $key => $value) {
@@ -510,7 +538,8 @@ class ImportValidationService {
         return $normalized;
     }
 
-    private function normalizeEnfant(array $enfant): array {
+    private function normalizeEnfant(array $enfant): array
+    {
         $normalized = [];
 
         foreach ($enfant as $key => $value) {
@@ -542,7 +571,8 @@ class ImportValidationService {
         return $normalized;
     }
 
-    private function normalizeFinancialData(array $data): array {
+    private function normalizeFinancialData(array $data): array
+    {
         $normalized = [];
 
         foreach ($data as $key => $value) {
@@ -564,7 +594,8 @@ class ImportValidationService {
     /**
      * Split "Nom Prénom" or "Prénom Nom" into separate parts
      */
-    private function splitNomPrenom(string $value): array {
+    private function splitNomPrenom(string $value): array
+    {
         $parts = preg_split('/\s+/', trim($value), 2);
 
         if (count($parts) === 2) {
@@ -582,7 +613,8 @@ class ImportValidationService {
         return ['prenom' => $value, 'nom' => ''];
     }
 
-    private function parseDate(string $value): Carbon {
+    private function parseDate(string $value): Carbon
+    {
         $value = trim($value);
 
         // ISO format YYYY-MM-DD

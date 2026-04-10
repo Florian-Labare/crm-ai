@@ -6,12 +6,14 @@ use App\Services\Ai\Extractors\ClientExtractor;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class ClientExtractorTest extends TestCase {
+class ClientExtractorTest extends TestCase
+{
     private ClientExtractor $extractor;
 
-    protected function setUp(): void {
+    protected function setUp(): void
+    {
         parent::setUp();
-        $this->extractor = new ClientExtractor();
+        $this->extractor = new ClientExtractor;
 
         // Configuration par défaut pour les tests
         config(['mistral.features.use_for_llm' => true]);
@@ -21,7 +23,8 @@ class ClientExtractorTest extends TestCase {
         config(['mistral.fallback_to_openai' => false]);
     }
 
-    public function test_extracts_client_name(): void {
+    public function test_extracts_client_name(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -38,7 +41,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('Jean', $data['prenom'] ?? null);
     }
 
-    public function test_extracts_birth_date(): void {
+    public function test_extracts_birth_date(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -54,7 +58,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('1980-05-15', $data['date_naissance'] ?? null);
     }
 
-    public function test_extracts_address(): void {
+    public function test_extracts_address(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -72,7 +77,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('Paris', $data['ville'] ?? null);
     }
 
-    public function test_extracts_profession(): void {
+    public function test_extracts_profession(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -88,7 +94,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('architecte', $data['profession'] ?? null);
     }
 
-    public function test_extracts_children(): void {
+    public function test_extracts_children(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -107,7 +114,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('Louis', $data['enfants'][1]['prenom'] ?? null);
     }
 
-    public function test_ignores_conjoint_data(): void {
+    public function test_ignores_conjoint_data(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -127,7 +135,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertNotEquals('Martin', $data['nom'] ?? null);
     }
 
-    public function test_extracts_fumeur_false(): void {
+    public function test_extracts_fumeur_false(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -143,7 +152,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertFalse($data['fumeur'] ?? true);
     }
 
-    public function test_extracts_fumeur_true(): void {
+    public function test_extracts_fumeur_true(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -159,7 +169,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertTrue($data['fumeur'] ?? false);
     }
 
-    public function test_extracts_sports_activities(): void {
+    public function test_extracts_sports_activities(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -176,7 +187,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('musculation', $data['details_activites_sportives'] ?? null);
     }
 
-    public function test_extracts_chef_entreprise(): void {
+    public function test_extracts_chef_entreprise(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -194,7 +206,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('SARL', $data['statut'] ?? null);
     }
 
-    public function test_extracts_email(): void {
+    public function test_extracts_email(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -210,7 +223,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('jean.dupont@gmail.com', $data['email'] ?? null);
     }
 
-    public function test_extracts_telephone(): void {
+    public function test_extracts_telephone(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -226,7 +240,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('0612345678', $data['telephone'] ?? null);
     }
 
-    public function test_returns_empty_on_api_error(): void {
+    public function test_returns_empty_on_api_error(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
@@ -236,7 +251,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals([], $data);
     }
 
-    public function test_returns_empty_on_invalid_json(): void {
+    public function test_returns_empty_on_invalid_json(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -252,7 +268,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals([], $data);
     }
 
-    public function test_extracts_situation_matrimoniale(): void {
+    public function test_extracts_situation_matrimoniale(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -268,7 +285,8 @@ class ClientExtractorTest extends TestCase {
         $this->assertEquals('Marié(e)', $data['situation_matrimoniale'] ?? null);
     }
 
-    public function test_extracts_consentement_audio(): void {
+    public function test_extracts_consentement_audio(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[

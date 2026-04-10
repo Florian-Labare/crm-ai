@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Log;
  * Permet de vérifier la disponibilité du système de diarisation
  * et de mettre en cache le résultat pour éviter des vérifications répétées
  */
-class PyannoteHealthService {
+class PyannoteHealthService
+{
     private const CACHE_KEY = 'pyannote_health_status';
 
     private const CACHE_TTL = 3600; // 1 heure
@@ -22,7 +23,8 @@ class PyannoteHealthService {
      * @param  bool  $forceRefresh  Forcer une nouvelle vérification
      * @return array{available: bool, checks: array, errors: array, warnings: array}
      */
-    public function check(bool $forceRefresh = false): array {
+    public function check(bool $forceRefresh = false): array
+    {
         // Retourner le cache si disponible et non forcé
         if (! $forceRefresh && Cache::has(self::CACHE_KEY)) {
             return Cache::get(self::CACHE_KEY);
@@ -53,7 +55,8 @@ class PyannoteHealthService {
     /**
      * Vérifie rapidement si pyannote est disponible (depuis le cache ou check rapide)
      */
-    public function isAvailable(): bool {
+    public function isAvailable(): bool
+    {
         $status = $this->check();
 
         return $status['available'];
@@ -62,7 +65,8 @@ class PyannoteHealthService {
     /**
      * Efface le cache et force une nouvelle vérification
      */
-    public function refresh(): array {
+    public function refresh(): array
+    {
         Cache::forget(self::CACHE_KEY);
 
         return $this->check(true);
@@ -71,7 +75,8 @@ class PyannoteHealthService {
     /**
      * Exécute le script Python de health check
      */
-    private function runHealthCheck(): array {
+    private function runHealthCheck(): array
+    {
         $scriptPath = base_path('scripts/check_pyannote.py');
 
         if (! file_exists($scriptPath)) {

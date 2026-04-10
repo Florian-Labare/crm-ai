@@ -9,23 +9,28 @@ use Tests\TestCase;
 /**
  * Classe de test utilisant le trait LlmClientTrait.
  */
-class LlmTestService {
+class LlmTestService
+{
     use LlmClientTrait;
 
-    public function testCallLlm(string $system, string $user, float $temperature = 0.1, bool $json = true): ?array {
+    public function testCallLlm(string $system, string $user, float $temperature = 0.1, bool $json = true): ?array
+    {
         return $this->callLlm($system, $user, $temperature, $json);
     }
 }
 
-class LlmClientTraitTest extends TestCase {
+class LlmClientTraitTest extends TestCase
+{
     private LlmTestService $service;
 
-    protected function setUp(): void {
+    protected function setUp(): void
+    {
         parent::setUp();
-        $this->service = new LlmTestService();
+        $this->service = new LlmTestService;
     }
 
-    public function test_mistral_api_returns_valid_json(): void {
+    public function test_mistral_api_returns_valid_json(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
         config(['mistral.llm.endpoint' => 'https://api.mistral.ai/v1/chat/completions']);
@@ -61,7 +66,8 @@ class LlmClientTraitTest extends TestCase {
         });
     }
 
-    public function test_openai_api_returns_valid_json(): void {
+    public function test_openai_api_returns_valid_json(): void
+    {
         config(['mistral.features.use_for_llm' => false]);
         config(['openai.api_key' => 'test-openai-key']);
 
@@ -95,7 +101,8 @@ class LlmClientTraitTest extends TestCase {
         });
     }
 
-    public function test_fallback_to_openai_when_mistral_fails(): void {
+    public function test_fallback_to_openai_when_mistral_fails(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
         config(['mistral.fallback_to_openai' => true]);
@@ -127,7 +134,8 @@ class LlmClientTraitTest extends TestCase {
         $this->assertTrue($result['fallback']);
     }
 
-    public function test_throws_exception_when_no_fallback(): void {
+    public function test_throws_exception_when_no_fallback(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
         config(['mistral.fallback_to_openai' => false]);
@@ -143,7 +151,8 @@ class LlmClientTraitTest extends TestCase {
         $this->service->testCallLlm('System', 'User', 0.1, true);
     }
 
-    public function test_throws_exception_when_mistral_key_missing(): void {
+    public function test_throws_exception_when_mistral_key_missing(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => null]);
         config(['mistral.fallback_to_openai' => false]);
@@ -154,7 +163,8 @@ class LlmClientTraitTest extends TestCase {
         $this->service->testCallLlm('System', 'User', 0.1, true);
     }
 
-    public function test_throws_exception_when_openai_key_missing(): void {
+    public function test_throws_exception_when_openai_key_missing(): void
+    {
         config(['mistral.features.use_for_llm' => false]);
         config(['openai.api_key' => null]);
 
@@ -164,7 +174,8 @@ class LlmClientTraitTest extends TestCase {
         $this->service->testCallLlm('System', 'User', 0.1, true);
     }
 
-    public function test_returns_null_when_json_parsing_fails(): void {
+    public function test_returns_null_when_json_parsing_fails(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
         config(['mistral.llm.endpoint' => 'https://api.mistral.ai/v1/chat/completions']);
@@ -191,7 +202,8 @@ class LlmClientTraitTest extends TestCase {
         $this->assertNull($result);
     }
 
-    public function test_json_format_is_sent_in_payload(): void {
+    public function test_json_format_is_sent_in_payload(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
         config(['mistral.llm.endpoint' => 'https://api.mistral.ai/v1/chat/completions']);
@@ -210,7 +222,8 @@ class LlmClientTraitTest extends TestCase {
         });
     }
 
-    public function test_temperature_is_passed_correctly(): void {
+    public function test_temperature_is_passed_correctly(): void
+    {
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
         config(['mistral.llm.endpoint' => 'https://api.mistral.ai/v1/chat/completions']);

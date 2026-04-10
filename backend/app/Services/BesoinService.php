@@ -12,7 +12,8 @@ use App\Models\Client;
  * - L'inférence des besoins depuis les sections BAE existantes
  * - La synchronisation du champ client.besoins
  */
-class BesoinService {
+class BesoinService
+{
     /** Slugs canoniques reconnus par le système */
     public const VALID_SLUGS = ['prevoyance', 'retraite', 'epargne', 'sante', 'emprunteur'];
 
@@ -95,7 +96,8 @@ class BesoinService {
     /**
      * Normalise un tableau de chaînes libres vers des slugs canoniques uniques.
      */
-    public function normalizeSlugs(array $besoins): array {
+    public function normalizeSlugs(array $besoins): array
+    {
         $slugs = [];
         foreach ($besoins as $besoin) {
             $key = mb_strtolower(trim((string) $besoin));
@@ -112,7 +114,8 @@ class BesoinService {
      * Retourne les besoins effectifs d'un client :
      * besoins déclarés (normalisés) + besoins inférés des sections BAE existantes.
      */
-    public function getEffectiveBesoins(Client $client): array {
+    public function getEffectiveBesoins(Client $client): array
+    {
         $client->loadMissing(array_values(self::BAE_RELATIONS));
 
         $raw = is_array($client->besoins)
@@ -134,7 +137,8 @@ class BesoinService {
      * Synchronise client.besoins avec les sections BAE existantes.
      * Ajoute les slugs manquants, ne retire rien.
      */
-    public function syncBesoinsFromBae(Client $client): void {
+    public function syncBesoinsFromBae(Client $client): void
+    {
         $effective = $this->getEffectiveBesoins($client);
         $current = is_array($client->besoins) ? $client->besoins : [];
 
@@ -146,7 +150,8 @@ class BesoinService {
     /**
      * Crée automatiquement les sections BAE manquantes pour les besoins déclarés.
      */
-    public function createBaeSectionsFromBesoins(Client $client, array $besoins): void {
+    public function createBaeSectionsFromBesoins(Client $client, array $besoins): void
+    {
         $slugs = $this->normalizeSlugs($besoins);
 
         foreach (self::BAE_RELATIONS as $slug => $relation) {
@@ -159,7 +164,8 @@ class BesoinService {
     /**
      * Retourne le label lisible d'un slug.
      */
-    public function label(string $slug): string {
+    public function label(string $slug): string
+    {
         return self::LABELS[$slug] ?? ucfirst($slug);
     }
 }

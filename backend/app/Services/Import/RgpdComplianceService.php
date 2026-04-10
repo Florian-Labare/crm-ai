@@ -9,7 +9,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class RgpdComplianceService {
+class RgpdComplianceService
+{
     /**
      * Default retention period for import sessions (in days)
      */
@@ -68,7 +69,8 @@ class RgpdComplianceService {
     /**
      * Check if session has valid RGPD consent
      */
-    public function hasValidConsent(ImportSession $session): bool {
+    public function hasValidConsent(ImportSession $session): bool
+    {
         return $session->rgpd_consent_given
             && $session->legal_basis !== null
             && $session->consent_timestamp !== null;
@@ -92,7 +94,8 @@ class RgpdComplianceService {
     /**
      * Create ephemeral database connection (not stored)
      */
-    public function createEphemeralConnection(array $config, int $teamId, int $userId): array {
+    public function createEphemeralConnection(array $config, int $teamId, int $userId): array
+    {
         // Don't store in database, just return config for immediate use
         $this->logAction(
             ImportAuditLog::ACTION_CONNECT,
@@ -116,7 +119,8 @@ class RgpdComplianceService {
     /**
      * Purge expired import sessions and their data
      */
-    public function purgeExpiredSessions(): int {
+    public function purgeExpiredSessions(): int
+    {
         $expiredSessions = ImportSession::where('retention_until', '<', now())
             ->whereNotNull('retention_until')
             ->get();
@@ -168,7 +172,8 @@ class RgpdComplianceService {
     /**
      * Get audit trail for a session
      */
-    public function getSessionAuditTrail(ImportSession $session): array {
+    public function getSessionAuditTrail(ImportSession $session): array
+    {
         return ImportAuditLog::where('import_session_id', $session->id)
             ->with('user:id,name')
             ->orderBy('created_at', 'desc')
@@ -179,7 +184,8 @@ class RgpdComplianceService {
     /**
      * Get audit trail for a team
      */
-    public function getTeamAuditTrail(int $teamId, ?Carbon $from = null, ?Carbon $to = null): array {
+    public function getTeamAuditTrail(int $teamId, ?Carbon $from = null, ?Carbon $to = null): array
+    {
         $query = ImportAuditLog::forTeam($teamId)
             ->with('user:id,name');
 
@@ -196,7 +202,8 @@ class RgpdComplianceService {
     /**
      * Export audit logs for RGPD compliance (data portability)
      */
-    public function exportAuditLogs(int $teamId): array {
+    public function exportAuditLogs(int $teamId): array
+    {
         $logs = ImportAuditLog::forTeam($teamId)
             ->with(['user:id,name,email', 'importSession:id,original_filename'])
             ->orderBy('created_at', 'asc')
@@ -226,7 +233,8 @@ class RgpdComplianceService {
     /**
      * Get clients imported from a specific session (for right to erasure)
      */
-    public function getClientsFromSession(ImportSession $session): array {
+    public function getClientsFromSession(ImportSession $session): array
+    {
         return Client::where('import_session_id', $session->id)
             ->select('id', 'nom', 'prenom', 'email', 'imported_at')
             ->get()
@@ -236,7 +244,8 @@ class RgpdComplianceService {
     /**
      * Delete all data related to an import session (right to erasure)
      */
-    public function deleteSessionData(ImportSession $session, Request $request): array {
+    public function deleteSessionData(ImportSession $session, Request $request): array
+    {
         $clientsDeleted = 0;
         $rowsDeleted = 0;
 

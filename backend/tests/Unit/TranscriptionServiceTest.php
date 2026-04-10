@@ -8,10 +8,12 @@ use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-class TranscriptionServiceTest extends TestCase {
+class TranscriptionServiceTest extends TestCase
+{
     private string $tempAudioFile;
 
-    protected function setUp(): void {
+    protected function setUp(): void
+    {
         parent::setUp();
 
         // Créer un fichier audio temporaire pour les tests
@@ -19,7 +21,8 @@ class TranscriptionServiceTest extends TestCase {
         file_put_contents($this->tempAudioFile, 'fake audio content for testing');
     }
 
-    protected function tearDown(): void {
+    protected function tearDown(): void
+    {
         if (file_exists($this->tempAudioFile)) {
             unlink($this->tempAudioFile);
         }
@@ -28,7 +31,8 @@ class TranscriptionServiceTest extends TestCase {
     }
 
     #[Test]
-    public function voxtral_transcription_returns_text_on_success() {
+    public function voxtral_transcription_returns_text_on_success()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.model' => 'voxtral-mini-latest']);
@@ -40,14 +44,15 @@ class TranscriptionServiceTest extends TestCase {
             ], 200),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         $this->assertEquals("Bonjour, je m'appelle Jean Dupont.", $result);
     }
 
     #[Test]
-    public function voxtral_fallback_to_whisper_local_on_failure() {
+    public function voxtral_fallback_to_whisper_local_on_failure()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -76,14 +81,15 @@ class TranscriptionServiceTest extends TestCase {
 
         config(['openai.api_key' => 'test_openai_key']);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         $this->assertEquals('Fallback transcription from OpenAI.', $result);
     }
 
     #[Test]
-    public function voxtral_is_skipped_when_disabled() {
+    public function voxtral_is_skipped_when_disabled()
+    {
         config(['mistral.features.use_for_transcription' => false]);
         config(['openai.api_key' => 'test_openai_key']);
 
@@ -94,7 +100,7 @@ class TranscriptionServiceTest extends TestCase {
         ]);
 
         // Whisper local va échouer, donc fallback sur OpenAI
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         // Vérifie que Voxtral n'a pas été appelé
@@ -104,7 +110,8 @@ class TranscriptionServiceTest extends TestCase {
     }
 
     #[Test]
-    public function voxtral_returns_null_when_api_key_missing() {
+    public function voxtral_returns_null_when_api_key_missing()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => null]);
         config(['openai.api_key' => 'test_openai_key']);
@@ -115,7 +122,7 @@ class TranscriptionServiceTest extends TestCase {
             ], 200),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         // Doit fallback sur OpenAI
@@ -123,18 +130,20 @@ class TranscriptionServiceTest extends TestCase {
     }
 
     #[Test]
-    public function transcribe_returns_null_for_nonexistent_file() {
+    public function transcribe_returns_null_for_nonexistent_file()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe('/nonexistent/file.mp3');
 
         $this->assertNull($result);
     }
 
     #[Test]
-    public function openai_transcription_works_directly() {
+    public function openai_transcription_works_directly()
+    {
         config(['mistral.features.use_for_transcription' => false]);
         config(['openai.api_key' => 'test_openai_key']);
 
@@ -145,14 +154,15 @@ class TranscriptionServiceTest extends TestCase {
         ]);
 
         // Simuler l'échec de Whisper local
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         $this->assertEquals('OpenAI Whisper transcription.', $result);
     }
 
     #[Test]
-    public function openai_returns_null_on_api_error() {
+    public function openai_returns_null_on_api_error()
+    {
         config(['mistral.features.use_for_transcription' => false]);
         config(['openai.api_key' => 'test_openai_key']);
 
@@ -160,14 +170,15 @@ class TranscriptionServiceTest extends TestCase {
             'api.openai.com/*' => Http::response(['error' => 'Rate limited'], 429),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         $this->assertNull($result);
     }
 
     #[Test]
-    public function voxtral_sends_correct_model_in_request() {
+    public function voxtral_sends_correct_model_in_request()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.model' => 'voxtral-mini-latest']);
@@ -179,7 +190,7 @@ class TranscriptionServiceTest extends TestCase {
             ], 200),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $service->transcribe($this->tempAudioFile);
 
         Http::assertSent(function ($request) {
@@ -189,7 +200,8 @@ class TranscriptionServiceTest extends TestCase {
     }
 
     #[Test]
-    public function voxtral_handles_empty_response_gracefully() {
+    public function voxtral_handles_empty_response_gracefully()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -202,7 +214,7 @@ class TranscriptionServiceTest extends TestCase {
             ], 200),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         // Voxtral retourne null, fallback sur Whisper local puis OpenAI
@@ -210,7 +222,8 @@ class TranscriptionServiceTest extends TestCase {
     }
 
     #[Test]
-    public function voxtral_handles_timeout() {
+    public function voxtral_handles_timeout()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -225,7 +238,7 @@ class TranscriptionServiceTest extends TestCase {
             ], 200),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         // Doit fallback vers OpenAI
@@ -233,7 +246,8 @@ class TranscriptionServiceTest extends TestCase {
     }
 
     #[Test]
-    public function voxtral_french_transcription_quality() {
+    public function voxtral_french_transcription_quality()
+    {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -247,7 +261,7 @@ class TranscriptionServiceTest extends TestCase {
             ], 200),
         ]);
 
-        $service = new TranscriptionService();
+        $service = new TranscriptionService;
         $result = $service->transcribe($this->tempAudioFile);
 
         $this->assertEquals($frenchTranscription, $result);

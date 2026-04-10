@@ -9,7 +9,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class RecordingService {
+class RecordingService
+{
     /**
      * Stocke un chunk audio
      */
@@ -53,7 +54,8 @@ class RecordingService {
     /**
      * Finalise l'enregistrement : dispatch le job asynchrone et retour immediat
      */
-    public function finalizeRecording(string $sessionId, int $userId): RecordingSession {
+    public function finalizeRecording(string $sessionId, int $userId): RecordingSession
+    {
         Log::info("[RECORDING] Finalisation de la session {$sessionId}");
 
         $session = RecordingSession::where('session_id', $sessionId)
@@ -90,7 +92,8 @@ class RecordingService {
         return $session;
     }
 
-    private function getChunksInOrder(string $sessionId, int $totalChunks): array {
+    private function getChunksInOrder(string $sessionId, int $totalChunks): array
+    {
         $chunks = [];
         for ($i = 0; $i < $totalChunks; $i++) {
             $filename = "{$sessionId}_part_{$i}.webm";

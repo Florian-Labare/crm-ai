@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 // Added this line
 use Illuminate\Support\Facades\Storage;
 
-class Team extends Model {
+class Team extends Model
+{
     protected $fillable = ['user_id', 'name', 'logo_path', 'personal_team'];
 
     protected $appends = ['logo_url'];
 
-    public function getLogoUrlAttribute(): ?string {
+    public function getLogoUrlAttribute(): ?string
+    {
         if (! $this->logo_path) {
             return null;
         }
@@ -22,14 +24,16 @@ class Team extends Model {
     /**
      * The owner of the team.
      */
-    public function owner() {
+    public function owner()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
 
     /**
      * All of the users that belong to the team.
      */
-    public function users() {
+    public function users()
+    {
         return $this->belongsToMany(User::class, 'team_user')
             ->withPivot('role')
             ->withTimestamps();
@@ -38,7 +42,8 @@ class Team extends Model {
     /**
      * Invitations for this team.
      */
-    public function invitations() {
+    public function invitations()
+    {
         return $this->hasMany(TeamInvitation::class);
     }
 }

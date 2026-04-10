@@ -12,11 +12,13 @@ use Illuminate\Support\Facades\Log;
  * Collecte et analyse les métriques de performance et d'erreurs
  * pour assurer la fiabilité du système de séparation des locuteurs
  */
-class DiarizationMonitoringService {
+class DiarizationMonitoringService
+{
     /**
      * Enregistre le résultat d'une diarisation
      */
-    public function logResult(array $data): DiarizationLog {
+    public function logResult(array $data): DiarizationLog
+    {
         $log = DiarizationLog::create($data);
 
         // Logger les échecs pour alerte
@@ -99,7 +101,8 @@ class DiarizationMonitoringService {
     /**
      * Récupère les statistiques de diarisation sur une période
      */
-    public function getStats(int $days = 7): array {
+    public function getStats(int $days = 7): array
+    {
         $startDate = now()->subDays($days);
 
         $totals = DiarizationLog::withoutGlobalScopes()
@@ -179,7 +182,8 @@ class DiarizationMonitoringService {
     /**
      * Récupère les échecs récents pour investigation
      */
-    public function getRecentFailures(int $limit = 10): array {
+    public function getRecentFailures(int $limit = 10): array
+    {
         return DiarizationLog::withoutGlobalScopes()
             ->whereIn('status', ['failed', 'timeout'])
             ->orderByDesc('created_at')
@@ -203,7 +207,8 @@ class DiarizationMonitoringService {
     /**
      * Génère un résumé de santé du système
      */
-    public function getHealthSummary(): array {
+    public function getHealthSummary(): array
+    {
         // Stats des dernières 24h
         $last24h = DiarizationLog::withoutGlobalScopes()
             ->where('created_at', '>=', now()->subHours(24))

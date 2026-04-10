@@ -8,10 +8,12 @@ use App\Models\ClientRevenu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ClientRevenuResourceTest extends TestCase {
+class ClientRevenuResourceTest extends TestCase
+{
     use RefreshDatabase;
 
-    public function test_resource_returns_correct_structure(): void {
+    public function test_resource_returns_correct_structure(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -43,7 +45,8 @@ class ClientRevenuResourceTest extends TestCase {
         $this->assertEquals(3500.00, $array['montant']);
     }
 
-    public function test_resource_handles_null_values(): void {
+    public function test_resource_handles_null_values(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -65,7 +68,8 @@ class ClientRevenuResourceTest extends TestCase {
         $this->assertNull($array['montant']);
     }
 
-    public function test_created_at_is_formatted_as_iso(): void {
+    public function test_created_at_is_formatted_as_iso(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',

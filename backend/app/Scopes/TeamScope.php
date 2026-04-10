@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 
-class TeamScope implements Scope {
+class TeamScope implements Scope
+{
     /**
      * Apply the scope to a given Eloquent query builder.
      */
-    public function apply(Builder $builder, Model $model): void {
+    public function apply(Builder $builder, Model $model): void
+    {
         if (Auth::hasUser()) {
             $currentTeam = Auth::user()->currentTeam();
 

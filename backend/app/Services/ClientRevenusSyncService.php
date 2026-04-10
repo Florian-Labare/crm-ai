@@ -6,13 +6,15 @@ use App\Models\Client;
 use App\Models\ClientRevenu;
 use Illuminate\Support\Facades\Log;
 
-class ClientRevenusSyncService {
+class ClientRevenusSyncService
+{
     /**
      * Synchronise les revenus d'un client avec les données extraites
      *
      * @param  array  $revenusData  Tableau de revenus extraits par GPT
      */
-    public function syncRevenus(Client $client, array $revenusData): void {
+    public function syncRevenus(Client $client, array $revenusData): void
+    {
         Log::info("💰 [REVENUS] Synchronisation des revenus pour le client #{$client->id}", [
             'nombre_revenus_recus' => count($revenusData),
         ]);
@@ -65,7 +67,8 @@ class ClientRevenusSyncService {
     /**
      * Trouve un revenu existant correspondant aux données
      */
-    private function findMatchingRevenu($existingRevenus, array $revenuData): ?ClientRevenu {
+    private function findMatchingRevenu($existingRevenus, array $revenuData): ?ClientRevenu
+    {
         $nature = $this->normalizeString($revenuData['nature'] ?? null);
         $details = $this->normalizeString($revenuData['details'] ?? null);
         $isAutre = $nature === 'autre';
@@ -98,7 +101,8 @@ class ClientRevenusSyncService {
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array {
+    private function filterEmptyValues(array $data): array
+    {
         return array_filter($data, function ($value, $key) {
             if (is_bool($value)) {
                 return true;
@@ -111,7 +115,8 @@ class ClientRevenusSyncService {
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string {
+    private function normalizeString(?string $value): ?string
+    {
         if (is_null($value)) {
             return null;
         }

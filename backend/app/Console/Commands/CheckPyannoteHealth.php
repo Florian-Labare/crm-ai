@@ -5,7 +5,8 @@ namespace App\Console\Commands;
 use App\Services\PyannoteHealthService;
 use Illuminate\Console\Command;
 
-class CheckPyannoteHealth extends Command {
+class CheckPyannoteHealth extends Command
+{
     /**
      * The name and signature of the console command.
      */
@@ -21,7 +22,8 @@ class CheckPyannoteHealth extends Command {
     /**
      * Execute the console command.
      */
-    public function handle(PyannoteHealthService $healthService): int {
+    public function handle(PyannoteHealthService $healthService): int
+    {
         $refresh = $this->option('refresh');
         $json = $this->option('json');
 

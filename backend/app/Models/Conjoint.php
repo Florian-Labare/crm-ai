@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Conjoint extends Model {
+class Conjoint extends Model
+{
     protected $fillable = [
         'client_id',
         // Identité
@@ -54,7 +55,8 @@ class Conjoint extends Model {
         'revenus_annuels' => 'decimal:2',
     ];
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 }

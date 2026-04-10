@@ -12,14 +12,16 @@ use Illuminate\Support\Facades\Log;
  * Gère la création et mise à jour du conjoint d'un client depuis les données
  * extraites par l'IA.
  */
-class ConjointSyncService {
+class ConjointSyncService
+{
     /**
      * Synchronise les données du conjoint pour un client.
      *
      * @param  Client  $client  Client concerné
      * @param  array  $conjointData  Données du conjoint extraites
      */
-    public function syncConjoint(Client $client, array $conjointData): void {
+    public function syncConjoint(Client $client, array $conjointData): void
+    {
         Log::info("💑 [CONJOINT] Synchronisation du conjoint pour le client #{$client->id}", [
             'has_conjoint_data' => ! empty($conjointData),
             'keys' => array_keys($conjointData),
@@ -75,7 +77,8 @@ class ConjointSyncService {
      * @param  array  $data  Données à filtrer
      * @return array Données filtrées
      */
-    private function filterEmptyValues(array $data): array {
+    private function filterEmptyValues(array $data): array
+    {
         return array_filter($data, function ($value, $key) {
             // Ne pas filtrer les booléens (même false)
             if (is_bool($value)) {
@@ -93,7 +96,8 @@ class ConjointSyncService {
      * @param  string|null  $value  Valeur à normaliser
      * @return string|null Valeur normalisée
      */
-    private function normalizeString(?string $value): ?string {
+    private function normalizeString(?string $value): ?string
+    {
         if (is_null($value)) {
             return null;
         }

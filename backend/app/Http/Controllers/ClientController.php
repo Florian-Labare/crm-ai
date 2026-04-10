@@ -15,7 +15,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
-class ClientController extends Controller {
+class ClientController extends Controller
+{
     use HasClientSubresources;
 
     public function __construct(private readonly BesoinService $besoinService) {}
@@ -24,7 +25,8 @@ class ClientController extends Controller {
     // CRUD CLIENT
     // =========================================================================
 
-    public function index(Request $request): AnonymousResourceCollection {
+    public function index(Request $request): AnonymousResourceCollection
+    {
         $user = auth()->user();
         $team = $user->currentTeam();
 
@@ -51,7 +53,8 @@ class ClientController extends Controller {
         return ClientResource::collection($query->latest('id')->get());
     }
 
-    public function show(int $id): ClientResource {
+    public function show(int $id): ClientResource
+    {
         $user = auth()->user();
         $team = $user->currentTeam();
 
@@ -71,7 +74,8 @@ class ClientController extends Controller {
         return ClientResource::make($client);
     }
 
-    public function store(StoreClientRequest $request): JsonResponse {
+    public function store(StoreClientRequest $request): JsonResponse
+    {
         $this->authorize('create', Client::class);
 
         $teamId = auth()->user()->currentTeam()?->id;
@@ -100,7 +104,8 @@ class ClientController extends Controller {
         }
     }
 
-    public function checkDuplicate(Request $request): JsonResponse {
+    public function checkDuplicate(Request $request): JsonResponse
+    {
         $request->validate([
             'email' => 'nullable|email',
             'telephone' => 'nullable|string',
@@ -127,7 +132,8 @@ class ClientController extends Controller {
         return response()->json($result);
     }
 
-    public function update(UpdateClientRequest $request, int $id): ClientResource {
+    public function update(UpdateClientRequest $request, int $id): ClientResource
+    {
         $client = Client::findOrFail($id);
         $this->authorize('update', $client);
 
@@ -153,7 +159,8 @@ class ClientController extends Controller {
         ]));
     }
 
-    public function destroy(int $id): JsonResponse {
+    public function destroy(int $id): JsonResponse
+    {
         $client = Client::findOrFail($id);
         $this->authorize('delete', $client);
         $client->delete();
@@ -161,7 +168,8 @@ class ClientController extends Controller {
         return response()->json(null, 204);
     }
 
-    public function updateStatus(Request $request, Client $client): JsonResponse {
+    public function updateStatus(Request $request, Client $client): JsonResponse
+    {
         $this->authorize('update', $client);
         $validated = $request->validate(['is_client' => 'required|boolean']);
         $client->update(['is_client' => $validated['is_client']]);
@@ -174,14 +182,16 @@ class ClientController extends Controller {
         ]);
     }
 
-    public function archive(Client $client): JsonResponse {
+    public function archive(Client $client): JsonResponse
+    {
         $this->authorize('update', $client);
         $client->update(['is_archived' => true]);
 
         return response()->json(['message' => 'Le contact a été archivé.', 'client' => ClientResource::make($client->fresh())]);
     }
 
-    public function restore(Client $client): JsonResponse {
+    public function restore(Client $client): JsonResponse
+    {
         $this->authorize('update', $client);
         $client->update(['is_archived' => false]);
 
@@ -198,15 +208,18 @@ class ClientController extends Controller {
         'montant' => 'nullable|numeric|min:0',
     ];
 
-    public function storeRevenu(Request $request, Client $client): JsonResponse {
+    public function storeRevenu(Request $request, Client $client): JsonResponse
+    {
         return $this->storeSubresource($request, $client, 'revenus', self::REVENU_RULES);
     }
 
-    public function updateRevenu(Request $request, Client $client, int $revenu): JsonResponse {
+    public function updateRevenu(Request $request, Client $client, int $revenu): JsonResponse
+    {
         return $this->updateSubresource($request, $client, 'revenus', $revenu, self::REVENU_RULES);
     }
 
-    public function deleteRevenu(Client $client, int $revenu): JsonResponse {
+    public function deleteRevenu(Client $client, int $revenu): JsonResponse
+    {
         return $this->deleteSubresource($client, 'revenus', $revenu);
     }
 
@@ -219,15 +232,18 @@ class ClientController extends Controller {
         'duree_restante' => 'nullable|integer|min:0',
     ];
 
-    public function storePassif(Request $request, Client $client): JsonResponse {
+    public function storePassif(Request $request, Client $client): JsonResponse
+    {
         return $this->storeSubresource($request, $client, 'passifs', self::PASSIF_RULES);
     }
 
-    public function updatePassif(Request $request, Client $client, int $passif): JsonResponse {
+    public function updatePassif(Request $request, Client $client, int $passif): JsonResponse
+    {
         return $this->updateSubresource($request, $client, 'passifs', $passif, self::PASSIF_RULES);
     }
 
-    public function deletePassif(Client $client, int $passif): JsonResponse {
+    public function deletePassif(Client $client, int $passif): JsonResponse
+    {
         return $this->deleteSubresource($client, 'passifs', $passif);
     }
 
@@ -239,15 +255,18 @@ class ClientController extends Controller {
         'valeur_actuelle' => 'nullable|numeric|min:0',
     ];
 
-    public function storeActifFinancier(Request $request, Client $client): JsonResponse {
+    public function storeActifFinancier(Request $request, Client $client): JsonResponse
+    {
         return $this->storeSubresource($request, $client, 'actifsFinanciers', self::ACTIF_RULES);
     }
 
-    public function updateActifFinancier(Request $request, Client $client, int $actifFinancier): JsonResponse {
+    public function updateActifFinancier(Request $request, Client $client, int $actifFinancier): JsonResponse
+    {
         return $this->updateSubresource($request, $client, 'actifsFinanciers', $actifFinancier, self::ACTIF_RULES);
     }
 
-    public function deleteActifFinancier(Client $client, int $actifFinancier): JsonResponse {
+    public function deleteActifFinancier(Client $client, int $actifFinancier): JsonResponse
+    {
         return $this->deleteSubresource($client, 'actifsFinanciers', $actifFinancier);
     }
 
@@ -260,15 +279,18 @@ class ClientController extends Controller {
         'valeur_acquisition' => 'nullable|numeric|min:0',
     ];
 
-    public function storeBienImmobilier(Request $request, Client $client): JsonResponse {
+    public function storeBienImmobilier(Request $request, Client $client): JsonResponse
+    {
         return $this->storeSubresource($request, $client, 'biensImmobiliers', self::BIEN_RULES);
     }
 
-    public function updateBienImmobilier(Request $request, Client $client, int $bienImmobilier): JsonResponse {
+    public function updateBienImmobilier(Request $request, Client $client, int $bienImmobilier): JsonResponse
+    {
         return $this->updateSubresource($request, $client, 'biensImmobiliers', $bienImmobilier, self::BIEN_RULES);
     }
 
-    public function deleteBienImmobilier(Client $client, int $bienImmobilier): JsonResponse {
+    public function deleteBienImmobilier(Client $client, int $bienImmobilier): JsonResponse
+    {
         return $this->deleteSubresource($client, 'biensImmobiliers', $bienImmobilier);
     }
 
@@ -278,15 +300,18 @@ class ClientController extends Controller {
         'valeur' => 'nullable|numeric|min:0',
     ];
 
-    public function storeAutreEpargne(Request $request, Client $client): JsonResponse {
+    public function storeAutreEpargne(Request $request, Client $client): JsonResponse
+    {
         return $this->storeSubresource($request, $client, 'autresEpargnes', self::EPARGNE_RULES);
     }
 
-    public function updateAutreEpargne(Request $request, Client $client, int $autreEpargne): JsonResponse {
+    public function updateAutreEpargne(Request $request, Client $client, int $autreEpargne): JsonResponse
+    {
         return $this->updateSubresource($request, $client, 'autresEpargnes', $autreEpargne, self::EPARGNE_RULES);
     }
 
-    public function deleteAutreEpargne(Client $client, int $autreEpargne): JsonResponse {
+    public function deleteAutreEpargne(Client $client, int $autreEpargne): JsonResponse
+    {
         return $this->deleteSubresource($client, 'autresEpargnes', $autreEpargne);
     }
 
@@ -296,15 +321,18 @@ class ClientController extends Controller {
         'montant' => 'nullable|numeric|min:0',
     ];
 
-    public function storeCharge(Request $request, Client $client): JsonResponse {
+    public function storeCharge(Request $request, Client $client): JsonResponse
+    {
         return $this->storeSubresource($request, $client, 'charges', self::CHARGE_RULES);
     }
 
-    public function updateCharge(Request $request, Client $client, int $charge): JsonResponse {
+    public function updateCharge(Request $request, Client $client, int $charge): JsonResponse
+    {
         return $this->updateSubresource($request, $client, 'charges', $charge, self::CHARGE_RULES);
     }
 
-    public function deleteCharge(Client $client, int $charge): JsonResponse {
+    public function deleteCharge(Client $client, int $charge): JsonResponse
+    {
         return $this->deleteSubresource($client, 'charges', $charge);
     }
 
@@ -326,15 +354,18 @@ class ClientController extends Controller {
         'niveau_protheses_auditives' => 'nullable|integer|min:0|max:10',
     ];
 
-    public function storeSanteSouhait(Request $request, Client $client): JsonResponse {
+    public function storeSanteSouhait(Request $request, Client $client): JsonResponse
+    {
         return $this->upsertSingleton($request, $client, 'santeSouhait', self::SANTE_RULES);
     }
 
-    public function updateSanteSouhait(Request $request, Client $client): JsonResponse {
+    public function updateSanteSouhait(Request $request, Client $client): JsonResponse
+    {
         return $this->upsertSingleton($request, $client, 'santeSouhait', self::SANTE_RULES);
     }
 
-    public function deleteSanteSouhait(Client $client): JsonResponse {
+    public function deleteSanteSouhait(Client $client): JsonResponse
+    {
         return $this->deleteSingleton($client, 'santeSouhait');
     }
 
@@ -356,15 +387,18 @@ class ClientController extends Controller {
         'payeur' => 'nullable|string|max:255',
     ];
 
-    public function storeBaePrevoyance(Request $request, Client $client): JsonResponse {
+    public function storeBaePrevoyance(Request $request, Client $client): JsonResponse
+    {
         return $this->upsertSingleton($request, $client, 'baePrevoyance', self::BAE_PREVOYANCE_RULES);
     }
 
-    public function updateBaePrevoyance(Request $request, Client $client): JsonResponse {
+    public function updateBaePrevoyance(Request $request, Client $client): JsonResponse
+    {
         return $this->upsertSingleton($request, $client, 'baePrevoyance', self::BAE_PREVOYANCE_RULES);
     }
 
-    public function deleteBaePrevoyance(Client $client): JsonResponse {
+    public function deleteBaePrevoyance(Client $client): JsonResponse
+    {
         return $this->deleteSingleton($client, 'baePrevoyance');
     }
 
@@ -386,15 +420,18 @@ class ClientController extends Controller {
         'titulaire' => 'nullable|string|max:255',
     ];
 
-    public function storeBaeRetraite(Request $request, Client $client): JsonResponse {
+    public function storeBaeRetraite(Request $request, Client $client): JsonResponse
+    {
         return $this->upsertSingleton($request, $client, 'baeRetraite', self::BAE_RETRAITE_RULES);
     }
 
-    public function updateBaeRetraite(Request $request, Client $client): JsonResponse {
+    public function updateBaeRetraite(Request $request, Client $client): JsonResponse
+    {
         return $this->upsertSingleton($request, $client, 'baeRetraite', self::BAE_RETRAITE_RULES);
     }
 
-    public function deleteBaeRetraite(Client $client): JsonResponse {
+    public function deleteBaeRetraite(Client $client): JsonResponse
+    {
         return $this->deleteSingleton($client, 'baeRetraite');
     }
 
@@ -423,7 +460,8 @@ class ClientController extends Controller {
         'situation_financiere_revenus_charges' => 'nullable|string',
     ];
 
-    public function storeBaeEpargne(Request $request, Client $client): JsonResponse {
+    public function storeBaeEpargne(Request $request, Client $client): JsonResponse
+    {
         $this->decodeJsonFields($request, [
             'actifs_financiers_details', 'actifs_immo_details', 'actifs_autres_details',
             'passifs_details', 'charges_details',
@@ -432,7 +470,8 @@ class ClientController extends Controller {
         return $this->upsertSingleton($request, $client, 'baeEpargne', self::BAE_EPARGNE_RULES);
     }
 
-    public function updateBaeEpargne(Request $request, Client $client): JsonResponse {
+    public function updateBaeEpargne(Request $request, Client $client): JsonResponse
+    {
         $this->decodeJsonFields($request, [
             'actifs_financiers_details', 'actifs_immo_details', 'actifs_autres_details',
             'passifs_details', 'charges_details',
@@ -441,7 +480,8 @@ class ClientController extends Controller {
         return $this->upsertSingleton($request, $client, 'baeEpargne', self::BAE_EPARGNE_RULES);
     }
 
-    public function deleteBaeEpargne(Client $client): JsonResponse {
+    public function deleteBaeEpargne(Client $client): JsonResponse
+    {
         return $this->deleteSingleton($client, 'baeEpargne');
     }
 
@@ -472,19 +512,22 @@ class ClientController extends Controller {
         'km_parcourus_annuels' => 'nullable|integer|min:0',
     ];
 
-    public function storeConjoint(Request $request, Client $client): JsonResponse {
+    public function storeConjoint(Request $request, Client $client): JsonResponse
+    {
         $this->nullifyEmptyDates($request, ['date_naissance', 'date_evenement_professionnel']);
 
         return $this->upsertSingleton($request, $client, 'conjoint', self::CONJOINT_RULES);
     }
 
-    public function updateConjoint(Request $request, Client $client): JsonResponse {
+    public function updateConjoint(Request $request, Client $client): JsonResponse
+    {
         $this->nullifyEmptyDates($request, ['date_naissance', 'date_evenement_professionnel']);
 
         return $this->upsertSingleton($request, $client, 'conjoint', self::CONJOINT_RULES);
     }
 
-    public function deleteConjoint(Client $client): JsonResponse {
+    public function deleteConjoint(Client $client): JsonResponse
+    {
         return $this->deleteSingleton($client, 'conjoint');
     }
 
@@ -500,13 +543,15 @@ class ClientController extends Controller {
         'garde_alternee' => 'nullable|boolean',
     ];
 
-    public function storeEnfant(Request $request, Client $client): JsonResponse {
+    public function storeEnfant(Request $request, Client $client): JsonResponse
+    {
         $this->nullifyEmptyDates($request, ['date_naissance']);
 
         return $this->storeSubresource($request, $client, 'enfants', self::ENFANT_RULES);
     }
 
-    public function updateEnfant(Request $request, Client $client, \App\Models\Enfant $enfant): JsonResponse {
+    public function updateEnfant(Request $request, Client $client, \App\Models\Enfant $enfant): JsonResponse
+    {
         $this->authorize('update', $client);
         abort_if($enfant->client_id !== $client->id, 404, 'Enfant non trouvé');
         $this->nullifyEmptyDates($request, ['date_naissance']);
@@ -515,7 +560,8 @@ class ClientController extends Controller {
         return response()->json($enfant);
     }
 
-    public function deleteEnfant(Client $client, \App\Models\Enfant $enfant): JsonResponse {
+    public function deleteEnfant(Client $client, \App\Models\Enfant $enfant): JsonResponse
+    {
         $this->authorize('update', $client);
         abort_if($enfant->client_id !== $client->id, 404, 'Enfant non trouvé');
         $enfant->delete();
@@ -527,7 +573,8 @@ class ClientController extends Controller {
     // CONTRATS
     // =========================================================================
 
-    public function storeContrat(Request $request, Client $client): JsonResponse {
+    public function storeContrat(Request $request, Client $client): JsonResponse
+    {
         $this->authorize('update', $client);
 
         $validated = $request->validate([
@@ -550,7 +597,8 @@ class ClientController extends Controller {
         return response()->json($contrat, 201);
     }
 
-    public function updateContrat(Request $request, Client $client, ClientContrat $contrat): JsonResponse {
+    public function updateContrat(Request $request, Client $client, ClientContrat $contrat): JsonResponse
+    {
         $this->authorize('update', $client);
         abort_if($contrat->client_id !== $client->id, 404, 'Contrat non trouvé');
 
@@ -569,7 +617,8 @@ class ClientController extends Controller {
         return response()->json($contrat);
     }
 
-    public function deleteContrat(Client $client, ClientContrat $contrat): JsonResponse {
+    public function deleteContrat(Client $client, ClientContrat $contrat): JsonResponse
+    {
         $this->authorize('update', $client);
         abort_if($contrat->client_id !== $client->id, 404, 'Contrat non trouvé');
         $contrat->delete();
@@ -582,7 +631,8 @@ class ClientController extends Controller {
     // =========================================================================
 
     /** Convertit les chaînes vides en null pour les champs date avant validation */
-    private function nullifyEmptyDates(Request $request, array $fields): void {
+    private function nullifyEmptyDates(Request $request, array $fields): void
+    {
         $data = $request->all();
         foreach ($fields as $field) {
             if (isset($data[$field]) && $data[$field] === '') {
@@ -593,7 +643,8 @@ class ClientController extends Controller {
     }
 
     /** Décode les champs JSON stockés en string avant validation */
-    private function decodeJsonFields(Request $request, array $fields): void {
+    private function decodeJsonFields(Request $request, array $fields): void
+    {
         $data = $request->all();
         foreach ($fields as $field) {
             $value = $data[$field] ?? null;

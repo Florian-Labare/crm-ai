@@ -13,14 +13,16 @@ use App\Services\Import\RgpdComplianceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ImportSessionController extends Controller {
+class ImportSessionController extends Controller
+{
     public function __construct(
         private ImportOrchestrationService $orchestrator,
         private ImportMappingService $mappingService,
         private RgpdComplianceService $rgpdService
     ) {}
 
-    public function index(Request $request): JsonResponse {
+    public function index(Request $request): JsonResponse
+    {
         $teamId = $request->user()->currentTeam()?->id;
 
         $sessions = ImportSession::where('team_id', $teamId)
@@ -34,7 +36,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    public function upload(Request $request): JsonResponse {
+    public function upload(Request $request): JsonResponse
+    {
         $validated = $request->validate([
             'file' => 'required|file|mimes:xlsx,xls,csv,json,xml,sql,txt|max:51200',
             'import_mapping_id' => 'nullable|exists:import_mappings,id',
@@ -79,7 +82,8 @@ class ImportSessionController extends Controller {
         ], 201);
     }
 
-    public function show(ImportSession $session): JsonResponse {
+    public function show(ImportSession $session): JsonResponse
+    {
         // Augmenter la limite mémoire pour le chargement des stats
         ini_set('memory_limit', '512M');
 
@@ -96,7 +100,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    public function setMapping(Request $request, ImportSession $session): JsonResponse {
+    public function setMapping(Request $request, ImportSession $session): JsonResponse
+    {
         // Augmenter la limite mémoire pour les opérations de mapping
         ini_set('memory_limit', '512M');
 
@@ -155,7 +160,8 @@ class ImportSessionController extends Controller {
     /**
      * Record RGPD consent for import session
      */
-    public function recordConsent(Request $request, ImportSession $session): JsonResponse {
+    public function recordConsent(Request $request, ImportSession $session): JsonResponse
+    {
         $validated = $request->validate([
             'legal_basis' => 'required|in:consent,contract,legal_obligation,vital_interests,public_task,legitimate_interest',
             'legal_basis_details' => 'required|string|max:1000',
@@ -179,14 +185,16 @@ class ImportSessionController extends Controller {
     /**
      * Get legal basis options for RGPD consent
      */
-    public function legalBases(): JsonResponse {
+    public function legalBases(): JsonResponse
+    {
         return response()->json([
             'success' => true,
             'data' => ImportAuditLog::getLegalBasesLabels(),
         ]);
     }
 
-    public function start(Request $request, ImportSession $session): JsonResponse {
+    public function start(Request $request, ImportSession $session): JsonResponse
+    {
         if (! $session->import_mapping_id) {
             return response()->json([
                 'success' => false,
@@ -235,7 +243,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    public function rows(Request $request, ImportSession $session): JsonResponse {
+    public function rows(Request $request, ImportSession $session): JsonResponse
+    {
         $query = ImportRow::where('import_session_id', $session->id);
 
         if ($request->has('status')) {
@@ -251,7 +260,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    public function resolveRow(Request $request, ImportSession $session, ImportRow $row): JsonResponse {
+    public function resolveRow(Request $request, ImportSession $session, ImportRow $row): JsonResponse
+    {
         if ($row->import_session_id !== $session->id) {
             return response()->json([
                 'success' => false,
@@ -282,7 +292,8 @@ class ImportSessionController extends Controller {
         }
     }
 
-    public function importValid(ImportSession $session): JsonResponse {
+    public function importValid(ImportSession $session): JsonResponse
+    {
         $imported = $this->orchestrator->importValidRows($session);
 
         return response()->json([
@@ -295,7 +306,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    public function destroy(Request $request, ImportSession $session): JsonResponse {
+    public function destroy(Request $request, ImportSession $session): JsonResponse
+    {
         // RGPD: Use the compliance service to properly delete and log
         $result = $this->rgpdService->deleteSessionData($session, $request);
 
@@ -309,7 +321,8 @@ class ImportSessionController extends Controller {
     /**
      * Get audit trail for a session
      */
-    public function auditTrail(ImportSession $session): JsonResponse {
+    public function auditTrail(ImportSession $session): JsonResponse
+    {
         $trail = $this->rgpdService->getSessionAuditTrail($session);
 
         return response()->json([
@@ -321,7 +334,8 @@ class ImportSessionController extends Controller {
     /**
      * Get clients imported from this session
      */
-    public function importedClients(ImportSession $session): JsonResponse {
+    public function importedClients(ImportSession $session): JsonResponse
+    {
         $clients = $this->rgpdService->getClientsFromSession($session);
 
         return response()->json([
@@ -330,7 +344,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    public function suggestMappings(ImportSession $session): JsonResponse {
+    public function suggestMappings(ImportSession $session): JsonResponse
+    {
         // Augmenter la limite mémoire pour les suggestions
         ini_set('memory_limit', '512M');
 
@@ -353,7 +368,8 @@ class ImportSessionController extends Controller {
         ]);
     }
 
-    private function detectSourceType(string $filename): string {
+    private function detectSourceType(string $filename): string
+    {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         return match ($extension) {

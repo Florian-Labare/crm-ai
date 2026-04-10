@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des emprunts multiples (immobilier, consommation, etc.)
  * - Retourne un array de passifs avec nature, preteur, periodicite, montants, durée
  */
-class ClientPassifsExtractor {
+class ClientPassifsExtractor
+{
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array {
+    public function extract(string $transcription, array $currentData = []): array
+    {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -46,7 +48,8 @@ class ClientPassifsExtractor {
         }
     }
 
-    private function buildPrompt(string $transcription): string {
+    private function buildPrompt(string $transcription): string
+    {
         return <<<PROMPT
 Analyse cette transcription et détecte les PRÊTS/EMPRUNTS du client.
 
@@ -67,7 +70,8 @@ PROMPT;
      * 2. Si un passif n'a pas de prêteur, le fusionner avec un passif de même nature qui en a un
      * 3. Si deux passifs de même nature n'ont pas de prêteur, les fusionner
      */
-    private function deduplicatePassifs(array $passifs): array {
+    private function deduplicatePassifs(array $passifs): array
+    {
         if (count($passifs) <= 1) {
             return $passifs;
         }
@@ -137,7 +141,8 @@ PROMPT;
     /**
      * Fusionne deux passifs en gardant les informations les plus complètes
      */
-    private function mergePassifData(array $existing, array $new): array {
+    private function mergePassifData(array $existing, array $new): array
+    {
         $fields = ['nature', 'preteur', 'periodicite', 'montant_remboursement', 'capital_restant_du', 'duree_restante'];
 
         foreach ($fields as $field) {
@@ -154,7 +159,8 @@ PROMPT;
         return $existing;
     }
 
-    private function getSystemPrompt(): string {
+    private function getSystemPrompt(): string
+    {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de PASSIFS clients (prêts, emprunts, dettes).
 

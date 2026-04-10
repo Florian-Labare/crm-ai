@@ -3,8 +3,10 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-return new class() extends Migration {
-    public function up(): void {
+return new class extends Migration
+{
+    public function up(): void
+    {
         // Supprimer : DER (5,8,11), fiches conseil (6,9,12), fiche_ipid_sante (14),
         // devis_sante (15), immobilier (16,17), fiscalité (18,19)
         DB::table('compliance_requirements')
@@ -57,7 +59,8 @@ return new class() extends Migration {
         ]);
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         // Supprimer les enregistrements ajoutés
         DB::table('compliance_requirements')
             ->whereIn('document_type', ['mandat_recherche', 'recueil_global', 'lettre_mission_emprunteur', 'recueil_ade'])

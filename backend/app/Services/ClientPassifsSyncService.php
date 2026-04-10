@@ -6,13 +6,15 @@ use App\Models\Client;
 use App\Models\ClientPassif;
 use Illuminate\Support\Facades\Log;
 
-class ClientPassifsSyncService {
+class ClientPassifsSyncService
+{
     /**
      * Synchronise les passifs (prêts/emprunts) d'un client avec les données extraites
      *
      * @param  array  $passifsData  Tableau de passifs extraits par GPT
      */
-    public function syncPassifs(Client $client, array $passifsData): void {
+    public function syncPassifs(Client $client, array $passifsData): void
+    {
         Log::info("📉 [PASSIFS] Synchronisation des passifs pour le client #{$client->id}", [
             'nombre_passifs_recus' => count($passifsData),
         ]);
@@ -76,7 +78,8 @@ class ClientPassifsSyncService {
      * - Un autre avec le capital restant dû
      * Cette méthode les fusionne en un seul objet complet
      */
-    private function deduplicateIncomingPassifs(array $passifs): array {
+    private function deduplicateIncomingPassifs(array $passifs): array
+    {
         if (count($passifs) <= 1) {
             return $passifs;
         }
@@ -141,7 +144,8 @@ class ClientPassifsSyncService {
     /**
      * Trouve un passif existant correspondant aux données
      */
-    private function findMatchingPassif($existingPassifs, array $passifData): ?ClientPassif {
+    private function findMatchingPassif($existingPassifs, array $passifData): ?ClientPassif
+    {
         // Match par nature et preteur
         if (isset($passifData['nature']) && isset($passifData['preteur'])) {
             $match = $existingPassifs->first(function ($passif) use ($passifData) {
@@ -170,7 +174,8 @@ class ClientPassifsSyncService {
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array {
+    private function filterEmptyValues(array $data): array
+    {
         return array_filter($data, function ($value, $key) {
             if (is_bool($value)) {
                 return true;
@@ -183,7 +188,8 @@ class ClientPassifsSyncService {
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string {
+    private function normalizeString(?string $value): ?string
+    {
         if (is_null($value)) {
             return null;
         }

@@ -13,7 +13,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class FinalizeRecordingJob implements ShouldQueue {
+class FinalizeRecordingJob implements ShouldQueue
+{
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300;
@@ -96,7 +97,8 @@ class FinalizeRecordingJob implements ShouldQueue {
         }
     }
 
-    public function failed(\Throwable $exception): void {
+    public function failed(\Throwable $exception): void
+    {
         Log::error("[FINALIZE] Echec pour session {$this->session->session_id}: {$exception->getMessage()}");
 
         $this->session->update(['status' => 'failed']);
@@ -106,7 +108,8 @@ class FinalizeRecordingJob implements ShouldQueue {
         ]);
     }
 
-    private function getChunksInOrder(string $sessionId, int $totalChunks): array {
+    private function getChunksInOrder(string $sessionId, int $totalChunks): array
+    {
         $chunks = [];
         for ($i = 0; $i < $totalChunks; $i++) {
             $filename = "{$sessionId}_part_{$i}.webm";
@@ -122,7 +125,8 @@ class FinalizeRecordingJob implements ShouldQueue {
         return $chunks;
     }
 
-    private function transcribeAudio(string $filePath, TranscriptionService $transcriptionService): string {
+    private function transcribeAudio(string $filePath, TranscriptionService $transcriptionService): string
+    {
         if (! file_exists($filePath)) {
             throw new \Exception("Fichier audio introuvable : {$filePath}");
         }
@@ -143,7 +147,8 @@ class FinalizeRecordingJob implements ShouldQueue {
         return $transcription;
     }
 
-    private function concatenateChunks(array $chunks, string $sessionId): string {
+    private function concatenateChunks(array $chunks, string $sessionId): string
+    {
         if (count($chunks) === 1) {
             $tempDir = storage_path('app/temp');
             if (! is_dir($tempDir)) {
@@ -200,7 +205,8 @@ class FinalizeRecordingJob implements ShouldQueue {
         return $outputPath;
     }
 
-    private function cleanupChunks(string $sessionId): void {
+    private function cleanupChunks(string $sessionId): void
+    {
         if (Storage::disk('recordings')->exists($sessionId)) {
             Storage::disk('recordings')->deleteDirectory($sessionId);
             Log::info("[FINALIZE] Chunks supprimes pour la session {$sessionId}");

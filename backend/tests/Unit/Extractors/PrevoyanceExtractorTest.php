@@ -6,12 +6,14 @@ use App\Services\Ai\Extractors\PrevoyanceExtractor;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class PrevoyanceExtractorTest extends TestCase {
+class PrevoyanceExtractorTest extends TestCase
+{
     private PrevoyanceExtractor $extractor;
 
-    protected function setUp(): void {
+    protected function setUp(): void
+    {
         parent::setUp();
-        $this->extractor = new PrevoyanceExtractor();
+        $this->extractor = new PrevoyanceExtractor;
 
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
@@ -19,7 +21,8 @@ class PrevoyanceExtractorTest extends TestCase {
         config(['mistral.fallback_to_openai' => false]);
     }
 
-    public function test_detects_prevoyance_need(): void {
+    public function test_detects_prevoyance_need(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -36,7 +39,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals('add', $data['besoins_action'] ?? null);
     }
 
-    public function test_extracts_revenu_a_garantir(): void {
+    public function test_extracts_revenu_a_garantir(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -53,7 +57,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertTrue($data['bae_prevoyance']['souhaite_couverture_invalidite'] ?? false);
     }
 
-    public function test_extracts_capital_deces(): void {
+    public function test_extracts_capital_deces(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -69,7 +74,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals(200000, $data['bae_prevoyance']['capital_deces_souhaite'] ?? null);
     }
 
-    public function test_extracts_rente_conjoint(): void {
+    public function test_extracts_rente_conjoint(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -85,7 +91,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals(1500, $data['bae_prevoyance']['rente_conjoint'] ?? null);
     }
 
-    public function test_extracts_charges_professionnelles(): void {
+    public function test_extracts_charges_professionnelles(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -102,7 +109,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals(50000, $data['bae_prevoyance']['montant_annuel_charges_professionnelles'] ?? null);
     }
 
-    public function test_action_remove_when_negation(): void {
+    public function test_action_remove_when_negation(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -118,7 +126,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals('remove', $data['besoins_action'] ?? null);
     }
 
-    public function test_returns_empty_when_no_prevoyance(): void {
+    public function test_returns_empty_when_no_prevoyance(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -134,7 +143,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals([], $data);
     }
 
-    public function test_extracts_duree_indemnisation(): void {
+    public function test_extracts_duree_indemnisation(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -150,7 +160,8 @@ class PrevoyanceExtractorTest extends TestCase {
         $this->assertEquals("jusqu'à la retraite", $data['bae_prevoyance']['duree_indemnisation_souhaitee'] ?? null);
     }
 
-    public function test_returns_empty_on_api_error(): void {
+    public function test_returns_empty_on_api_error(): void
+    {
         Http::fake([
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);

@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class DocumentTemplate extends Model {
+class DocumentTemplate extends Model
+{
     use HasFactory;
 
     protected $fillable = [
@@ -25,32 +26,37 @@ class DocumentTemplate extends Model {
     /**
      * The "booted" method of the model.
      */
-    protected static function booted(): void {
-        static::addGlobalScope(new \App\Scopes\TeamScope());
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new \App\Scopes\TeamScope);
     }
 
-    public function team(): \Illuminate\Database\Eloquent\Relations\BelongsTo {
+    public function team(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
         return $this->belongsTo(Team::class);
     }
 
     /**
      * Un template peut avoir plusieurs documents générés
      */
-    public function generatedDocuments(): HasMany {
+    public function generatedDocuments(): HasMany
+    {
         return $this->hasMany(GeneratedDocument::class);
     }
 
     /**
      * Scope pour récupérer uniquement les templates actifs
      */
-    public function scopeActive($query) {
+    public function scopeActive($query)
+    {
         return $query->where('is_active', true);
     }
 
     /**
      * Scope pour filtrer par catégorie
      */
-    public function scopeByCategory($query, string $category) {
+    public function scopeByCategory($query, string $category)
+    {
         return $query->where('category', $category);
     }
 }

@@ -6,10 +6,12 @@ use App\Models\MeetingSummary;
 use App\Services\Ai\Traits\LlmClientTrait;
 use Illuminate\Support\Facades\Log;
 
-class MeetingSummaryService {
+class MeetingSummaryService
+{
     use LlmClientTrait;
 
-    public function generateSummary(string $transcription): array {
+    public function generateSummary(string $transcription): array
+    {
         $systemPrompt = <<<'SYSTEM'
 Tu es un assistant spécialisé en production de comptes-rendus d'entretien client en français.
 
@@ -96,7 +98,8 @@ PROMPT;
         }
     }
 
-    public function storeSummary(int $clientId, int $userId, ?int $audioRecordId, array $payload): MeetingSummary {
+    public function storeSummary(int $clientId, int $userId, ?int $audioRecordId, array $payload): MeetingSummary
+    {
         $data = [
             'client_id' => $clientId,
             'created_by' => $userId,
@@ -114,7 +117,8 @@ PROMPT;
         );
     }
 
-    private function formatSummaryText(array $summaryJson): string {
+    private function formatSummaryText(array $summaryJson): string
+    {
         $parts = [];
         if (! empty($summaryJson['overview'])) {
             $parts[] = $summaryJson['overview'];

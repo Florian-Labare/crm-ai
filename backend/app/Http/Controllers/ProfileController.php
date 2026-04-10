@@ -7,11 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
-class ProfileController extends Controller {
+class ProfileController extends Controller
+{
     /**
      * Update the authenticated user's profile (name, firstname)
      */
-    public function update(Request $request): JsonResponse {
+    public function update(Request $request): JsonResponse
+    {
         $user = auth()->user();
 
         $request->validate([
@@ -31,7 +33,8 @@ class ProfileController extends Controller {
     /**
      * Upload avatar photo for the authenticated user
      */
-    public function uploadAvatar(Request $request): JsonResponse {
+    public function uploadAvatar(Request $request): JsonResponse
+    {
         $user = auth()->user();
 
         $request->validate([
@@ -56,7 +59,8 @@ class ProfileController extends Controller {
     /**
      * Remove avatar photo for the authenticated user
      */
-    public function deleteAvatar(): JsonResponse {
+    public function deleteAvatar(): JsonResponse
+    {
         $user = auth()->user();
 
         if ($user->avatar_path) {
@@ -70,7 +74,8 @@ class ProfileController extends Controller {
     /**
      * Update the authenticated user's password
      */
-    public function updatePassword(Request $request): JsonResponse {
+    public function updatePassword(Request $request): JsonResponse
+    {
         $user = auth()->user();
 
         $request->validate([

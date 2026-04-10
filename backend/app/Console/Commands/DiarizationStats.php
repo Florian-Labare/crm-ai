@@ -5,7 +5,8 @@ namespace App\Console\Commands;
 use App\Services\DiarizationMonitoringService;
 use Illuminate\Console\Command;
 
-class DiarizationStats extends Command {
+class DiarizationStats extends Command
+{
     /**
      * The name and signature of the console command.
      */
@@ -21,7 +22,8 @@ class DiarizationStats extends Command {
     /**
      * Execute the console command.
      */
-    public function handle(DiarizationMonitoringService $monitoringService): int {
+    public function handle(DiarizationMonitoringService $monitoringService): int
+    {
         $days = (int) $this->option('days');
         $json = $this->option('json');
 

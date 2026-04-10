@@ -3,8 +3,10 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
-return new class() extends Migration {
-    public function up(): void {
+return new class extends Migration
+{
+    public function up(): void
+    {
         // 1. Rename in team_user pivot (simple string column)
         DB::table('team_user')->where('role', 'member')->update(['role' => 'mia']);
         DB::table('team_user')->where('role', 'viewer')->update(['role' => 'secretaire']);
@@ -19,7 +21,8 @@ return new class() extends Migration {
         DB::statement("ALTER TABLE team_invitations MODIFY COLUMN role ENUM('admin','mia','secretaire') NOT NULL DEFAULT 'mia'");
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         DB::table('team_user')->where('role', 'mia')->update(['role' => 'member']);
         DB::table('team_user')->where('role', 'secretaire')->update(['role' => 'viewer']);
 

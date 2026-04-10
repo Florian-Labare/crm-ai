@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClientPassif extends Model {
+class ClientPassif extends Model
+{
     protected $table = 'client_passifs';
 
     protected $fillable = [
@@ -24,7 +25,8 @@ class ClientPassif extends Model {
         'duree_restante' => 'integer',
     ];
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 }

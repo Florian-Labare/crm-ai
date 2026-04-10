@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class OAuthMailService {
+class OAuthMailService
+{
     /**
      * Envoyer un email depuis le compte SSO du sender (Gmail ou Outlook).
      * Fallback SMTP si aucun compte SSO disponible ou si l'API échoue.
@@ -129,7 +130,8 @@ class OAuthMailService {
         Log::info("OAuthMailService: email envoyé via Graph depuis {$sender->email} vers {$to}");
     }
 
-    private function refreshGoogleToken($socialAccount): string {
+    private function refreshGoogleToken($socialAccount): string
+    {
         $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'client_id' => config('services.google.client_id'),
             'client_secret' => config('services.google.client_secret'),
@@ -147,7 +149,8 @@ class OAuthMailService {
         return $newToken;
     }
 
-    private function refreshAzureToken($socialAccount): string {
+    private function refreshAzureToken($socialAccount): string
+    {
         $tenant = config('services.azure.tenant', 'common');
 
         $response = Http::asForm()->post("https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/token", [

@@ -11,10 +11,12 @@ use Illuminate\Support\Facades\Log;
  * Identifie automatiquement le courtier et le client dans un enregistrement
  * et extrait uniquement les segments du client pour transcription
  */
-class DiarizationService {
+class DiarizationService
+{
     private ?DiarizationMonitoringService $monitoringService = null;
 
-    public function __construct(?DiarizationMonitoringService $monitoringService = null) {
+    public function __construct(?DiarizationMonitoringService $monitoringService = null)
+    {
         $this->monitoringService = $monitoringService ?? app(DiarizationMonitoringService::class);
     }
 
@@ -27,7 +29,8 @@ class DiarizationService {
     /**
      * Vérifie si pyannote est disponible et fonctionnel
      */
-    public function isAvailable(): bool {
+    public function isAvailable(): bool
+    {
         static $available = null;
 
         if ($available !== null) {
@@ -53,7 +56,8 @@ class DiarizationService {
      * @param  string  $audioPath  Chemin vers le fichier audio
      * @param  array  $context  Contexte optionnel (audio_record_id, team_id, user_id, etc.)
      */
-    public function diarizeWithMonitoring(string $audioPath, array $context = []): array {
+    public function diarizeWithMonitoring(string $audioPath, array $context = []): array
+    {
         $startTime = microtime(true);
         $fileSize = file_exists($audioPath) ? filesize($audioPath) : null;
 
@@ -105,14 +109,16 @@ class DiarizationService {
     /**
      * Met à jour un AudioRecord avec les résultats de diarisation
      */
-    public function updateAudioRecordWithDiarization(AudioRecord $audioRecord, array $diarizationResult): void {
+    public function updateAudioRecordWithDiarization(AudioRecord $audioRecord, array $diarizationResult): void
+    {
         $audioRecord->update([
             'diarization_data' => $diarizationResult,
             'diarization_success' => $diarizationResult['success'] ?? false,
         ]);
     }
 
-    public function diarize(string $audioPath): array {
+    public function diarize(string $audioPath): array
+    {
         // Vérifier si pyannote est disponible
         if (! $this->isAvailable()) {
             Log::info('[DIARIZATION] Pyannote non disponible - fallback sur transcription complète');
@@ -289,7 +295,8 @@ class DiarizationService {
      * @param  array  $segments  Segments du client avec start/end timestamps
      * @return string|null Chemin vers le fichier audio contenant uniquement les segments du client
      */
-    public function extractClientAudio(string $audioPath, array $segments): ?string {
+    public function extractClientAudio(string $audioPath, array $segments): ?string
+    {
         if (empty($segments)) {
             return null;
         }
@@ -349,7 +356,8 @@ class DiarizationService {
     /**
      * Nettoie les fichiers temporaires
      */
-    public function cleanup(string $audioPath): void {
+    public function cleanup(string $audioPath): void
+    {
         if (file_exists($audioPath) && strpos($audioPath, '/temp/') !== false) {
             @unlink($audioPath);
             Log::info('🗑️ [DIARIZATION] Fichier temporaire supprimé', ['path' => $audioPath]);

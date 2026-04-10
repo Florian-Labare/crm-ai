@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
-class ClientComplianceController extends Controller {
+class ClientComplianceController extends Controller
+{
     public function __construct(
         private readonly BesoinService $besoinService,
         private readonly ComplianceStatusService $complianceStatusService,
@@ -22,7 +23,8 @@ class ClientComplianceController extends Controller {
     /**
      * Retourne un badge simplifié (feu tricolore) pour le statut compliance.
      */
-    public function badge(Client $client): JsonResponse {
+    public function badge(Client $client): JsonResponse
+    {
         $badge = $this->complianceStatusService->computeBadge($client);
 
         return response()->json([
@@ -34,7 +36,8 @@ class ClientComplianceController extends Controller {
     /**
      * Retourne le statut de compliance d'un client avec les documents requis et fournis
      */
-    public function status(Client $client): JsonResponse {
+    public function status(Client $client): JsonResponse
+    {
         // Récupérer les documents fournis par le client
         $documents = $client->complianceDocuments()
             ->orderBy('created_at', 'desc')
@@ -242,7 +245,8 @@ class ClientComplianceController extends Controller {
     /**
      * Retourne les alertes d'expiration pour un client
      */
-    public function alerts(Client $client): JsonResponse {
+    public function alerts(Client $client): JsonResponse
+    {
         $alerts = [];
 
         // Documents expirés
@@ -305,7 +309,8 @@ class ClientComplianceController extends Controller {
     /**
      * Upload un document de compliance
      */
-    public function upload(Request $request, Client $client): JsonResponse {
+    public function upload(Request $request, Client $client): JsonResponse
+    {
         $request->validate([
             'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
             'document_type' => ['required', 'string', Rule::in(array_keys(ClientComplianceDocument::DOCUMENT_LABELS))],
@@ -363,7 +368,8 @@ class ClientComplianceController extends Controller {
     /**
      * Valide un document
      */
-    public function validate(Request $request, Client $client, ClientComplianceDocument $document): JsonResponse {
+    public function validate(Request $request, Client $client, ClientComplianceDocument $document): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -395,7 +401,8 @@ class ClientComplianceController extends Controller {
     /**
      * Rejette un document
      */
-    public function reject(Request $request, Client $client, ClientComplianceDocument $document): JsonResponse {
+    public function reject(Request $request, Client $client, ClientComplianceDocument $document): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -425,7 +432,8 @@ class ClientComplianceController extends Controller {
     /**
      * Télécharge un document
      */
-    public function download(Client $client, ClientComplianceDocument $document) {
+    public function download(Client $client, ClientComplianceDocument $document)
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -440,7 +448,8 @@ class ClientComplianceController extends Controller {
     /**
      * Supprime un document
      */
-    public function destroy(Client $client, ClientComplianceDocument $document): JsonResponse {
+    public function destroy(Client $client, ClientComplianceDocument $document): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -475,7 +484,8 @@ class ClientComplianceController extends Controller {
     /**
      * Upload un document signé avec tags
      */
-    public function uploadSigned(Request $request, Client $client): JsonResponse {
+    public function uploadSigned(Request $request, Client $client): JsonResponse
+    {
         $request->validate([
             'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
             'tags' => 'required|array|min:1',
@@ -530,7 +540,8 @@ class ClientComplianceController extends Controller {
     /**
      * Lie un document signé à une ou plusieurs exigences
      */
-    public function linkToRequirements(Client $client, ClientComplianceDocument $document, Request $request): JsonResponse {
+    public function linkToRequirements(Client $client, ClientComplianceDocument $document, Request $request): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -575,7 +586,8 @@ class ClientComplianceController extends Controller {
     /**
      * Retire la liaison d'un document signé avec une exigence
      */
-    public function unlinkFromRequirement(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse {
+    public function unlinkFromRequirement(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -605,7 +617,8 @@ class ClientComplianceController extends Controller {
     /**
      * Valide une liaison document-exigence
      */
-    public function validateLink(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse {
+    public function validateLink(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -639,7 +652,8 @@ class ClientComplianceController extends Controller {
     /**
      * Rejette une liaison document-exigence
      */
-    public function rejectLink(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse {
+    public function rejectLink(Client $client, ClientComplianceDocument $document, ComplianceRequirement $requirement): JsonResponse
+    {
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
@@ -671,7 +685,8 @@ class ClientComplianceController extends Controller {
     /**
      * Détermine la catégorie d'un type de document
      */
-    private function getCategoryForDocumentType(string $documentType): string {
+    private function getCategoryForDocumentType(string $documentType): string
+    {
         $identityTypes = ['cni', 'passeport', 'titre_sejour'];
         $bankingTypes = ['rib'];
         $fiscalTypes = ['avis_imposition', 'avis_imposition_n1', 'avis_imposition_n2'];

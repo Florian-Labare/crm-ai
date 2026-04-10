@@ -27,7 +27,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ProcessAudioRecording implements ShouldQueue {
+class ProcessAudioRecording implements ShouldQueue
+{
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
@@ -66,7 +67,8 @@ class ProcessAudioRecording implements ShouldQueue {
      *
      * @param  bool  $reviewMode  Si true, crée des PendingChanges pour validation manuelle
      */
-    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null, bool $reviewMode = true) {
+    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null, bool $reviewMode = true)
+    {
         $this->audioRecord = $audioRecord;
         $this->existingClientId = $existingClientId;
         $this->reviewMode = $reviewMode;
@@ -90,7 +92,7 @@ class ProcessAudioRecording implements ShouldQueue {
             }
 
             try {
-                $summaryService = new MeetingSummaryService();
+                $summaryService = new MeetingSummaryService;
                 $summaryPayload = $summaryService->generateSummary($transcription);
                 if (! empty($summaryPayload['summary_text']) || ! empty($summaryPayload['summary_json'])) {
                     $summaryService->storeSummary(
@@ -456,7 +458,7 @@ class ProcessAudioRecording implements ShouldQueue {
             }
 
             // 4️⃣ ter - Synchronisation des données BAE (Prévoyance, Retraite, Épargne)
-            $baeService = new BaeService();
+            $baeService = new BaeService;
 
             // Supprimer les BAE des besoins retirés
             if (! empty($removedBesoins)) {
@@ -469,49 +471,49 @@ class ProcessAudioRecording implements ShouldQueue {
             // 4️⃣ quater - Synchronisation des enfants
             if (isset($data['enfants']) && is_array($data['enfants']) && ! empty($data['enfants'])) {
                 Log::info('👶 Détection de données enfants, synchronisation...');
-                $enfantService = new EnfantSyncService();
+                $enfantService = new EnfantSyncService;
                 $enfantService->syncEnfants($client, $data['enfants']);
             }
 
             // 4️⃣ quinquies - Synchronisation du conjoint
             if (isset($data['conjoint']) && is_array($data['conjoint']) && ! empty($data['conjoint'])) {
                 Log::info('💑 Détection de données conjoint, synchronisation...');
-                $conjointService = new ConjointSyncService();
+                $conjointService = new ConjointSyncService;
                 $conjointService->syncConjoint($client, $data['conjoint']);
             }
 
             // 4️⃣ sextus - Synchronisation des revenus
             if (isset($data['client_revenus']) && is_array($data['client_revenus']) && ! empty($data['client_revenus'])) {
                 Log::info('💰 Détection de données revenus, synchronisation...');
-                $revenusService = new ClientRevenusSyncService();
+                $revenusService = new ClientRevenusSyncService;
                 $revenusService->syncRevenus($client, $data['client_revenus']);
             }
 
             // 4️⃣ septimus - Synchronisation des passifs
             if (isset($data['client_passifs']) && is_array($data['client_passifs']) && ! empty($data['client_passifs'])) {
                 Log::info('📉 Détection de données passifs, synchronisation...');
-                $passifsService = new ClientPassifsSyncService();
+                $passifsService = new ClientPassifsSyncService;
                 $passifsService->syncPassifs($client, $data['client_passifs']);
             }
 
             // 4️⃣ octavus - Synchronisation des actifs financiers
             if (isset($data['client_actifs_financiers']) && is_array($data['client_actifs_financiers']) && ! empty($data['client_actifs_financiers'])) {
                 Log::info('📈 Détection de données actifs financiers, synchronisation...');
-                $actifsService = new ClientActifsFinanciersSyncService();
+                $actifsService = new ClientActifsFinanciersSyncService;
                 $actifsService->syncActifsFinanciers($client, $data['client_actifs_financiers']);
             }
 
             // 4️⃣ nonus - Synchronisation des biens immobiliers
             if (isset($data['client_biens_immobiliers']) && is_array($data['client_biens_immobiliers']) && ! empty($data['client_biens_immobiliers'])) {
                 Log::info('🏠 Détection de données biens immobiliers, synchronisation...');
-                $biensService = new ClientBiensImmobiliersSyncService();
+                $biensService = new ClientBiensImmobiliersSyncService;
                 $biensService->syncBiensImmobiliers($client, $data['client_biens_immobiliers']);
             }
 
             // 4️⃣ decimus - Synchronisation des autres épargnes
             if (isset($data['client_autres_epargnes']) && is_array($data['client_autres_epargnes']) && ! empty($data['client_autres_epargnes'])) {
                 Log::info('💎 Détection de données autres épargnes, synchronisation...');
-                $epargnesService = new ClientAutresEpargnesSyncService();
+                $epargnesService = new ClientAutresEpargnesSyncService;
                 $epargnesService->syncAutresEpargnes($client, $data['client_autres_epargnes']);
             }
 
@@ -548,7 +550,8 @@ class ProcessAudioRecording implements ShouldQueue {
     /**
      * Corrige les champs entreprise mal placés par GPT
      */
-    private function fixEnterpriseFields(string $transcription, array &$data): void {
+    private function fixEnterpriseFields(string $transcription, array &$data): void
+    {
         Log::info('🏢 [FIX ENTREPRISE] Correction des champs entreprise');
 
         $text = mb_strtolower($transcription, 'UTF-8');
@@ -678,7 +681,8 @@ class ProcessAudioRecording implements ShouldQueue {
     /**
      * Normalise la civilité pour correspondre à l'enum MySQL (Monsieur/Madame)
      */
-    private function normalizeCivilite(?string $civilite): ?string {
+    private function normalizeCivilite(?string $civilite): ?string
+    {
         if (empty($civilite)) {
             return null;
         }
@@ -713,7 +717,8 @@ class ProcessAudioRecording implements ShouldQueue {
     /**
      * Gestion de l'échec définitif du job
      */
-    public function failed(\Throwable $exception): void {
+    public function failed(\Throwable $exception): void
+    {
         Log::error("💀 Job ProcessAudioRecording #{$this->audioRecord->id} échoué définitivement");
 
         $this->audioRecord->update([

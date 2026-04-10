@@ -5,7 +5,8 @@ namespace App\Services\Import;
 use App\Models\Client;
 use Illuminate\Support\Str;
 
-class ImportDuplicateDetectionService {
+class ImportDuplicateDetectionService
+{
     private const CONFIDENCE_THRESHOLD_HIGH = 0.9;
 
     private const CONFIDENCE_THRESHOLD_MEDIUM = 0.7;
@@ -19,7 +20,8 @@ class ImportDuplicateDetectionService {
         'nom_prenom' => 0.10,
     ];
 
-    public function findDuplicates(array $normalizedData, int $teamId): array {
+    public function findDuplicates(array $normalizedData, int $teamId): array
+    {
         $matches = [];
         $totalScore = 0;
 
@@ -69,7 +71,8 @@ class ImportDuplicateDetectionService {
         ];
     }
 
-    public function checkDuplicateInBatch(array $normalizedData, array $batchData, int $rowNumber): array {
+    public function checkDuplicateInBatch(array $normalizedData, array $batchData, int $rowNumber): array
+    {
         $duplicates = [];
 
         foreach ($batchData as $index => $otherRow) {
@@ -90,7 +93,8 @@ class ImportDuplicateDetectionService {
         return $duplicates;
     }
 
-    private function findByEmail(array $data, int $teamId): array {
+    private function findByEmail(array $data, int $teamId): array
+    {
         if (empty($data['email'])) {
             return [];
         }
@@ -107,7 +111,8 @@ class ImportDuplicateDetectionService {
         ])->toArray();
     }
 
-    private function findByPhone(array $data, int $teamId): array {
+    private function findByPhone(array $data, int $teamId): array
+    {
         if (empty($data['telephone'])) {
             return [];
         }
@@ -126,7 +131,8 @@ class ImportDuplicateDetectionService {
         ])->toArray();
     }
 
-    private function findByNameAndBirthdate(array $data, int $teamId): array {
+    private function findByNameAndBirthdate(array $data, int $teamId): array
+    {
         if (empty($data['nom']) || empty($data['prenom'])) {
             return [];
         }
@@ -187,7 +193,8 @@ class ImportDuplicateDetectionService {
         return $results;
     }
 
-    private function compareRows(array $row1, array $row2): float {
+    private function compareRows(array $row1, array $row2): float
+    {
         $score = 0;
 
         if (! empty($row1['email']) && ! empty($row2['email'])) {
@@ -226,7 +233,8 @@ class ImportDuplicateDetectionService {
         return min(1.0, $score);
     }
 
-    private function calculateNameSimilarity(string $nom1, string $prenom1, string $nom2, string $prenom2): float {
+    private function calculateNameSimilarity(string $nom1, string $prenom1, string $nom2, string $prenom2): float
+    {
         $nom1 = $this->normalizeName($nom1);
         $nom2 = $this->normalizeName($nom2);
         $prenom1 = $this->normalizeName($prenom1);
@@ -239,7 +247,8 @@ class ImportDuplicateDetectionService {
         return max($directMatch, $inverseMatch);
     }
 
-    private function stringSimilarity(string $str1, string $str2): float {
+    private function stringSimilarity(string $str1, string $str2): float
+    {
         if (empty($str1) || empty($str2)) {
             return 0;
         }
@@ -254,7 +263,8 @@ class ImportDuplicateDetectionService {
         return 1 - ($levenshtein / $maxLen);
     }
 
-    private function normalizeName(string $name): string {
+    private function normalizeName(string $name): string
+    {
         $normalized = Str::lower($name);
         $normalized = Str::ascii($normalized);
         $normalized = preg_replace('/[^a-z]/', '', $normalized);
@@ -262,7 +272,8 @@ class ImportDuplicateDetectionService {
         return $normalized;
     }
 
-    private function normalizeDate(?string $date): ?string {
+    private function normalizeDate(?string $date): ?string
+    {
         if (empty($date)) {
             return null;
         }
@@ -274,7 +285,8 @@ class ImportDuplicateDetectionService {
         }
     }
 
-    private function getConfidenceLevel(float $confidence): string {
+    private function getConfidenceLevel(float $confidence): string
+    {
         if ($confidence >= self::CONFIDENCE_THRESHOLD_HIGH) {
             return 'high';
         }
@@ -288,7 +300,8 @@ class ImportDuplicateDetectionService {
         return 'none';
     }
 
-    private function formatClientInfo(Client $client): array {
+    private function formatClientInfo(Client $client): array
+    {
         return [
             'id' => $client->id,
             'nom' => $client->nom,

@@ -8,11 +8,13 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
-class MiaUserSeeder extends Seeder {
+class MiaUserSeeder extends Seeder
+{
     /**
      * Run the database seeds.
      */
-    public function run(): void {
+    public function run(): void
+    {
         // Créer le rôle MIA s'il n'existe pas
         $miaRole = Role::firstOrCreate(['name' => 'MIA']);
 

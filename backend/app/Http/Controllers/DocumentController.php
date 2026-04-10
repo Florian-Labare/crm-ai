@@ -13,7 +13,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-class DocumentController extends Controller {
+class DocumentController extends Controller
+{
     private DocumentGeneratorService $documentGeneratorService;
 
     private DocumentTemplateFormService $formService;
@@ -29,7 +30,8 @@ class DocumentController extends Controller {
     /**
      * Liste tous les templates de documents actifs
      */
-    public function listTemplates(): JsonResponse {
+    public function listTemplates(): JsonResponse
+    {
         $templates = DocumentTemplate::active()->get();
 
         return response()->json([
@@ -41,7 +43,8 @@ class DocumentController extends Controller {
     /**
      * Liste tous les documents générés pour un client
      */
-    public function listClientDocuments(int $clientId): JsonResponse {
+    public function listClientDocuments(int $clientId): JsonResponse
+    {
         $client = Client::findOrFail($clientId);
 
         $documents = GeneratedDocument::where('client_id', $clientId)
@@ -63,7 +66,8 @@ class DocumentController extends Controller {
     /**
      * Génère un nouveau document pour un client
      */
-    public function generateDocument(Request $request, int $clientId): JsonResponse {
+    public function generateDocument(Request $request, int $clientId): JsonResponse
+    {
         $request->validate([
             'template_id' => 'required|exists:document_templates,id',
             'format' => 'sometimes|in:pdf,docx',
@@ -105,7 +109,8 @@ class DocumentController extends Controller {
     /**
      * Retourne le formulaire associé à un template pour un client.
      */
-    public function showForm(int $clientId, int $templateId): JsonResponse {
+    public function showForm(int $clientId, int $templateId): JsonResponse
+    {
         $client = Client::findOrFail($clientId);
         $template = DocumentTemplate::findOrFail($templateId);
 
@@ -135,7 +140,8 @@ class DocumentController extends Controller {
     /**
      * Sauvegarde les valeurs du formulaire associé à un template.
      */
-    public function saveForm(Request $request, int $clientId, int $templateId): JsonResponse {
+    public function saveForm(Request $request, int $clientId, int $templateId): JsonResponse
+    {
         $request->validate([
             'values' => 'required|array',
         ]);
@@ -162,7 +168,8 @@ class DocumentController extends Controller {
     /**
      * Télécharge un document généré (depuis S3)
      */
-    public function downloadDocument(int $documentId) {
+    public function downloadDocument(int $documentId)
+    {
         $document = GeneratedDocument::findOrFail($documentId);
 
         if (! Storage::exists($document->file_path)) {
@@ -175,7 +182,8 @@ class DocumentController extends Controller {
     /**
      * Envoie un document par email au client
      */
-    public function sendDocumentByEmail(int $documentId): JsonResponse {
+    public function sendDocumentByEmail(int $documentId): JsonResponse
+    {
         try {
             $document = GeneratedDocument::with('client')->findOrFail($documentId);
             $client = $document->client;
@@ -225,7 +233,8 @@ class DocumentController extends Controller {
      * Envoie un document généré vers la section compliance du client.
      * Copie le fichier S3, crée un ClientComplianceDocument et l'auto-lie à l'exigence.
      */
-    public function sendToCompliance(int $clientId, int $documentId): JsonResponse {
+    public function sendToCompliance(int $clientId, int $documentId): JsonResponse
+    {
         $client = Client::findOrFail($clientId);
         $document = GeneratedDocument::with('documentTemplate')->findOrFail($documentId);
 
@@ -299,7 +308,8 @@ class DocumentController extends Controller {
     /**
      * Supprime un document généré
      */
-    public function deleteDocument(int $documentId): JsonResponse {
+    public function deleteDocument(int $documentId): JsonResponse
+    {
         try {
             $document = GeneratedDocument::findOrFail($documentId);
 

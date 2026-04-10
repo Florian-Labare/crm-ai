@@ -23,7 +23,7 @@ echo "📁 Chemin : {$templatePath}\n";
 copy($templatePath, $backupPath);
 echo '💾 Sauvegarde créée : '.basename($backupPath)."\n\n";
 
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 if ($zip->open($templatePath) !== true) {
     exit("❌ Impossible d'ouvrir le template\n");
 }
@@ -87,7 +87,7 @@ $zip->addFromString('word/document.xml', $xml);
 $zip->close();
 
 // Vérifier le résultat
-$zipCheck = new ZipArchive();
+$zipCheck = new ZipArchive;
 $zipCheck->open($templatePath);
 $xmlCheck = $zipCheck->getFromName('word/document.xml');
 preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/s', $xmlCheck, $textMatchesAfter);

@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
  * - Adresse → code_postal + ville
  * - besoins / besoins_action (logique corrigée)
  */
-class AiDataNormalizer {
+class AiDataNormalizer
+{
     /**
      * Normalise les données extraites par l'IA.
      *
@@ -23,7 +24,8 @@ class AiDataNormalizer {
      * @param  string  $transcription  Transcription originale pour corrections contextuelles
      * @return array Données normalisées
      */
-    public function normalize(array $data, string $transcription): array {
+    public function normalize(array $data, string $transcription): array
+    {
         // 🗺️ Mapping des anciens noms vers les nouveaux
         $data = $this->mapLegacyFieldNames($data);
 
@@ -137,7 +139,8 @@ class AiDataNormalizer {
     /**
      * Mapping des anciens noms de champs vers les nouveaux.
      */
-    private function mapLegacyFieldNames(array $data): array {
+    private function mapLegacyFieldNames(array $data): array
+    {
         $fieldMapping = [
             'datedenaissance' => 'date_naissance',
             'lieudenaissance' => 'lieu_naissance',
@@ -214,7 +217,8 @@ class AiDataNormalizer {
     /**
      * Normalise une date vers le format ISO (YYYY-MM-DD).
      */
-    private function normalizeDateToISO(string $date): ?string {
+    private function normalizeDateToISO(string $date): ?string
+    {
         try {
             $date = trim($date);
             if ($date === '') {
@@ -252,7 +256,8 @@ class AiDataNormalizer {
     /**
      * Normalise une date avec mois français vers une chaîne parsable par Carbon.
      */
-    private function normalizeFrenchDateString(string $date): string {
+    private function normalizeFrenchDateString(string $date): string
+    {
         $normalized = mb_strtolower($date, 'UTF-8');
         $normalized = preg_replace('/\b1er\b/u', '1', $normalized);
 
@@ -288,7 +293,8 @@ class AiDataNormalizer {
     /**
      * Normalise un numéro de téléphone.
      */
-    private function normalizePhone(string $phone): ?string {
+    private function normalizePhone(string $phone): ?string
+    {
         try {
             // Supprimer espaces, points, tirets, parenthèses
             $normalized = preg_replace('/[\s.\-()]/', '', $phone);
@@ -315,7 +321,8 @@ class AiDataNormalizer {
     /**
      * Normalise une adresse email.
      */
-    private function normalizeEmail(string $email): ?string {
+    private function normalizeEmail(string $email): ?string
+    {
         try {
             $normalized = trim($email);
             $normalized = strtolower($normalized);
@@ -338,7 +345,8 @@ class AiDataNormalizer {
     /**
      * Normalise un code postal français.
      */
-    private function normalizePostalCode(string $postalCode): ?string {
+    private function normalizePostalCode(string $postalCode): ?string
+    {
         try {
             $normalized = trim($postalCode);
             $normalized = preg_replace('/[^0-9]/', '', $normalized);
@@ -361,7 +369,8 @@ class AiDataNormalizer {
     /**
      * Normalise les entrées booléennes (true/false, oui/non).
      */
-    private function normalizeBoolean(mixed $value): ?bool {
+    private function normalizeBoolean(mixed $value): ?bool
+    {
         if (is_bool($value)) {
             return $value;
         }
@@ -400,7 +409,8 @@ class AiDataNormalizer {
     /**
      * Normalise le tableau enfants.
      */
-    private function normalizeEnfants(array $data): array {
+    private function normalizeEnfants(array $data): array
+    {
         Log::info('👶 [ENFANTS] Normalisation du tableau enfants', ['count' => count($data['enfants'])]);
         $normalizedEnfants = [];
 
@@ -465,7 +475,8 @@ class AiDataNormalizer {
     /**
      * Applique les négations/affirmations orales détectées dans la transcription.
      */
-    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void {
+    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void
+    {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $fieldPatterns = [
@@ -590,7 +601,8 @@ class AiDataNormalizer {
      * Détecte et extrait les activités sportives depuis la transcription.
      * Remplit activites_sportives (boolean) et details_activites_sportives (string).
      */
-    private function detectSportsFromTranscript(string $transcription, array &$data): void {
+    private function detectSportsFromTranscript(string $transcription, array &$data): void
+    {
         $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
 
         // Liste des sports à détecter
@@ -714,7 +726,8 @@ class AiDataNormalizer {
     /**
      * Hydrate les champs entreprise depuis la transcription.
      */
-    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void {
+    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void
+    {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $patterns = [
@@ -835,7 +848,8 @@ class AiDataNormalizer {
     /**
      * Hydrate code_postal et ville depuis l'adresse complète.
      */
-    private function hydrateAddressComponents(array &$data): void {
+    private function hydrateAddressComponents(array &$data): void
+    {
         if (empty($data['adresse'])) {
             return;
         }
@@ -880,7 +894,8 @@ class AiDataNormalizer {
     /**
      * Tente de corriger un email incomplet en analysant la transcription.
      */
-    private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string {
+    private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string
+    {
         try {
             $lowerTranscription = mb_strtolower($transcription);
 
@@ -957,7 +972,8 @@ class AiDataNormalizer {
      * - Si besoins vide/null → besoins_action = null
      * - Jamais "replace" par défaut
      */
-    private function normalizeBesoins(array $data): array {
+    private function normalizeBesoins(array $data): array
+    {
         // S'assurer que besoins est un tableau
         if (isset($data['besoins'])) {
             if (is_string($data['besoins'])) {
@@ -1025,7 +1041,8 @@ class AiDataNormalizer {
      * - "activités sportives ?" "oui tout à fait"
      * - "pratiquez-vous une activité sportive ?" "oui"
      */
-    private function detectPositiveSportsResponse(string $transcription): bool {
+    private function detectPositiveSportsResponse(string $transcription): bool
+    {
         $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
 
         // Pattern 1: Question sur le sport suivie d'une réponse positive

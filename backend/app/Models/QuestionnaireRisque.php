@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class QuestionnaireRisque extends Model {
+class QuestionnaireRisque extends Model
+{
     protected $fillable = [
         'team_id',
         'client_id',
@@ -22,27 +23,33 @@ class QuestionnaireRisque extends Model {
     /**
      * The "booted" method of the model.
      */
-    protected static function booted(): void {
-        static::addGlobalScope(new \App\Scopes\TeamScope());
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new \App\Scopes\TeamScope);
     }
 
-    public function team(): BelongsTo {
+    public function team(): BelongsTo
+    {
         return $this->belongsTo(Team::class);
     }
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 
-    public function financier(): HasOne {
+    public function financier(): HasOne
+    {
         return $this->hasOne(QuestionnaireRisqueFinancier::class);
     }
 
-    public function connaissances(): HasOne {
+    public function connaissances(): HasOne
+    {
         return $this->hasOne(QuestionnaireRisqueConnaissance::class);
     }
 
-    public function quiz(): HasOne {
+    public function quiz(): HasOne
+    {
         return $this->hasOne(QuestionnaireRisqueQuiz::class);
     }
 }

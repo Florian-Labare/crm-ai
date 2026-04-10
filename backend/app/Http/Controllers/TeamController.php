@@ -13,11 +13,13 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
-class TeamController extends Controller {
+class TeamController extends Controller
+{
     /**
      * Display a listing of user's teams
      */
-    public function index(): JsonResponse {
+    public function index(): JsonResponse
+    {
         $user = auth()->user();
         $teams = $user->teams()->with('owner')->get();
 
@@ -31,7 +33,8 @@ class TeamController extends Controller {
      * Store a newly created team
      * Restricted to super admins and team admins
      */
-    public function store(Request $request): JsonResponse {
+    public function store(Request $request): JsonResponse
+    {
         $user = auth()->user();
         $currentTeam = $user->currentTeam();
 
@@ -60,7 +63,8 @@ class TeamController extends Controller {
     /**
      * Display the specified team
      */
-    public function show(Team $team): JsonResponse {
+    public function show(Team $team): JsonResponse
+    {
         if (! auth()->user()->belongsToTeam($team)) {
             abort(403, 'You do not belong to this team.');
         }
@@ -73,7 +77,8 @@ class TeamController extends Controller {
     /**
      * Update the specified team
      */
-    public function update(Request $request, Team $team): JsonResponse {
+    public function update(Request $request, Team $team): JsonResponse
+    {
         if (! auth()->user()->isTeamAdmin($team)) {
             abort(403, 'Only team admins can update the team.');
         }
@@ -90,7 +95,8 @@ class TeamController extends Controller {
     /**
      * Remove the specified team
      */
-    public function destroy(Team $team): JsonResponse {
+    public function destroy(Team $team): JsonResponse
+    {
         if (! auth()->user()->isTeamOwner($team)) {
             abort(403, 'Only the team owner can delete the team.');
         }
@@ -107,7 +113,8 @@ class TeamController extends Controller {
     /**
      * Get team members
      */
-    public function members(Team $team): JsonResponse {
+    public function members(Team $team): JsonResponse
+    {
         if (! auth()->user()->belongsToTeam($team)) {
             abort(403, 'You do not belong to this team.');
         }
@@ -131,7 +138,8 @@ class TeamController extends Controller {
     /**
      * Invite a member to the team via email
      */
-    public function inviteMember(Request $request, Team $team): JsonResponse {
+    public function inviteMember(Request $request, Team $team): JsonResponse
+    {
         if (! auth()->user()->isTeamAdmin($team)) {
             abort(403, 'Only team admins can invite members.');
         }
@@ -197,7 +205,8 @@ class TeamController extends Controller {
     /**
      * Show invitation details (public)
      */
-    public function showInvitation(string $token): JsonResponse {
+    public function showInvitation(string $token): JsonResponse
+    {
         $invitation = TeamInvitation::where('token', $token)
             ->with(['team', 'inviter'])
             ->firstOrFail();
@@ -226,7 +235,8 @@ class TeamController extends Controller {
     /**
      * Accept an invitation (auth required)
      */
-    public function acceptInvitation(string $token): JsonResponse {
+    public function acceptInvitation(string $token): JsonResponse
+    {
         $user = auth()->user();
 
         $invitation = TeamInvitation::where('token', $token)
@@ -260,7 +270,8 @@ class TeamController extends Controller {
     /**
      * Decline/delete an invitation (public)
      */
-    public function declineInvitation(string $token): JsonResponse {
+    public function declineInvitation(string $token): JsonResponse
+    {
         $invitation = TeamInvitation::where('token', $token)->firstOrFail();
         $invitation->delete();
 
@@ -270,7 +281,8 @@ class TeamController extends Controller {
     /**
      * List pending invitations for a team (admin only)
      */
-    public function pendingInvitations(Team $team): JsonResponse {
+    public function pendingInvitations(Team $team): JsonResponse
+    {
         if (! auth()->user()->isTeamAdmin($team)) {
             abort(403, 'Only team admins can view invitations.');
         }
@@ -292,7 +304,8 @@ class TeamController extends Controller {
     /**
      * Cancel a pending invitation (admin only)
      */
-    public function cancelInvitation(Team $team, TeamInvitation $invitation): JsonResponse {
+    public function cancelInvitation(Team $team, TeamInvitation $invitation): JsonResponse
+    {
         if (! auth()->user()->isTeamAdmin($team)) {
             abort(403, 'Only team admins can cancel invitations.');
         }
@@ -309,7 +322,8 @@ class TeamController extends Controller {
     /**
      * Update member role
      */
-    public function updateMemberRole(Request $request, Team $team, User $user): JsonResponse {
+    public function updateMemberRole(Request $request, Team $team, User $user): JsonResponse
+    {
         if (! auth()->user()->isTeamAdmin($team)) {
             abort(403, 'Only team admins can update member roles.');
         }
@@ -332,7 +346,8 @@ class TeamController extends Controller {
     /**
      * Upload logo for the team (admin only)
      */
-    public function uploadLogo(Request $request, int $teamId): JsonResponse {
+    public function uploadLogo(Request $request, int $teamId): JsonResponse
+    {
         $team = Team::findOrFail($teamId);
 
         if (! auth()->user()->isTeamAdmin($team)) {
@@ -362,7 +377,8 @@ class TeamController extends Controller {
     /**
      * Remove a member from the team
      */
-    public function removeMember(Team $team, User $user): JsonResponse {
+    public function removeMember(Team $team, User $user): JsonResponse
+    {
         if (! auth()->user()->isTeamAdmin($team)) {
             abort(403, 'Only team admins can remove members.');
         }

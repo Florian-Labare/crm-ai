@@ -6,13 +6,15 @@ use App\Models\Client;
 use App\Models\ClientActifFinancier;
 use Illuminate\Support\Facades\Log;
 
-class ClientActifsFinanciersSyncService {
+class ClientActifsFinanciersSyncService
+{
     /**
      * Synchronise les actifs financiers d'un client avec les données extraites
      *
      * @param  array  $actifsData  Tableau d'actifs financiers extraits par GPT
      */
-    public function syncActifsFinanciers(Client $client, array $actifsData): void {
+    public function syncActifsFinanciers(Client $client, array $actifsData): void
+    {
         $originalCount = count($actifsData);
 
         // 🔀 ÉTAPE 1: Nettoyer et dédupliquer les données entrantes
@@ -74,7 +76,8 @@ class ClientActifsFinanciersSyncService {
     /**
      * Trouve un actif existant correspondant aux données
      */
-    private function findMatchingActif($existingActifs, array $actifData): ?ClientActifFinancier {
+    private function findMatchingActif($existingActifs, array $actifData): ?ClientActifFinancier
+    {
         // Match par nature et etablissement
         if (isset($actifData['nature']) && isset($actifData['etablissement'])) {
             $match = $existingActifs->first(function ($actif) use ($actifData) {
@@ -108,7 +111,8 @@ class ClientActifsFinanciersSyncService {
      * - Un autre avec la valeur
      * Cette méthode les fusionne en un seul objet complet
      */
-    private function deduplicateByNature(array $actifs): array {
+    private function deduplicateByNature(array $actifs): array
+    {
         if (count($actifs) <= 1) {
             return $actifs;
         }
@@ -168,7 +172,8 @@ class ClientActifsFinanciersSyncService {
         return $result;
     }
 
-    private function sanitizeIncomingActifs(array $actifsData): array {
+    private function sanitizeIncomingActifs(array $actifsData): array
+    {
         $filtered = [];
         foreach ($actifsData as $actif) {
             $actif = $this->filterEmptyValues($actif);
@@ -195,7 +200,8 @@ class ClientActifsFinanciersSyncService {
         return $this->deduplicateByKey($filtered);
     }
 
-    private function deduplicateByKey(array $actifs): array {
+    private function deduplicateByKey(array $actifs): array
+    {
         $seen = [];
         $result = [];
 
@@ -219,7 +225,8 @@ class ClientActifsFinanciersSyncService {
         return $result;
     }
 
-    private function isCryptoNature(string $value): bool {
+    private function isCryptoNature(string $value): bool
+    {
         return str_contains($value, 'crypto')
             || str_contains($value, 'bitcoin')
             || str_contains($value, 'btc')
@@ -233,7 +240,8 @@ class ClientActifsFinanciersSyncService {
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array {
+    private function filterEmptyValues(array $data): array
+    {
         return array_filter($data, function ($value, $key) {
             if (is_bool($value)) {
                 return true;
@@ -246,7 +254,8 @@ class ClientActifsFinanciersSyncService {
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string {
+    private function normalizeString(?string $value): ?string
+    {
         if (is_null($value)) {
             return null;
         }

@@ -10,8 +10,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @property-read \App\Models\AudioRecord $resource
  */
-class AudioRecordResource extends JsonResource {
-    public function toArray(Request $request): array {
+class AudioRecordResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
         return [
             'id' => $this->id,
             'status' => $this->status,

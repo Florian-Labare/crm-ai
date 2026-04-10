@@ -5,7 +5,8 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use Illuminate\Console\Command;
 
-class CleanBesoinEncoding extends Command {
+class CleanBesoinEncoding extends Command
+{
     /**
      * The name and signature of the console command.
      *
@@ -23,7 +24,8 @@ class CleanBesoinEncoding extends Command {
     /**
      * Execute the console command.
      */
-    public function handle() {
+    public function handle()
+    {
         $this->info('🧹 Nettoyage des besoins mal encodés...');
 
         $clients = Client::whereNotNull('besoins')->get();

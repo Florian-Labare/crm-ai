@@ -60,7 +60,7 @@ foreach ($templates as $templatePath) {
     echo "📄 Analyse du template: {$templateName}\n";
 
     try {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($templatePath) !== true) {
             echo "   ❌ Impossible d'ouvrir le fichier\n";
 

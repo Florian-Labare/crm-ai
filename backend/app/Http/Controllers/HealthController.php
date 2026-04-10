@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 /**
  * Controller pour les endpoints de santé du système
  */
-class HealthController extends Controller {
+class HealthController extends Controller
+{
     public function __construct(
         private readonly PyannoteHealthService $pyannoteHealth,
         private readonly DiarizationMonitoringService $monitoringService
@@ -19,7 +20,8 @@ class HealthController extends Controller {
     /**
      * Vérifie la santé globale du système audio
      */
-    public function audioSystem(): JsonResponse {
+    public function audioSystem(): JsonResponse
+    {
         $pyannoteStatus = $this->pyannoteHealth->check();
 
         return response()->json([
@@ -42,7 +44,8 @@ class HealthController extends Controller {
     /**
      * Vérifie spécifiquement pyannote
      */
-    public function pyannote(Request $request): JsonResponse {
+    public function pyannote(Request $request): JsonResponse
+    {
         $forceRefresh = $request->boolean('refresh', false);
 
         $status = $forceRefresh
@@ -59,7 +62,8 @@ class HealthController extends Controller {
     /**
      * Retourne les statistiques de monitoring de la diarisation
      */
-    public function diarizationStats(Request $request): JsonResponse {
+    public function diarizationStats(Request $request): JsonResponse
+    {
         $days = $request->input('days', 7);
 
         $stats = $this->monitoringService->getStats($days);

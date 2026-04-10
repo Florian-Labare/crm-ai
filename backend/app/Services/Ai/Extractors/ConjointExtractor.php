@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Log;
  *
  * N'extrait PAS les données du client principal (géré par ClientExtractor).
  */
-class ConjointExtractor {
+class ConjointExtractor
+{
     use LlmClientTrait;
 
     /**
@@ -26,7 +27,8 @@ class ConjointExtractor {
      * @param  array  $currentData  Données existantes (optionnel)
      * @return array Données extraites
      */
-    public function extract(string $transcription, array $currentData = []): array {
+    public function extract(string $transcription, array $currentData = []): array
+    {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -55,7 +57,8 @@ class ConjointExtractor {
     /**
      * Construit le prompt utilisateur.
      */
-    private function buildPrompt(string $transcription): string {
+    private function buildPrompt(string $transcription): string
+    {
         return <<<PROMPT
 Analyse cette transcription et extrais UNIQUEMENT les informations concernant le CONJOINT (époux/épouse, partenaire de PACS, concubin(e)).
 
@@ -76,7 +79,8 @@ PROMPT;
     /**
      * Retourne le prompt système pour l'extraction du conjoint.
      */
-    private function getSystemPrompt(): string {
+    private function getSystemPrompt(): string
+    {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de données CONJOINT pour un CRM d'assurance.
 

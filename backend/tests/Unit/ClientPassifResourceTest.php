@@ -8,10 +8,12 @@ use App\Models\ClientPassif;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ClientPassifResourceTest extends TestCase {
+class ClientPassifResourceTest extends TestCase
+{
     use RefreshDatabase;
 
-    public function test_resource_returns_correct_structure(): void {
+    public function test_resource_returns_correct_structure(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -49,7 +51,8 @@ class ClientPassifResourceTest extends TestCase {
         $this->assertEquals(180, $array['duree_restante']);
     }
 
-    public function test_resource_handles_null_values(): void {
+    public function test_resource_handles_null_values(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -69,7 +72,8 @@ class ClientPassifResourceTest extends TestCase {
         $this->assertNull($array['montant_remboursement']);
     }
 
-    public function test_duree_restante_is_integer(): void {
+    public function test_duree_restante_is_integer(): void
+    {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',

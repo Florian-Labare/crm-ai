@@ -7,7 +7,8 @@ use App\Models\DocumentTemplate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-class DocumentTemplateFormService {
+class DocumentTemplateFormService
+{
     private const COMPUTED_VARIABLES = [
         'bae_epargne.actifs_immo_total',
         'actifs_immo_total',
@@ -30,7 +31,8 @@ class DocumentTemplateFormService {
     /**
      * Retourne les champs du formulaire pour un template donné.
      */
-    public function getFields(DocumentTemplate $template, Client $client): array {
+    public function getFields(DocumentTemplate $template, Client $client): array
+    {
         $templatePath = storage_path('app/'.$template->file_path);
         $variables = $this->mapper->extractTemplateVariables($templatePath);
         $columnMap = $this->fieldService->mapVariablesToColumns($variables);
@@ -90,7 +92,8 @@ class DocumentTemplateFormService {
     /**
      * Construit le label pour une variable en ajoutant le suffixe contextuel
      */
-    private function buildLabel(string $variable, array $questionLabels): string {
+    private function buildLabel(string $variable, array $questionLabels): string
+    {
         $baseLabel = $questionLabels[$variable] ?? null;
         $generatedLabel = $this->fieldService->labelForVariable($variable);
 
@@ -119,7 +122,8 @@ class DocumentTemplateFormService {
     /**
      * Vérifie si un label du template est partagé par plusieurs types de champs
      */
-    private function isSharedTemplateLabel(string $label, string $variable): bool {
+    private function isSharedTemplateLabel(string $label, string $variable): bool
+    {
         $lower = strtolower($label);
         $varLower = strtolower($variable);
 
@@ -157,7 +161,8 @@ class DocumentTemplateFormService {
     /**
      * Extrait le suffixe contextuel d'un label (ex: " (conjoint)", " (enfant 1)")
      */
-    private function extractSuffix(string $label): string {
+    private function extractSuffix(string $label): string
+    {
         if (preg_match('/(\s*\([^)]+\))$/', $label, $matches)) {
             return $matches[1];
         }
@@ -168,7 +173,8 @@ class DocumentTemplateFormService {
     /**
      * Vérifie si le label du template contient déjà le contexte
      */
-    private function labelAlreadyHasContext(string $label, string $variable): bool {
+    private function labelAlreadyHasContext(string $label, string $variable): bool
+    {
         $lower = strtolower($label);
         $varLower = strtolower($variable);
 
@@ -186,7 +192,8 @@ class DocumentTemplateFormService {
     /**
      * Retourne uniquement les valeurs sauvegardées (pour override lors de la génération).
      */
-    public function getSavedValues(DocumentTemplate $template, Client $client): array {
+    public function getSavedValues(DocumentTemplate $template, Client $client): array
+    {
         $templatePath = storage_path('app/'.$template->file_path);
         $variables = $this->mapper->extractTemplateVariables($templatePath);
         $columnMap = $this->fieldService->mapVariablesToColumns($variables);
@@ -221,7 +228,8 @@ class DocumentTemplateFormService {
      *
      * @param  array<string, mixed>  $values
      */
-    public function saveValues(DocumentTemplate $template, Client $client, array $values): void {
+    public function saveValues(DocumentTemplate $template, Client $client, array $values): void
+    {
         $templatePath = storage_path('app/'.$template->file_path);
         $variables = $this->mapper->extractTemplateVariables($templatePath);
         $columnMap = $this->fieldService->mapVariablesToColumns($variables);
@@ -257,16 +265,19 @@ class DocumentTemplateFormService {
         }
     }
 
-    private function isComputedVariable(string $variable): bool {
+    private function isComputedVariable(string $variable): bool
+    {
         return in_array($variable, self::COMPUTED_VARIABLES, true);
     }
 
-    private function variableIsSituationActuelle(string $variable): bool {
+    private function variableIsSituationActuelle(string $variable): bool
+    {
         return $variable === 'clients.situation_actuelle'
             || $variable === 'conjoints.situation_actuelle_statut';
     }
 
-    private function variableIsFullName(string $variable): bool {
+    private function variableIsFullName(string $variable): bool
+    {
         return str_ends_with($variable, '.full_name')
             || str_starts_with($variable, 'nomprenom')
             || str_starts_with($variable, 'nomprenom');

@@ -17,7 +17,7 @@ echo "🧹 NETTOYAGE DU TEMPLATE RECUEIL ADE\n";
 echo str_repeat('=', 80)."\n\n";
 
 // 1. Extraire les variables avant nettoyage
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 if ($zip->open($templatePath) !== true) {
     echo "❌ Impossible d'ouvrir le fichier\n";
     exit(1);
@@ -44,7 +44,7 @@ copy($templatePath, $backupPath);
 echo 'Backup créée: '.basename($backupPath)."\n";
 
 // 3. Nettoyer le template
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 if ($zip->open($templatePath) !== true) {
     echo "❌ Impossible d'ouvrir pour nettoyage\n";
     exit(1);
@@ -96,7 +96,7 @@ $zip->addFromString('word/document.xml', $xml);
 $zip->close();
 
 // 4. Vérifier que toutes les variables sont préservées
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 $zip->open($templatePath);
 $xmlAfter = $zip->getFromName('word/document.xml');
 $zip->close();

@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des actifs financiers multiples (assurance-vie, PEA, compte-titres, etc.)
  * - Retourne un array d'actifs avec nature, etablissement, detenteur, date, valeur
  */
-class ClientActifsFinanciersExtractor {
+class ClientActifsFinanciersExtractor
+{
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array {
+    public function extract(string $transcription, array $currentData = []): array
+    {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -47,7 +49,8 @@ class ClientActifsFinanciersExtractor {
         }
     }
 
-    private function buildPrompt(string $transcription): string {
+    private function buildPrompt(string $transcription): string
+    {
         return <<<PROMPT
 Analyse cette transcription et détecte les ACTIFS FINANCIERS du client.
 
@@ -66,7 +69,8 @@ PROMPT;
      * Logique : Si 2 actifs ont la même nature (et même établissement si spécifié),
      * on les fusionne en gardant toutes les informations disponibles.
      */
-    private function deduplicateActifs(array $actifs): array {
+    private function deduplicateActifs(array $actifs): array
+    {
         if (count($actifs) <= 1) {
             return $actifs;
         }
@@ -136,7 +140,8 @@ PROMPT;
     /**
      * Fusionne deux actifs en gardant les informations les plus complètes
      */
-    private function mergeActifData(array $existing, array $new): array {
+    private function mergeActifData(array $existing, array $new): array
+    {
         $fields = ['nature', 'etablissement', 'detenteur', 'date_ouverture_souscription', 'valeur_actuelle'];
 
         foreach ($fields as $field) {
@@ -150,7 +155,8 @@ PROMPT;
         return $existing;
     }
 
-    private function sanitizeActifs(array $actifs): array {
+    private function sanitizeActifs(array $actifs): array
+    {
         $filtered = [];
         $seen = [];
         foreach ($actifs as $actif) {
@@ -177,7 +183,8 @@ PROMPT;
         return $filtered;
     }
 
-    private function normalizeKey(string $value): string {
+    private function normalizeKey(string $value): string
+    {
         $normalized = mb_strtolower(trim($value), 'UTF-8');
         $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized);
         $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized);
@@ -185,7 +192,8 @@ PROMPT;
         return trim((string) $normalized, '_');
     }
 
-    private function isCryptoNature(string $value): bool {
+    private function isCryptoNature(string $value): bool
+    {
         return str_contains($value, 'crypto')
             || str_contains($value, 'bitcoin')
             || str_contains($value, 'btc')
@@ -196,7 +204,8 @@ PROMPT;
             || str_contains($value, 'token');
     }
 
-    private function getSystemPrompt(): string {
+    private function getSystemPrompt(): string
+    {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction d'ACTIFS FINANCIERS clients.
 

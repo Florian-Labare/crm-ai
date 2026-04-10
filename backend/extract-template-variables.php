@@ -4,7 +4,7 @@ require __DIR__.'/vendor/autoload.php';
 
 $templatePath = __DIR__.'/storage/app/templates/Template Mandat.docx';
 
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 if ($zip->open($templatePath) === true) {
     $content = $zip->getFromName('word/document.xml');
 

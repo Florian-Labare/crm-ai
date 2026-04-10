@@ -5,17 +5,20 @@ namespace App\Services;
 use App\Models\Client;
 use Carbon\Carbon;
 
-class TemplateVariableMapper {
+class TemplateVariableMapper
+{
     private array $mapping;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->mapping = config('document_mapping');
     }
 
     /**
      * Mappe toutes les variables du template avec les données du client
      */
-    public function mapVariables(Client $client): array {
+    public function mapVariables(Client $client): array
+    {
         // Charger toutes les relations nécessaires
         $client->load([
             'conjoint',
@@ -41,7 +44,8 @@ class TemplateVariableMapper {
     /**
      * Résout la valeur d'une variable en fonction de sa configuration
      */
-    private function resolveVariable(Client $client, $config): string {
+    private function resolveVariable(Client $client, $config): string
+    {
         // Si une valeur par défaut est spécifiée et aucune source, retourner la valeur par défaut
         if (isset($config['default']) && ! isset($config['source'])) {
             return $config['default'];
@@ -108,7 +112,8 @@ class TemplateVariableMapper {
     /**
      * Formate une valeur selon le type spécifié
      */
-    private function formatValue($value, string $format, array $config = []): string {
+    private function formatValue($value, string $format, array $config = []): string
+    {
         switch ($format) {
             case 'date':
                 if (empty($value)) {
@@ -165,14 +170,16 @@ class TemplateVariableMapper {
     /**
      * Retourne la liste de toutes les variables disponibles
      */
-    public function getAvailableVariables(): array {
+    public function getAvailableVariables(): array
+    {
         return array_keys($this->mapping);
     }
 
     /**
      * Retourne les statistiques sur les variables mappées
      */
-    public function getMappingStats(): array {
+    public function getMappingStats(): array
+    {
         $total = count($this->mapping);
         $mapped = count(array_filter($this->mapping, fn ($config) => isset($config['source'])));
         $defaults = count(array_filter($this->mapping, fn ($config) => isset($config['default']) && ! isset($config['source'])));

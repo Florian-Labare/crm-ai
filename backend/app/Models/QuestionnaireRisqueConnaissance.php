@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class QuestionnaireRisqueConnaissance extends Model {
+class QuestionnaireRisqueConnaissance extends Model
+{
     protected $fillable = [
         'questionnaire_risque_id',
         'connaissance_obligations',
@@ -43,7 +44,8 @@ class QuestionnaireRisqueConnaissance extends Model {
         'connaissance_girardin' => 'boolean',
     ];
 
-    public function questionnaireRisque(): BelongsTo {
+    public function questionnaireRisque(): BelongsTo
+    {
         return $this->belongsTo(QuestionnaireRisque::class);
     }
 }

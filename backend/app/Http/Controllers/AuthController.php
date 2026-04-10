@@ -8,11 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
-class AuthController extends Controller {
+class AuthController extends Controller
+{
     /**
      * Register a new user
      */
-    public function register(Request $request) {
+    public function register(Request $request)
+    {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -41,7 +43,8 @@ class AuthController extends Controller {
     /**
      * Login user
      */
-    public function login(Request $request) {
+    public function login(Request $request)
+    {
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
@@ -73,7 +76,8 @@ class AuthController extends Controller {
     /**
      * Logout user (revoke token)
      */
-    public function logout(Request $request) {
+    public function logout(Request $request)
+    {
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
@@ -84,7 +88,8 @@ class AuthController extends Controller {
     /**
      * Get authenticated user
      */
-    public function user(Request $request) {
+    public function user(Request $request)
+    {
         $user = $request->user();
         $currentTeam = $user->currentTeam();
         $teamRole = $currentTeam ? $user->roleInTeam($currentTeam) : null;
@@ -109,7 +114,8 @@ class AuthController extends Controller {
     /**
      * Ensure user has a personal team, create one if not
      */
-    private function ensureUserHasTeam(User $user): void {
+    private function ensureUserHasTeam(User $user): void
+    {
         // Check if user already has a personal team
         if (! $user->ownedTeams()->where('personal_team', true)->exists()) {
             // Create personal team

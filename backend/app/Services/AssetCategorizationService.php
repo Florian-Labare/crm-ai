@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
  * - BIENS IMMOBILIERS : Maisons, appartements, terrains, locaux commerciaux, SCI
  * - AUTRES ACTIFS : Crypto, or, art, bijoux, collections, métaux précieux
  */
-class AssetCategorizationService {
+class AssetCategorizationService
+{
     /**
      * Mots-clés pour identifier les ACTIFS FINANCIERS
      */
@@ -98,7 +99,8 @@ class AssetCategorizationService {
      * @param  array  $extractedData  Données extraites par GPT
      * @return array Données corrigées avec les actifs bien catégorisés
      */
-    public function validateAndCorrect(array $extractedData): array {
+    public function validateAndCorrect(array $extractedData): array
+    {
         Log::info('[AssetCategorizationService] Début de la validation des catégorisations');
 
         $actifsFinanciers = $extractedData['client_actifs_financiers'] ?? [];
@@ -164,7 +166,8 @@ class AssetCategorizationService {
     /**
      * Valide les actifs financiers et déplace les éléments mal catégorisés
      */
-    private function validateActifsFinanciers(array $actifs, array &$biensImmo, array &$autresActifs, array &$corrections): array {
+    private function validateActifsFinanciers(array $actifs, array &$biensImmo, array &$autresActifs, array &$corrections): array
+    {
         $validActifs = [];
 
         foreach ($actifs as $actif) {
@@ -193,7 +196,8 @@ class AssetCategorizationService {
     /**
      * Valide les biens immobiliers et déplace les éléments mal catégorisés
      */
-    private function validateBiensImmobiliers(array $biens, array &$actifsFinanciers, array &$autresActifs, array &$corrections): array {
+    private function validateBiensImmobiliers(array $biens, array &$actifsFinanciers, array &$autresActifs, array &$corrections): array
+    {
         $validBiens = [];
 
         foreach ($biens as $bien) {
@@ -222,7 +226,8 @@ class AssetCategorizationService {
     /**
      * Valide les autres actifs et déplace les éléments mal catégorisés
      */
-    private function validateAutresActifs(array $autres, array &$actifsFinanciers, array &$biensImmo, array &$corrections): array {
+    private function validateAutresActifs(array $autres, array &$actifsFinanciers, array &$biensImmo, array &$corrections): array
+    {
         $validAutres = [];
 
         foreach ($autres as $autre) {
@@ -256,7 +261,8 @@ class AssetCategorizationService {
      * 2. AUTRES (crypto, or, art) - seulement si pas immobilier
      * 3. FINANCIER - par défaut
      */
-    private function detectCategory(string $text): string {
+    private function detectCategory(string $text): string
+    {
         $text = mb_strtolower($text, 'UTF-8');
 
         // Normaliser les accents pour la comparaison
@@ -316,7 +322,8 @@ class AssetCategorizationService {
     /**
      * Supprime les accents d'une chaîne pour faciliter la comparaison
      */
-    private function removeAccents(string $text): string {
+    private function removeAccents(string $text): string
+    {
         $text = mb_strtolower($text, 'UTF-8');
         $accents = ['é', 'è', 'ê', 'ë', 'à', 'â', 'ä', 'ù', 'û', 'ü', 'ô', 'ö', 'î', 'ï', 'ç'];
         $noAccents = ['e', 'e', 'e', 'e', 'a', 'a', 'a', 'u', 'u', 'u', 'o', 'o', 'i', 'i', 'c'];
@@ -334,7 +341,8 @@ class AssetCategorizationService {
      *
      * Seuls les biens locatifs/investissement doivent apparaître dans le patrimoine.
      */
-    private function filterResidencePrincipale(array $biensImmobiliers, array &$corrections): array {
+    private function filterResidencePrincipale(array $biensImmobiliers, array &$corrections): array
+    {
         $filteredBiens = [];
 
         foreach ($biensImmobiliers as $bien) {
@@ -377,7 +385,8 @@ class AssetCategorizationService {
     /**
      * Extrait le texte recherchable d'un élément
      */
-    private function getSearchableText(array $item): string {
+    private function getSearchableText(array $item): string
+    {
         $parts = [];
 
         // Champs communs
@@ -403,7 +412,8 @@ class AssetCategorizationService {
     /**
      * Convertisseurs entre formats
      */
-    private function convertToImmobilier(array $actif): array {
+    private function convertToImmobilier(array $actif): array
+    {
         return [
             'designation' => $actif['nature'] ?? $actif['etablissement'] ?? 'Bien immobilier',
             'detenteur' => $actif['detenteur'] ?? null,
@@ -411,7 +421,8 @@ class AssetCategorizationService {
         ];
     }
 
-    private function convertToAutreActif(array $actif): array {
+    private function convertToAutreActif(array $actif): array
+    {
         return [
             'designation' => $actif['nature'] ?? 'Autre actif',
             'detenteur' => $actif['detenteur'] ?? null,
@@ -419,7 +430,8 @@ class AssetCategorizationService {
         ];
     }
 
-    private function convertToActifFinancier(array $bien): array {
+    private function convertToActifFinancier(array $bien): array
+    {
         return [
             'nature' => $bien['designation'] ?? 'actif financier',
             'detenteur' => $bien['detenteur'] ?? null,
@@ -427,7 +439,8 @@ class AssetCategorizationService {
         ];
     }
 
-    private function convertToAutreActifFromImmo(array $bien): array {
+    private function convertToAutreActifFromImmo(array $bien): array
+    {
         return [
             'designation' => $bien['designation'] ?? 'Autre actif',
             'detenteur' => $bien['detenteur'] ?? null,
@@ -435,7 +448,8 @@ class AssetCategorizationService {
         ];
     }
 
-    private function convertToActifFinancierFromAutre(array $autre): array {
+    private function convertToActifFinancierFromAutre(array $autre): array
+    {
         return [
             'nature' => $autre['designation'] ?? 'actif financier',
             'detenteur' => $autre['detenteur'] ?? null,
@@ -443,7 +457,8 @@ class AssetCategorizationService {
         ];
     }
 
-    private function convertToImmobilierFromAutre(array $autre): array {
+    private function convertToImmobilierFromAutre(array $autre): array
+    {
         return [
             'designation' => $autre['designation'] ?? 'Bien immobilier',
             'detenteur' => $autre['detenteur'] ?? null,

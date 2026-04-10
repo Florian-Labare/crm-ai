@@ -23,14 +23,16 @@ $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
-class S3ConfigChecker {
+class S3ConfigChecker
+{
     private array $errors = [];
 
     private array $warnings = [];
 
     private array $success = [];
 
-    public function run(): int {
+    public function run(): int
+    {
         $this->printHeader();
 
         $this->checkEnvironmentVariables();
@@ -44,14 +46,16 @@ class S3ConfigChecker {
         return empty($this->errors) ? 0 : 1;
     }
 
-    private function printHeader(): void {
+    private function printHeader(): void
+    {
         echo "\n";
         echo "========================================\n";
         echo "  Vérification Configuration S3\n";
         echo "========================================\n\n";
     }
 
-    private function checkEnvironmentVariables(): void {
+    private function checkEnvironmentVariables(): void
+    {
         echo "[1/5] Vérification variables d'environnement...\n";
 
         $required = [
@@ -97,7 +101,8 @@ class S3ConfigChecker {
         echo "\n";
     }
 
-    private function checkFilesystemConfig(): void {
+    private function checkFilesystemConfig(): void
+    {
         echo "[2/5] Vérification configuration Laravel...\n";
 
         // Vérifier que les disks sont bien configurés
@@ -120,7 +125,8 @@ class S3ConfigChecker {
         echo "\n";
     }
 
-    private function checkS3Connection(): void {
+    private function checkS3Connection(): void
+    {
         echo "[3/5] Test de connexion S3...\n";
 
         try {
@@ -138,7 +144,8 @@ class S3ConfigChecker {
         echo "\n";
     }
 
-    private function checkS3Permissions(): void {
+    private function checkS3Permissions(): void
+    {
         echo "[4/5] Test des permissions S3...\n";
 
         try {
@@ -180,7 +187,8 @@ class S3ConfigChecker {
         echo "\n";
     }
 
-    private function checkLocalDisks(): void {
+    private function checkLocalDisks(): void
+    {
         echo "[5/5] Vérification des disks locaux...\n";
 
         $localPaths = [
@@ -204,7 +212,8 @@ class S3ConfigChecker {
         echo "\n";
     }
 
-    private function printSummary(): void {
+    private function printSummary(): void
+    {
         echo "========================================\n";
         echo "  Résumé\n";
         echo "========================================\n\n";
@@ -247,5 +256,5 @@ class S3ConfigChecker {
 }
 
 // Exécuter le script
-$checker = new S3ConfigChecker();
+$checker = new S3ConfigChecker;
 exit($checker->run());

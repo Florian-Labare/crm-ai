@@ -234,7 +234,8 @@ file_put_contents($reportPath, json_encode($report, JSON_PRETTY_PRINT));
 echo "\n✅ Rapport terminé!\n";
 
 // Helper functions
-function scanDirectoryRecursive(string $dir): array {
+function scanDirectoryRecursive(string $dir): array
+{
     $files = [];
 
     if (! is_dir($dir)) {
@@ -259,7 +260,8 @@ function scanDirectoryRecursive(string $dir): array {
     return $files;
 }
 
-function formatBytes(int $bytes): string {
+function formatBytes(int $bytes): string
+{
     $units = ['B', 'KB', 'MB', 'GB'];
     $i = 0;
     while ($bytes >= 1024 && $i < count($units) - 1) {

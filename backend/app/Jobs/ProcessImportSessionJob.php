@@ -11,7 +11,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ProcessImportSessionJob implements ShouldQueue {
+class ProcessImportSessionJob implements ShouldQueue
+{
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
@@ -24,11 +25,13 @@ class ProcessImportSessionJob implements ShouldQueue {
 
     protected ImportSession $session;
 
-    public function __construct(ImportSession $session) {
+    public function __construct(ImportSession $session)
+    {
         $this->session = $session;
     }
 
-    public function handle(ImportOrchestrationService $orchestrator): void {
+    public function handle(ImportOrchestrationService $orchestrator): void
+    {
         Log::info('ProcessImportSessionJob started', [
             'session_id' => $this->session->id,
         ]);
@@ -59,7 +62,8 @@ class ProcessImportSessionJob implements ShouldQueue {
         }
     }
 
-    public function failed(\Throwable $exception): void {
+    public function failed(\Throwable $exception): void
+    {
         Log::error('ProcessImportSessionJob permanently failed', [
             'session_id' => $this->session->id,
             'error' => $exception->getMessage(),

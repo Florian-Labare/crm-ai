@@ -2,13 +2,15 @@
 
 namespace App\Enums;
 
-enum TeamRole: string {
+enum TeamRole: string
+{
     case OWNER = 'owner';
     case ADMIN = 'admin';
     case MIA = 'mia';
     case SECRETAIRE = 'secretaire';
 
-    public function label(): string {
+    public function label(): string
+    {
         return match ($this) {
             self::OWNER => 'Propriétaire',
             self::ADMIN => 'Admin',
@@ -17,7 +19,8 @@ enum TeamRole: string {
         };
     }
 
-    public function permissions(): array {
+    public function permissions(): array
+    {
         return match ($this) {
             self::OWNER => ['*'],
             self::ADMIN => ['manage-team', 'manage-members', 'crud-resources'],
@@ -26,27 +29,33 @@ enum TeamRole: string {
         };
     }
 
-    public function canManageTeam(): bool {
+    public function canManageTeam(): bool
+    {
         return in_array($this, [self::OWNER, self::ADMIN]);
     }
 
-    public function canManageMembers(): bool {
+    public function canManageMembers(): bool
+    {
         return in_array($this, [self::OWNER, self::ADMIN]);
     }
 
-    public function canManageResources(): bool {
+    public function canManageResources(): bool
+    {
         return in_array($this, [self::OWNER, self::ADMIN, self::MIA]);
     }
 
-    public function canDeleteResources(): bool {
+    public function canDeleteResources(): bool
+    {
         return in_array($this, [self::OWNER, self::ADMIN]);
     }
 
-    public static function all(): array {
+    public static function all(): array
+    {
         return [self::OWNER, self::ADMIN, self::MIA, self::SECRETAIRE];
     }
 
-    public static function values(): array {
+    public static function values(): array
+    {
         return array_map(fn ($role) => $role->value, self::all());
     }
 }

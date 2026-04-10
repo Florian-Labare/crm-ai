@@ -6,7 +6,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
 use PDOException;
 
-class DatabaseConnectorService {
+class DatabaseConnectorService
+{
     /**
      * Supported database drivers
      */
@@ -15,7 +16,8 @@ class DatabaseConnectorService {
     /**
      * Create a temporary database connection
      */
-    public function createConnection(array $config): Connection {
+    public function createConnection(array $config): Connection
+    {
         $driver = $config['driver'] ?? 'mysql';
 
         if (! in_array($driver, self::SUPPORTED_DRIVERS)) {
@@ -34,7 +36,8 @@ class DatabaseConnectorService {
     /**
      * Test a database connection
      */
-    public function testConnection(array $config): array {
+    public function testConnection(array $config): array
+    {
         try {
             $connection = $this->createConnection($config);
             $connection->getPdo();
@@ -59,7 +62,8 @@ class DatabaseConnectorService {
     /**
      * List available tables in the database
      */
-    public function listTables(array $config): array {
+    public function listTables(array $config): array
+    {
         $connection = $this->createConnection($config);
         $driver = $config['driver'] ?? 'mysql';
 
@@ -77,7 +81,8 @@ class DatabaseConnectorService {
     /**
      * Get table columns and their types
      */
-    public function getTableColumns(array $config, string $tableName): array {
+    public function getTableColumns(array $config, string $tableName): array
+    {
         if (! $this->isValidTableName($tableName)) {
             throw new \InvalidArgumentException('Nom de table invalide');
         }
@@ -97,7 +102,8 @@ class DatabaseConnectorService {
     /**
      * Get sample data from a table
      */
-    public function getSampleData(array $config, string $tableName, int $limit = 10): array {
+    public function getSampleData(array $config, string $tableName, int $limit = 10): array
+    {
         $connection = $this->createConnection($config);
 
         // Validate table name to prevent SQL injection
@@ -113,7 +119,8 @@ class DatabaseConnectorService {
     /**
      * Get row count for a table
      */
-    public function getTableRowCount(array $config, string $tableName): int {
+    public function getTableRowCount(array $config, string $tableName): int
+    {
         $connection = $this->createConnection($config);
 
         if (! $this->isValidTableName($tableName)) {
@@ -126,7 +133,8 @@ class DatabaseConnectorService {
     /**
      * Fetch data from a table in chunks
      */
-    public function fetchTableData(array $config, string $tableName, int $offset = 0, int $limit = 100): array {
+    public function fetchTableData(array $config, string $tableName, int $offset = 0, int $limit = 100): array
+    {
         $connection = $this->createConnection($config);
 
         if (! $this->isValidTableName($tableName)) {
@@ -154,7 +162,8 @@ class DatabaseConnectorService {
      * - Blocks multi-statement execution (semicolons outside string literals)
      * - Keyword check runs on comment-stripped, uppercased query
      */
-    public function executeQuery(array $config, string $query, int $limit = 1000): array {
+    public function executeQuery(array $config, string $query, int $limit = 1000): array
+    {
         // Strip SQL single-line (--) and multi-line (/* */) comments before validation
         $stripped = preg_replace('/--[^\r\n]*/', '', $query);
         $stripped = preg_replace('/\/\*.*?\*\//s', '', $stripped);
@@ -198,7 +207,8 @@ class DatabaseConnectorService {
     /**
      * Build connection configuration array
      */
-    private function buildConnectionConfig(array $config): array {
+    private function buildConnectionConfig(array $config): array
+    {
         $driver = $config['driver'] ?? 'mysql';
 
         $baseConfig = [
@@ -245,7 +255,8 @@ class DatabaseConnectorService {
     /**
      * List MySQL tables
      */
-    private function listMysqlTables(Connection $connection): array {
+    private function listMysqlTables(Connection $connection): array
+    {
         $results = $connection->select('SHOW TABLES');
         $key = 'Tables_in_'.$connection->getDatabaseName();
 
@@ -255,7 +266,8 @@ class DatabaseConnectorService {
     /**
      * List PostgreSQL tables
      */
-    private function listPostgresTables(Connection $connection): array {
+    private function listPostgresTables(Connection $connection): array
+    {
         $results = $connection->select(
             "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
         );
@@ -266,7 +278,8 @@ class DatabaseConnectorService {
     /**
      * List SQLite tables
      */
-    private function listSqliteTables(Connection $connection): array {
+    private function listSqliteTables(Connection $connection): array
+    {
         $results = $connection->select(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         );
@@ -277,7 +290,8 @@ class DatabaseConnectorService {
     /**
      * List SQL Server tables
      */
-    private function listSqlServerTables(Connection $connection): array {
+    private function listSqlServerTables(Connection $connection): array
+    {
         $results = $connection->select(
             "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
         );
@@ -288,7 +302,8 @@ class DatabaseConnectorService {
     /**
      * Get MySQL column information
      */
-    private function getMysqlColumns(Connection $connection, string $tableName): array {
+    private function getMysqlColumns(Connection $connection, string $tableName): array
+    {
         $results = $connection->select("DESCRIBE `{$tableName}`");
 
         return array_map(fn ($row) => [
@@ -303,7 +318,8 @@ class DatabaseConnectorService {
     /**
      * Get PostgreSQL column information
      */
-    private function getPostgresColumns(Connection $connection, string $tableName): array {
+    private function getPostgresColumns(Connection $connection, string $tableName): array
+    {
         $results = $connection->select('
             SELECT column_name, data_type, is_nullable, column_default
             FROM information_schema.columns
@@ -322,7 +338,8 @@ class DatabaseConnectorService {
     /**
      * Get SQLite column information
      */
-    private function getSqliteColumns(Connection $connection, string $tableName): array {
+    private function getSqliteColumns(Connection $connection, string $tableName): array
+    {
         $results = $connection->select("PRAGMA table_info(`{$tableName}`)");
 
         return array_map(fn ($row) => [
@@ -337,7 +354,8 @@ class DatabaseConnectorService {
     /**
      * Get SQL Server column information
      */
-    private function getSqlServerColumns(Connection $connection, string $tableName): array {
+    private function getSqlServerColumns(Connection $connection, string $tableName): array
+    {
         $results = $connection->select('
             SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
             FROM INFORMATION_SCHEMA.COLUMNS
@@ -356,14 +374,16 @@ class DatabaseConnectorService {
     /**
      * Validate table name to prevent SQL injection
      */
-    private function isValidTableName(string $tableName): bool {
+    private function isValidTableName(string $tableName): bool
+    {
         return preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $tableName) === 1;
     }
 
     /**
      * Sanitize error messages to hide sensitive information
      */
-    private function sanitizeErrorMessage(string $message): string {
+    private function sanitizeErrorMessage(string $message): string
+    {
         // Remove potential password or connection string info
         $message = preg_replace('/password[=:][^\s;]+/i', 'password=***', $message);
         $message = preg_replace('/pwd[=:][^\s;]+/i', 'pwd=***', $message);
@@ -374,14 +394,16 @@ class DatabaseConnectorService {
     /**
      * Get supported drivers
      */
-    public function getSupportedDrivers(): array {
+    public function getSupportedDrivers(): array
+    {
         return self::SUPPORTED_DRIVERS;
     }
 
     /**
      * Clean up temporary connection
      */
-    public function cleanupConnection(string $connectionName): void {
+    public function cleanupConnection(string $connectionName): void
+    {
         if (str_starts_with($connectionName, 'import_temp_')) {
             DB::purge($connectionName);
         }

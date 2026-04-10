@@ -4,7 +4,8 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Storage;
 
-class StorageService {
+class StorageService
+{
     /**
      * Télécharge un fichier depuis S3 vers le disque temp local pour traitement
      *
@@ -12,7 +13,8 @@ class StorageService {
      * @param  string|null  $disk  Disk source (défaut: disk par défaut)
      * @return string Chemin absolu local du fichier temporaire
      */
-    public function downloadToTemp(string $path, ?string $disk = null): string {
+    public function downloadToTemp(string $path, ?string $disk = null): string
+    {
         $disk = $disk ?? config('filesystems.default');
         $tempPath = Storage::disk('temp')->path($path);
 
@@ -34,7 +36,8 @@ class StorageService {
      * @param  string  $remotePath  Chemin relatif de destination sur S3
      * @param  string|null  $disk  Disk destination (défaut: disk par défaut)
      */
-    public function uploadFromLocal(string $localPath, string $remotePath, ?string $disk = null): bool {
+    public function uploadFromLocal(string $localPath, string $remotePath, ?string $disk = null): bool
+    {
         $disk = $disk ?? config('filesystems.default');
 
         return Storage::disk($disk)->put(
@@ -48,7 +51,8 @@ class StorageService {
      *
      * @param  string  $path  Chemin relatif sur le disk temp
      */
-    public function cleanupTemp(string $path): void {
+    public function cleanupTemp(string $path): void
+    {
         $tempPath = Storage::disk('temp')->path($path);
         if (file_exists($tempPath)) {
             @unlink($tempPath);
@@ -63,7 +67,8 @@ class StorageService {
      * @param  string|null  $disk  Disk source (défaut: disk par défaut)
      * @return string URL temporaire
      */
-    public function getTemporaryUrl(string $path, int $minutes = 5, ?string $disk = null): string {
+    public function getTemporaryUrl(string $path, int $minutes = 5, ?string $disk = null): string
+    {
         $disk = $disk ?? config('filesystems.default');
 
         return Storage::disk($disk)->temporaryUrl(
@@ -79,7 +84,8 @@ class StorageService {
      * @param  string|null  $disk  Disk source (défaut: disk par défaut)
      * @return string URL publique
      */
-    public function getPublicUrl(string $path, ?string $disk = null): string {
+    public function getPublicUrl(string $path, ?string $disk = null): string
+    {
         $disk = $disk ?? config('filesystems.default');
 
         return Storage::disk($disk)->url($path);
@@ -91,7 +97,8 @@ class StorageService {
      * @param  string  $path  Chemin relatif du fichier
      * @param  string|null  $disk  Disk (défaut: disk par défaut)
      */
-    public function exists(string $path, ?string $disk = null): bool {
+    public function exists(string $path, ?string $disk = null): bool
+    {
         $disk = $disk ?? config('filesystems.default');
 
         return Storage::disk($disk)->exists($path);
@@ -103,7 +110,8 @@ class StorageService {
      * @param  string  $path  Chemin relatif du fichier
      * @param  string|null  $disk  Disk (défaut: disk par défaut)
      */
-    public function delete(string $path, ?string $disk = null): bool {
+    public function delete(string $path, ?string $disk = null): bool
+    {
         $disk = $disk ?? config('filesystems.default');
 
         return Storage::disk($disk)->delete($path);
@@ -116,7 +124,8 @@ class StorageService {
      * @param  string|null  $disk  Disk (défaut: disk par défaut)
      * @return int Taille en octets
      */
-    public function size(string $path, ?string $disk = null): int {
+    public function size(string $path, ?string $disk = null): int
+    {
         $disk = $disk ?? config('filesystems.default');
 
         return Storage::disk($disk)->size($path);

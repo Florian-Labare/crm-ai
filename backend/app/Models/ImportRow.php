@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ImportRow extends Model {
+class ImportRow extends Model
+{
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_VALID = 'valid';
@@ -36,35 +37,43 @@ class ImportRow extends Model {
         'duplicate_confidence' => 'float',
     ];
 
-    public function session(): BelongsTo {
+    public function session(): BelongsTo
+    {
         return $this->belongsTo(ImportSession::class, 'import_session_id');
     }
 
-    public function matchedClient(): BelongsTo {
+    public function matchedClient(): BelongsTo
+    {
         return $this->belongsTo(Client::class, 'matched_client_id');
     }
 
-    public function isPending(): bool {
+    public function isPending(): bool
+    {
         return $this->status === self::STATUS_PENDING;
     }
 
-    public function isValid(): bool {
+    public function isValid(): bool
+    {
         return $this->status === self::STATUS_VALID;
     }
 
-    public function isInvalid(): bool {
+    public function isInvalid(): bool
+    {
         return $this->status === self::STATUS_INVALID;
     }
 
-    public function isDuplicate(): bool {
+    public function isDuplicate(): bool
+    {
         return $this->status === self::STATUS_DUPLICATE;
     }
 
-    public function isImported(): bool {
+    public function isImported(): bool
+    {
         return $this->status === self::STATUS_IMPORTED;
     }
 
-    public function hasPotentialDuplicates(): bool {
+    public function hasPotentialDuplicates(): bool
+    {
         return ! empty($this->duplicate_matches);
     }
 }

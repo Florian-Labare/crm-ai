@@ -10,7 +10,7 @@ foreach ($templates as $templateName) {
     echo "\n📄 Template: {$templateName}\n";
     echo str_repeat('=', 80)."\n";
 
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     $zip->open(__DIR__.'/storage/app/templates/'.$templateName);
     $xml = $zip->getFromName('word/document.xml');
     $zip->close();

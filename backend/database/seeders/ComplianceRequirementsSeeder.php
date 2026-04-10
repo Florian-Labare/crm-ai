@@ -5,11 +5,13 @@ namespace Database\Seeders;
 use App\Models\ComplianceRequirement;
 use Illuminate\Database\Seeder;
 
-class ComplianceRequirementsSeeder extends Seeder {
+class ComplianceRequirementsSeeder extends Seeder
+{
     /**
      * Run the database seeds.
      */
-    public function run(): void {
+    public function run(): void
+    {
         $requirements = [
             // Documents globaux (requis pour tous les clients)
             [

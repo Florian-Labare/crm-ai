@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Client extends Model {
+class Client extends Model
+{
     protected $fillable = [
         'team_id',
         'is_client',
@@ -67,15 +68,17 @@ class Client extends Model {
         'is_archived' => 'boolean',
     ];
 
-    public function setEmailAttribute(?string $value): void {
+    public function setEmailAttribute(?string $value): void
+    {
         $this->attributes['email'] = $value ? strtolower(trim($value)) : null;
     }
 
     /**
      * The "booted" method of the model.
      */
-    protected static function booted(): void {
-        static::addGlobalScope(new \App\Scopes\TeamScope());
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new \App\Scopes\TeamScope);
     }
 
     // ===== SCOPES =====
@@ -83,116 +86,142 @@ class Client extends Model {
     /**
      * Scope pour les prospects (non-clients, non-archivés)
      */
-    public function scopeProspects($query) {
+    public function scopeProspects($query)
+    {
         return $query->where('is_client', false)->where('is_archived', false);
     }
 
     /**
      * Scope pour les clients (is_client = true, non-archivés)
      */
-    public function scopeClients($query) {
+    public function scopeClients($query)
+    {
         return $query->where('is_client', true)->where('is_archived', false);
     }
 
     /**
      * Scope pour les archivés (RAF)
      */
-    public function scopeArchived($query) {
+    public function scopeArchived($query)
+    {
         return $query->where('is_archived', true);
     }
 
     /**
      * Scope pour les actifs (non-archivés)
      */
-    public function scopeActive($query) {
+    public function scopeActive($query)
+    {
         return $query->where('is_archived', false);
     }
 
-    public function team(): BelongsTo {
+    public function team(): BelongsTo
+    {
         return $this->belongsTo(Team::class);
     }
 
-    public function user(): BelongsTo {
+    public function user(): BelongsTo
+    {
         return $this->belongsTo(User::class);
     }
 
-    public function conjoint(): HasOne {
+    public function conjoint(): HasOne
+    {
         return $this->hasOne(Conjoint::class);
     }
 
-    public function enfants(): HasMany {
+    public function enfants(): HasMany
+    {
         return $this->hasMany(Enfant::class);
     }
 
-    public function chargeClientele(): BelongsTo {
+    public function chargeClientele(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'der_charge_clientele_id');
     }
 
-    public function santeSouhait(): HasOne {
+    public function santeSouhait(): HasOne
+    {
         return $this->hasOne(SanteSouhait::class);
     }
 
-    public function baePrevoyance(): HasOne {
+    public function baePrevoyance(): HasOne
+    {
         return $this->hasOne(BaePrevoyance::class);
     }
 
-    public function baeRetraite(): HasOne {
+    public function baeRetraite(): HasOne
+    {
         return $this->hasOne(BaeRetraite::class);
     }
 
-    public function baeEpargne(): HasOne {
+    public function baeEpargne(): HasOne
+    {
         return $this->hasOne(BaeEpargne::class);
     }
 
-    public function complianceDocuments(): HasMany {
+    public function complianceDocuments(): HasMany
+    {
         return $this->hasMany(ClientComplianceDocument::class);
     }
 
-    public function questionnaireRisque(): HasOne {
+    public function questionnaireRisque(): HasOne
+    {
         return $this->hasOne(QuestionnaireRisque::class);
     }
 
-    public function generatedDocuments(): HasMany {
+    public function generatedDocuments(): HasMany
+    {
         return $this->hasMany(GeneratedDocument::class);
     }
 
-    public function revenus(): HasMany {
+    public function revenus(): HasMany
+    {
         return $this->hasMany(ClientRevenu::class);
     }
 
-    public function passifs(): HasMany {
+    public function passifs(): HasMany
+    {
         return $this->hasMany(ClientPassif::class);
     }
 
-    public function actifsFinanciers(): HasMany {
+    public function actifsFinanciers(): HasMany
+    {
         return $this->hasMany(ClientActifFinancier::class);
     }
 
-    public function biensImmobiliers(): HasMany {
+    public function biensImmobiliers(): HasMany
+    {
         return $this->hasMany(ClientBienImmobilier::class);
     }
 
-    public function autresEpargnes(): HasMany {
+    public function autresEpargnes(): HasMany
+    {
         return $this->hasMany(ClientAutreEpargne::class);
     }
 
-    public function charges(): HasMany {
+    public function charges(): HasMany
+    {
         return $this->hasMany(ClientCharge::class);
     }
 
-    public function audioRecords(): HasMany {
+    public function audioRecords(): HasMany
+    {
         return $this->hasMany(AudioRecord::class);
     }
 
-    public function recordingSessions(): HasMany {
+    public function recordingSessions(): HasMany
+    {
         return $this->hasMany(RecordingSession::class);
     }
 
-    public function meetingSummaries(): HasMany {
+    public function meetingSummaries(): HasMany
+    {
         return $this->hasMany(MeetingSummary::class);
     }
 
-    public function contrats(): HasMany {
+    public function contrats(): HasMany
+    {
         return $this->hasMany(ClientContrat::class);
     }
 }

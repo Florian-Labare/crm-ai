@@ -32,7 +32,7 @@ foreach ($templates as $filename => $displayName) {
     echo str_repeat('-', 80)."\n";
 
     // 1. Extraire les variables avant nettoyage
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     if ($zip->open($templatePath) !== true) {
         echo "   ❌ Impossible d'ouvrir le fichier\n\n";
 
@@ -61,7 +61,7 @@ foreach ($templates as $filename => $displayName) {
     echo '   Backup créée: '.basename($backupPath)."\n";
 
     // 3. Nettoyer le template
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     if ($zip->open($templatePath) !== true) {
         echo "   ❌ Impossible d'ouvrir pour nettoyage\n\n";
 
@@ -114,7 +114,7 @@ foreach ($templates as $filename => $displayName) {
     $zip->close();
 
     // 4. Vérifier que toutes les variables sont préservées
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     $zip->open($templatePath);
     $xmlAfter = $zip->getFromName('word/document.xml');
     $zip->close();

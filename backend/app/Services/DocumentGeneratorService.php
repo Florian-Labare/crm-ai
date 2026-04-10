@@ -11,10 +11,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class DocumentGeneratorService {
+class DocumentGeneratorService
+{
     private DirectTemplateMapper $mapper;
 
-    public function __construct(DirectTemplateMapper $mapper) {
+    public function __construct(DirectTemplateMapper $mapper)
+    {
         $this->mapper = $mapper;
     }
 
@@ -148,7 +150,8 @@ class DocumentGeneratorService {
      * Mappe toutes les données du client aux variables du template
      * Note: Le template utilise des noms sans underscores (ex: datenaissance au lieu de date_naissance)
      */
-    private function mapClientDataToVariables(Client $client): array {
+    private function mapClientDataToVariables(Client $client): array
+    {
         // Charger toutes les relations
         $client->load([
             'conjoint',
@@ -275,7 +278,8 @@ class DocumentGeneratorService {
     /**
      * Télécharge le logo depuis S3 vers un fichier temporaire local
      */
-    private function downloadLogoToTemp(string $s3Path): string {
+    private function downloadLogoToTemp(string $s3Path): string
+    {
         $content = Storage::disk('s3')->get($s3Path);
         $tempPath = storage_path('app/temp/logo_'.uniqid().'.png');
 
@@ -291,7 +295,8 @@ class DocumentGeneratorService {
     /**
      * Génère un nom de fichier unique pour le document
      */
-    private function generateFileName(Client $client, DocumentTemplate $template, string $format): string {
+    private function generateFileName(Client $client, DocumentTemplate $template, string $format): string
+    {
         $timestamp = now()->format('Ymd_His');
         $clientName = Str::slug($client->nom.'_'.$client->prenom, '_');
         $templateSlug = Str::slug($template->name, '_');
@@ -302,7 +307,8 @@ class DocumentGeneratorService {
     /**
      * Parse une date de façon sécurisée (gère les formats partiels comme "1961-XX-XX")
      */
-    private function safeFormatDate(?string $date): string {
+    private function safeFormatDate(?string $date): string
+    {
         if (empty($date)) {
             return '';
         }
@@ -324,7 +330,8 @@ class DocumentGeneratorService {
     /**
      * Normalise une valeur pour PhpWord TemplateProcessor::setValue (qui attend du texte).
      */
-    private function normalizeTemplateValue(mixed $value): string {
+    private function normalizeTemplateValue(mixed $value): string
+    {
         if ($value === null) {
             return '';
         }
@@ -363,7 +370,8 @@ class DocumentGeneratorService {
      *
      * @throws \Exception Si la conversion échoue
      */
-    private function convertToPdf(string $docxPath): string {
+    private function convertToPdf(string $docxPath): string
+    {
         try {
             // URL de Gotenberg (service Docker)
             $gotenbergUrl = 'http://gotenberg:3000/forms/libreoffice/convert';

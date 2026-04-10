@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Enfant extends Model {
+class Enfant extends Model
+{
     protected $fillable = [
         'client_id',
         'nom',
@@ -20,7 +21,8 @@ class Enfant extends Model {
         'garde_alternee' => 'boolean',
     ];
 
-    public function client(): BelongsTo {
+    public function client(): BelongsTo
+    {
         return $this->belongsTo(Client::class);
     }
 }

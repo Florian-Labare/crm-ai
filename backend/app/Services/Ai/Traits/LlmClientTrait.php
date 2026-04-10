@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Log;
  * Permet de basculer entre Mistral et OpenAI via les feature flags
  * avec fallback automatique si Mistral échoue.
  */
-trait LlmClientTrait {
+trait LlmClientTrait
+{
     /**
      * Appelle le LLM (Mistral ou OpenAI selon la configuration).
      *
@@ -21,7 +22,8 @@ trait LlmClientTrait {
      * @param  bool  $json  Forcer le format JSON
      * @return array|null Données décodées ou null si échec
      */
-    protected function callLlm(string $system, string $user, float $temperature = 0.1, bool $json = true): ?array {
+    protected function callLlm(string $system, string $user, float $temperature = 0.1, bool $json = true): ?array
+    {
         $useMistral = config('mistral.features.use_for_llm', false);
 
         try {
@@ -51,7 +53,8 @@ trait LlmClientTrait {
     /**
      * Appelle Mistral LLM.
      */
-    private function callMistral(string $system, string $user, float $temperature, bool $json): ?array {
+    private function callMistral(string $system, string $user, float $temperature, bool $json): ?array
+    {
         $apiKey = config('mistral.api_key');
         if (! $apiKey) {
             throw new \Exception('Clé API Mistral manquante.');
@@ -103,7 +106,8 @@ trait LlmClientTrait {
     /**
      * Appelle OpenAI LLM.
      */
-    private function callOpenAI(string $system, string $user, float $temperature, bool $json): ?array {
+    private function callOpenAI(string $system, string $user, float $temperature, bool $json): ?array
+    {
         $apiKey = config('openai.api_key');
         if (! $apiKey) {
             throw new \Exception('Clé API OpenAI manquante.');

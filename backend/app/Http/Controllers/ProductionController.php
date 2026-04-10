@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
-class ProductionController extends Controller {
+class ProductionController extends Controller
+{
     /** Champs Production acceptés lors du mapping import */
     private const MAPPABLE_FIELDS = [
         'nom_client', 'prenom_client', 'compagnie_libre', 'categorie', 'type_contrat',
@@ -25,11 +26,13 @@ class ProductionController extends Controller {
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    private function currentTeam() {
+    private function currentTeam()
+    {
         return Auth::user()->currentTeam();
     }
 
-    private function requireAdmin(): ?JsonResponse {
+    private function requireAdmin(): ?JsonResponse
+    {
         $team = $this->currentTeam();
         if (! $team || ! Auth::user()->isTeamAdmin($team)) {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -40,7 +43,8 @@ class ProductionController extends Controller {
 
     // ─── index ────────────────────────────────────────────────────────────────
 
-    public function index(Request $request): JsonResponse {
+    public function index(Request $request): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -84,7 +88,8 @@ class ProductionController extends Controller {
 
     // ─── store ────────────────────────────────────────────────────────────────
 
-    public function store(Request $request): JsonResponse {
+    public function store(Request $request): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -107,7 +112,8 @@ class ProductionController extends Controller {
 
     // ─── update ───────────────────────────────────────────────────────────────
 
-    public function update(Request $request, Production $production): JsonResponse {
+    public function update(Request $request, Production $production): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -122,7 +128,8 @@ class ProductionController extends Controller {
 
     // ─── destroy ──────────────────────────────────────────────────────────────
 
-    public function destroy(Production $production): JsonResponse {
+    public function destroy(Production $production): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -134,7 +141,8 @@ class ProductionController extends Controller {
 
     // ─── stats ────────────────────────────────────────────────────────────────
 
-    public function stats(Request $request): JsonResponse {
+    public function stats(Request $request): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -231,7 +239,8 @@ class ProductionController extends Controller {
 
     // ─── import preview ───────────────────────────────────────────────────────
 
-    public function importPreview(Request $request): JsonResponse {
+    public function importPreview(Request $request): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -301,7 +310,8 @@ class ProductionController extends Controller {
 
     // ─── import execute ───────────────────────────────────────────────────────
 
-    public function importExecute(Request $request): JsonResponse {
+    public function importExecute(Request $request): JsonResponse
+    {
         if ($err = $this->requireAdmin()) {
             return $err;
         }
@@ -409,7 +419,8 @@ class ProductionController extends Controller {
 
     // ─── Helpers privés ──────────────────────────────────────────────────────
 
-    private function castImportedValue(string $field, mixed $value, array &$errors, int $lineNum): mixed {
+    private function castImportedValue(string $field, mixed $value, array &$errors, int $lineNum): mixed
+    {
         $dateFields = ['date_signature', 'date_effet', 'date_commission', 'date_resiliation', 'date_reprise'];
         $decimalFields = ['prime_ttc', 'prime_ht', 'fond_euro', 'uc', 'taux_commission',
             'commission_compagnie', 'commission_mia', 'commission_recurrente', 'encours_commission'];
@@ -464,7 +475,8 @@ class ProductionController extends Controller {
         return (string) $value;
     }
 
-    private function validationRules(bool $partial = false): array {
+    private function validationRules(bool $partial = false): array
+    {
         $sometimes = $partial ? 'sometimes|' : '';
 
         return [

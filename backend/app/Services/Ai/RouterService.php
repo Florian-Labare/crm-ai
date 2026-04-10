@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Log;
  *
  * Retourne un tableau de sections : ["client", "prevoyance", "retraite", "epargne"]
  */
-class RouterService {
+class RouterService
+{
     use LlmClientTrait;
 
     /**
@@ -19,7 +20,8 @@ class RouterService {
      * @param  string  $transcription  Transcription vocale
      * @return array Tableau de sections (ex: ["client", "prevoyance"])
      */
-    public function detectSections(string $transcription): array {
+    public function detectSections(string $transcription): array
+    {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -68,7 +70,8 @@ class RouterService {
         }
     }
 
-    private function buildPrompt(string $transcription): string {
+    private function buildPrompt(string $transcription): string
+    {
         return <<<PROMPT
 Analyse cette transcription et détermine quelles sections sont concernées.
 
@@ -89,7 +92,8 @@ PROMPT;
      *
      * Garde-fou pour s'assurer que la section conjoint est détectée même si le LLM ne l'a pas fait.
      */
-    private function forceConjointDetection(string $transcription, array $sections): array {
+    private function forceConjointDetection(string $transcription, array $sections): array
+    {
         // Normaliser la transcription en minuscules pour la détection
         $text = mb_strtolower($transcription, 'UTF-8');
 
@@ -125,7 +129,8 @@ PROMPT;
         return $sections;
     }
 
-    private function getSystemPrompt(): string {
+    private function getSystemPrompt(): string
+    {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en routing de conversations pour un CRM d'assurance.
 

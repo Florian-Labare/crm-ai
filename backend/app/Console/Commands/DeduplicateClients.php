@@ -12,12 +12,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-class DeduplicateClients extends Command {
+class DeduplicateClients extends Command
+{
     protected $signature = 'clients:deduplicate {--merge : Fusionner automatiquement les doublons détectés}';
 
     protected $description = 'Détecte (et optionnellement fusionne) les doublons clients par utilisateur.';
 
-    public function handle(): int {
+    public function handle(): int
+    {
         $clients = Client::with(['conjoint', 'enfants', 'santeSouhait'])->get();
         if ($clients->isEmpty()) {
             $this->info('Aucun client enregistré.');
@@ -54,7 +56,8 @@ class DeduplicateClients extends Command {
         return self::SUCCESS;
     }
 
-    private function detectDuplicates(Collection $clients): Collection {
+    private function detectDuplicates(Collection $clients): Collection
+    {
         $groups = collect();
 
         $clients->groupBy(function (Client $client) {
@@ -101,7 +104,8 @@ class DeduplicateClients extends Command {
         });
     }
 
-    private function formatGroupSummary(Collection $group): string {
+    private function formatGroupSummary(Collection $group): string
+    {
         $first = $group->first();
         $ids = $group->pluck('id')->implode(', ');
 
@@ -115,7 +119,8 @@ class DeduplicateClients extends Command {
         );
     }
 
-    private function mergeGroup(Collection $group): void {
+    private function mergeGroup(Collection $group): void
+    {
         $master = $group->sortBy('created_at')->first();
         $duplicates = $group->where('id', '!=', $master->id);
 
@@ -124,7 +129,8 @@ class DeduplicateClients extends Command {
         }
     }
 
-    private function mergeClient(Client $master, Client $duplicate): void {
+    private function mergeClient(Client $master, Client $duplicate): void
+    {
         foreach ($master->getFillable() as $field) {
             if (blank($master->{$field}) && filled($duplicate->{$field})) {
                 $master->{$field} = $duplicate->{$field};
@@ -143,7 +149,8 @@ class DeduplicateClients extends Command {
         $this->info(sprintf('→ Fusion du client #%d dans #%d effectuée', $duplicate->id, $master->id));
     }
 
-    private function normalize(?string $value): ?string {
+    private function normalize(?string $value): ?string
+    {
         if (empty($value)) {
             return null;
         }
@@ -152,7 +159,8 @@ class DeduplicateClients extends Command {
         return $normalized === '' ? null : $normalized;
     }
 
-    private function normalizePhone(?string $value): ?string {
+    private function normalizePhone(?string $value): ?string
+    {
         if (empty($value)) {
             return null;
         }

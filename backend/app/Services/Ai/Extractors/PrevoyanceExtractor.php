@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des données bae_prevoyance
  * - TOUJOURS utiliser "add" pour besoins_action (sauf négation explicite)
  */
-class PrevoyanceExtractor {
+class PrevoyanceExtractor
+{
     use LlmClientTrait;
 
     /**
@@ -23,7 +24,8 @@ class PrevoyanceExtractor {
      * @param  array  $currentData  Données existantes (optionnel)
      * @return array Données extraites
      */
-    public function extract(string $transcription, array $currentData = []): array {
+    public function extract(string $transcription, array $currentData = []): array
+    {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -49,7 +51,8 @@ class PrevoyanceExtractor {
         }
     }
 
-    private function buildPrompt(string $transcription): string {
+    private function buildPrompt(string $transcription): string
+    {
         return <<<PROMPT
 Analyse cette transcription et détecte si le client parle de PRÉVOYANCE.
 
@@ -62,7 +65,8 @@ Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
     }
 
-    private function getSystemPrompt(): string {
+    private function getSystemPrompt(): string
+    {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de besoins PRÉVOYANCE.
 

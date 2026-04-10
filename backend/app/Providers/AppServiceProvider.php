@@ -11,18 +11,21 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 
-class AppServiceProvider extends ServiceProvider {
+class AppServiceProvider extends ServiceProvider
+{
     /**
      * Register any application services.
      */
-    public function register(): void {
+    public function register(): void
+    {
         //
     }
 
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void {
+    public function boot(): void
+    {
         $this->configureRateLimiting();
         $this->registerObservers();
 
@@ -35,14 +38,16 @@ class AppServiceProvider extends ServiceProvider {
     /**
      * Enregistre les observers des modèles
      */
-    protected function registerObservers(): void {
+    protected function registerObservers(): void
+    {
         Client::observe(ClientObserver::class);
     }
 
     /**
      * Configure rate limiting pour les différents endpoints
      */
-    protected function configureRateLimiting(): void {
+    protected function configureRateLimiting(): void
+    {
         // Rate limiting pour l'upload audio : 10 uploads par minute par utilisateur
         RateLimiter::for('audio-upload', function (Request $request) {
             return Limit::perMinute(10)

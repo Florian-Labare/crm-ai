@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Storage;
  * Note : Les transcriptions textuelles sont conservées (données métier)
  * Seuls les fichiers audio bruts sont supprimés
  */
-class PurgeOldAudioRecords extends Command {
+class PurgeOldAudioRecords extends Command
+{
     protected $signature = 'audio:purge-old
                             {--days=30 : Nombre de jours de rétention}
                             {--dry-run : Affiche ce qui serait supprimé sans supprimer}
@@ -32,7 +33,8 @@ class PurgeOldAudioRecords extends Command {
 
     private int $freedBytes = 0;
 
-    public function handle(): int {
+    public function handle(): int
+    {
         $days = (int) $this->option('days');
         $dryRun = $this->option('dry-run');
         $includeTranscriptions = $this->option('include-transcriptions');
@@ -103,7 +105,8 @@ class PurgeOldAudioRecords extends Command {
     /**
      * Traite un enregistrement pour suppression
      */
-    private function processRecord(AudioRecord $record, bool $dryRun, bool $includeTranscriptions): void {
+    private function processRecord(AudioRecord $record, bool $dryRun, bool $includeTranscriptions): void
+    {
         // 1. Supprimer le fichier audio (depuis S3)
         if ($record->path && Storage::exists($record->path)) {
             $size = Storage::size($record->path);
@@ -138,7 +141,8 @@ class PurgeOldAudioRecords extends Command {
     /**
      * Formate une taille en bytes
      */
-    private function formatBytes(int $bytes): string {
+    private function formatBytes(int $bytes): string
+    {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {

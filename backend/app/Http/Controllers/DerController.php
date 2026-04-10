@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
  *
  * Gère la création de rendez-vous et l'envoi du Document d'Entrée en Relation
  */
-class DerController extends Controller {
+class DerController extends Controller
+{
     /**
      * Injecter le service DER
      */
@@ -27,7 +28,8 @@ class DerController extends Controller {
     /**
      * Afficher le formulaire de création de rendez-vous DER
      */
-    public function create(): JsonResponse {
+    public function create(): JsonResponse
+    {
         $currentTeam = auth()->user()->currentTeam();
 
         if (! $currentTeam) {
@@ -52,7 +54,8 @@ class DerController extends Controller {
     /**
      * Créer un prospect, générer et envoyer le DER
      */
-    public function store(StoreDerRequest $request): JsonResponse {
+    public function store(StoreDerRequest $request): JsonResponse
+    {
         try {
             Log::info("📋 Création d'un nouveau rendez-vous DER");
 

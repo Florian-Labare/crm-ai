@@ -5,8 +5,10 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class AnalysisService {
-    public function extractClientData(string $transcription): array {
+class AnalysisService
+{
+    public function extractClientData(string $transcription): array
+    {
         $prompt = <<<PROMPT
             Analyse ce texte de conversation et extrais toutes les informations disponibles.
 
@@ -1387,7 +1389,8 @@ class AnalysisService {
      * @param  string  $date  Date à normaliser
      * @return string|null Date au format ISO ou null si invalide
      */
-    private function normalizeDateToISO(string $date): ?string {
+    private function normalizeDateToISO(string $date): ?string
+    {
         try {
             // Nettoyer la date (supprimer espaces)
             $date = trim($date);
@@ -1434,7 +1437,8 @@ class AnalysisService {
     /**
      * Normalise une date avec mois français vers une chaîne parsable par Carbon.
      */
-    private function normalizeFrenchDateString(string $date): string {
+    private function normalizeFrenchDateString(string $date): string
+    {
         $normalized = mb_strtolower($date, 'UTF-8');
         $normalized = preg_replace('/\b1er\b/u', '1', $normalized);
 
@@ -1473,7 +1477,8 @@ class AnalysisService {
      * @param  string  $phone  Numéro de téléphone
      * @return string|null Numéro normalisé ou null si invalide
      */
-    private function normalizePhone(string $phone): ?string {
+    private function normalizePhone(string $phone): ?string
+    {
         try {
             // Supprimer tous les espaces, points, tirets, parenthèses
             $normalized = preg_replace('/[\s.\-()]/', '', $phone);
@@ -1503,7 +1508,8 @@ class AnalysisService {
      * @param  string  $email  Adresse email
      * @return string|null Email normalisé ou null si invalide
      */
-    private function normalizeEmail(string $email): ?string {
+    private function normalizeEmail(string $email): ?string
+    {
         try {
             // Supprimer les espaces
             $normalized = trim($email);
@@ -1534,7 +1540,8 @@ class AnalysisService {
      * @param  string  $transcription  Transcription complète
      * @param  array  $data  Données extraites par GPT (modifiées par référence)
      */
-    private function detectAndApplySpelling(string $transcription, array &$data): void {
+    private function detectAndApplySpelling(string $transcription, array &$data): void
+    {
         Log::info('🔤 Détection des épellations dans la transcription');
 
         $text = $transcription;
@@ -1580,7 +1587,8 @@ class AnalysisService {
      * @param  array  $keywords  Mots-clés précédant l'épellation (ex: "nom", "ville")
      * @return string|null Mot reconstruit ou null si pas d'épellation détectée
      */
-    private function extractSpelledWord(string $text, array $keywords): ?string {
+    private function extractSpelledWord(string $text, array $keywords): ?string
+    {
         $textLower = mb_strtolower($text, 'UTF-8');
 
         // Pattern 1: "j'épelle X Y Z" ou "je l'épelle X Y Z"
@@ -1629,7 +1637,8 @@ class AnalysisService {
      * @param  string  $text  Texte contenant des lettres espacées
      * @return string|null Mot reconstruit ou null si pas de pattern détecté
      */
-    private function reconstructSpelledWord(string $text): ?string {
+    private function reconstructSpelledWord(string $text): ?string
+    {
         $text = trim($text);
 
         // Détecter si le texte contient des lettres séparées par des espaces
@@ -1665,7 +1674,8 @@ class AnalysisService {
      * @param  string  $text  Texte contenant potentiellement des nombres verbaux
      * @return string Texte avec les nombres convertis en chiffres
      */
-    private function convertFrenchVerbalNumbers(string $text): string {
+    private function convertFrenchVerbalNumbers(string $text): string
+    {
         // Dictionnaire des nombres de base
         $numbers = [
             'zéro' => 0, 'zero' => 0,
@@ -1807,7 +1817,8 @@ class AnalysisService {
      * @param  string  $postalCode  Code postal
      * @return string|null Code postal normalisé (5 chiffres) ou null si invalide
      */
-    private function normalizePostalCode(string $postalCode): ?string {
+    private function normalizePostalCode(string $postalCode): ?string
+    {
         try {
             // ÉTAPE 1: Convertir les nombres verbaux français en chiffres
             // Ex: "cinquante-et-un cent" → "51100"
@@ -1852,7 +1863,8 @@ class AnalysisService {
     /**
      * Normalise les entrées booléennes, y compris les réponses orales (oui/non).
      */
-    private function normalizeBoolean(mixed $value): ?bool {
+    private function normalizeBoolean(mixed $value): ?bool
+    {
         if (is_bool($value)) {
             return $value;
         }
@@ -1891,7 +1903,8 @@ class AnalysisService {
     /**
      * Analyse la transcription pour comprendre les affirmations/négations sur les champs booléens.
      */
-    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void {
+    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void
+    {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $fieldPatterns = [
@@ -2010,7 +2023,8 @@ class AnalysisService {
     /**
      * Détecte explicitement le consentement audio dans la transcription.
      */
-    private function hydrateConsentementAudioFromTranscript(string $transcription, array &$data): void {
+    private function hydrateConsentementAudioFromTranscript(string $transcription, array &$data): void
+    {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $negative = [
@@ -2060,7 +2074,8 @@ class AnalysisService {
     /**
      * Détecte les mentions vocales d'informations entreprise pour fiabiliser les drapeaux.
      */
-    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void {
+    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void
+    {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $patterns = [
@@ -2186,7 +2201,8 @@ class AnalysisService {
      * @param  string  $postalCode  Code postal normalisé (5 chiffres)
      * @return string|null Ville trouvée ou null
      */
-    private function lookupCityFromPostalCode(string $postalCode): ?string {
+    private function lookupCityFromPostalCode(string $postalCode): ?string
+    {
         try {
             // Chercher dans la table clients les villes existantes pour ce code postal
             $city = \App\Models\Client::where('code_postal', $postalCode)
@@ -2224,7 +2240,8 @@ class AnalysisService {
     /**
      * Analyse l'adresse complète et isole code postal / ville si besoin.
      */
-    private function hydrateAddressComponents(array &$data): void {
+    private function hydrateAddressComponents(array &$data): void
+    {
         if (empty($data['adresse'])) {
             return;
         }
@@ -2277,7 +2294,8 @@ class AnalysisService {
         }
     }
 
-    private function hydrateResidenceFiscaleFromTranscript(string $transcription, array &$data): void {
+    private function hydrateResidenceFiscaleFromTranscript(string $transcription, array &$data): void
+    {
         if (! empty($data['residence_fiscale'])) {
             return;
         }
@@ -2291,7 +2309,8 @@ class AnalysisService {
         }
     }
 
-    private function extractResidenceFiscale(string $transcription): ?string {
+    private function extractResidenceFiscale(string $transcription): ?string
+    {
         $patterns = [
             '/résidence fiscale[^\\p{L}0-9]{0,6}([\\p{L}][\\p{L}\\s\\-\'’]{1,60})/iu',
             '/résident fiscal[^\\p{L}0-9]{0,6}([\\p{L}][\\p{L}\\s\\-\'’]{1,60})/iu',
@@ -2330,7 +2349,8 @@ class AnalysisService {
      * @param  string  $incompleteEmail  Email incomplet extrait par GPT
      * @return string|null Email corrigé ou null si impossible
      */
-    private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string {
+    private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string
+    {
         try {
             // Normaliser la transcription en minuscules pour la recherche
             $lowerTranscription = mb_strtolower($transcription);
@@ -2423,7 +2443,8 @@ class AnalysisService {
      * @param  int  $clientId  ID du client
      * @param  array  $data  Données extraites contenant potentiellement questionnaire_risque
      */
-    public function saveQuestionnaireRisque(int $clientId, array $data): void {
+    public function saveQuestionnaireRisque(int $clientId, array $data): void
+    {
         try {
             // Vérifier si des données de questionnaire de risque sont présentes
             if (! isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {

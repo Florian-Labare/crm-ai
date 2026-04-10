@@ -14,11 +14,13 @@ use PhpOffice\PhpWord\TemplateProcessor;
  *
  * Gère la génération et l'envoi du Document d'Entrée en Relation
  */
-class DerService {
+class DerService
+{
     /**
      * Générer le DER à partir du template et des données du prospect
      */
-    public function generateDer(Client $client, User $chargeClientele): string {
+    public function generateDer(Client $client, User $chargeClientele): string
+    {
         Log::info("📄 Génération du DER pour le client #{$client->id}");
 
         // 1. Copier le template vers un fichier temporaire
@@ -105,7 +107,8 @@ class DerService {
     /**
      * Télécharge le logo depuis S3 vers un fichier temporaire local
      */
-    private function downloadLogoToTemp(string $s3Path): string {
+    private function downloadLogoToTemp(string $s3Path): string
+    {
         $content = Storage::disk('s3')->get($s3Path);
         $tempPath = storage_path('app/temp/logo_'.uniqid().'.png');
 
@@ -121,7 +124,8 @@ class DerService {
     /**
      * Formater une date pour l'affichage
      */
-    private function formatDate(?string $date): string {
+    private function formatDate(?string $date): string
+    {
         if (! $date) {
             return '';
         }
@@ -132,7 +136,8 @@ class DerService {
     /**
      * Formater une heure pour l'affichage
      */
-    private function formatHeure(?string $heure): string {
+    private function formatHeure(?string $heure): string
+    {
         if (! $heure) {
             return '';
         }
@@ -143,7 +148,8 @@ class DerService {
     /**
      * Supprimer le fichier temporaire du DER
      */
-    public function cleanupTempFile(string $tempPath): void {
+    public function cleanupTempFile(string $tempPath): void
+    {
         if (file_exists($tempPath)) {
             unlink($tempPath);
             Log::info("🗑️ Fichier temporaire supprimé : {$tempPath}");

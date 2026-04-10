@@ -12,7 +12,8 @@ use App\Models\ComplianceRequirement;
  * Extrait de ClientComplianceController pour rendre la logique métier
  * testable en isolation et réutilisable (badge, status, dashboard).
  */
-class ComplianceStatusService {
+class ComplianceStatusService
+{
     public function __construct(
         private readonly BesoinService $besoinService
     ) {}
@@ -24,7 +25,8 @@ class ComplianceStatusService {
      *               pending_count: int, missing_count: int, total_required: int,
      *               missing_documents: string[], expired_count: int, expiring_soon_count: int}
      */
-    public function computeBadge(Client $client): array {
+    public function computeBadge(Client $client): array
+    {
         $besoins = $this->besoinService->getEffectiveBesoins($client);
 
         $requirements = ComplianceRequirement::getRequirementsForBesoins($besoins)
@@ -71,7 +73,8 @@ class ComplianceStatusService {
     /**
      * Retourne les exigences actives pour un client (utilisé par status()).
      */
-    public function getRequirements(Client $client): \Illuminate\Database\Eloquent\Collection {
+    public function getRequirements(Client $client): \Illuminate\Database\Eloquent\Collection
+    {
         $besoins = $this->besoinService->getEffectiveBesoins($client);
 
         return ComplianceRequirement::getRequirementsForBesoins($besoins);
@@ -80,7 +83,8 @@ class ComplianceStatusService {
     /**
      * Feu tricolore : [couleur, label]
      */
-    private function resolveTrafficLight(int $total, int $valid, int $pending, int $missing): array {
+    private function resolveTrafficLight(int $total, int $valid, int $pending, int $missing): array
+    {
         if ($total === 0 || $valid === $total) {
             return ['green',  'Complet'];
         }

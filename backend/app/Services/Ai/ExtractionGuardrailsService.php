@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Log;
  * 2. Valider et normaliser les valeurs extraites
  * 3. Logger les écarts pour amélioration continue
  */
-class ExtractionGuardrailsService {
+class ExtractionGuardrailsService
+{
     /**
      * Patterns de détection pour les champs critiques
      * Structure : champ => [positive => [...], negative => [...]]
@@ -129,7 +130,8 @@ class ExtractionGuardrailsService {
      * @param  string  $transcription  Transcription originale
      * @return array Données enrichies et validées
      */
-    public function apply(array $extractedData, string $transcription): array {
+    public function apply(array $extractedData, string $transcription): array
+    {
         $originalData = $extractedData;
         $transcriptionLower = mb_strtolower($transcription);
 
@@ -148,7 +150,8 @@ class ExtractionGuardrailsService {
     /**
      * Détecte les champs critiques que GPT a potentiellement oubliés
      */
-    private function detectMissedCriticalFields(array $data, string $transcription): array {
+    private function detectMissedCriticalFields(array $data, string $transcription): array
+    {
         foreach ($this->criticalFieldPatterns as $field => $patterns) {
             // Si le champ est déjà extrait, on ne le remplace pas
             if (array_key_exists($field, $data) && $data[$field] !== null) {
@@ -211,7 +214,8 @@ class ExtractionGuardrailsService {
      * Analyse contextuelle avancée pour le consentement audio
      * Cherche la question puis la réponse qui suit
      */
-    private function detectConsentementFromContext(string $transcription): ?bool {
+    private function detectConsentementFromContext(string $transcription): ?bool
+    {
         // Patterns de questions sur l'enregistrement
         $questionPatterns = [
             'est-ce que vous êtes d\'accord',
@@ -296,7 +300,8 @@ class ExtractionGuardrailsService {
     /**
      * Valide et normalise les valeurs extraites
      */
-    private function validateAndNormalize(array $data): array {
+    private function validateAndNormalize(array $data): array
+    {
         // Normaliser le téléphone (supprimer espaces, tirets)
         if (isset($data['telephone'])) {
             $data['telephone'] = preg_replace('/[\s.-]/', '', $data['telephone']);
@@ -352,7 +357,8 @@ class ExtractionGuardrailsService {
     /**
      * Log les corrections effectuées par les guardrails
      */
-    private function logCorrections(array $original, array $corrected, string $transcription): void {
+    private function logCorrections(array $original, array $corrected, string $transcription): void
+    {
         $corrections = [];
 
         foreach ($corrected as $field => $value) {
@@ -382,7 +388,8 @@ class ExtractionGuardrailsService {
      * Extrait des valeurs manquantes par patterns regex
      * Utilisé en dernier recours si GPT n'a pas extrait certaines valeurs évidentes
      */
-    public function extractMissingValues(array $data, string $transcription): array {
+    public function extractMissingValues(array $data, string $transcription): array
+    {
         foreach ($this->valueExtractionPatterns as $field => $pattern) {
             if (! isset($data[$field]) && preg_match($pattern, $transcription, $matches)) {
                 $data[$field] = $matches[0];
@@ -399,7 +406,8 @@ class ExtractionGuardrailsService {
     /**
      * Vérifie la cohérence des données extraites
      */
-    public function checkCoherence(array $data): array {
+    public function checkCoherence(array $data): array
+    {
         $warnings = [];
 
         // Si chef_entreprise mais pas de profession

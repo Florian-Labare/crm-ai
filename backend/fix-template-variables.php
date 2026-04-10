@@ -46,7 +46,7 @@ foreach ($templates as $templateName => $replacements) {
     echo '   ✅ Backup créée: '.basename($backupPath)."\n";
 
     // Ouvrir le DOCX
-    $zip = new ZipArchive();
+    $zip = new ZipArchive;
     if ($zip->open($templatePath) !== true) {
         echo "   ❌ Impossible d'ouvrir le fichier\n\n";
 

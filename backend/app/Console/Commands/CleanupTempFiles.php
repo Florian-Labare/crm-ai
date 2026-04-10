@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Storage;
  * - Les chunks d'enregistrement non finalisés après 24h
  * - Les fichiers audio temporaires
  */
-class CleanupTempFiles extends Command {
+class CleanupTempFiles extends Command
+{
     protected $signature = 'audio:cleanup-temp
                             {--dry-run : Affiche ce qui serait supprimé sans supprimer}
                             {--hours=24 : Âge minimum des fichiers à supprimer (en heures)}';
@@ -25,7 +26,8 @@ class CleanupTempFiles extends Command {
 
     private int $freedBytes = 0;
 
-    public function handle(): int {
+    public function handle(): int
+    {
         $dryRun = $this->option('dry-run');
         $minAgeHours = (int) $this->option('hours');
         $minAgeTimestamp = now()->subHours($minAgeHours)->timestamp;
@@ -65,7 +67,8 @@ class CleanupTempFiles extends Command {
     /**
      * Nettoie le dossier storage/app/temp
      */
-    private function cleanupTempDirectory(int $minAgeTimestamp, bool $dryRun): void {
+    private function cleanupTempDirectory(int $minAgeTimestamp, bool $dryRun): void
+    {
         $tempDir = storage_path('app/temp');
 
         if (! is_dir($tempDir)) {
@@ -95,7 +98,8 @@ class CleanupTempFiles extends Command {
     /**
      * Nettoie les chunks d'enregistrement orphelins
      */
-    private function cleanupOrphanedChunks(int $minAgeTimestamp, bool $dryRun): void {
+    private function cleanupOrphanedChunks(int $minAgeTimestamp, bool $dryRun): void
+    {
         $recordingsDir = storage_path('app/recordings');
 
         if (! is_dir($recordingsDir)) {
@@ -128,7 +132,8 @@ class CleanupTempFiles extends Command {
     /**
      * Nettoie les sessions d'enregistrement abandonnées (> 24h sans finalisation)
      */
-    private function cleanupAbandonedSessions(int $minAgeTimestamp, bool $dryRun): void {
+    private function cleanupAbandonedSessions(int $minAgeTimestamp, bool $dryRun): void
+    {
         $this->info('📁 Nettoyage des sessions abandonnées...');
 
         $abandonedSessions = \App\Models\RecordingSession::where('status', 'recording')
@@ -161,7 +166,8 @@ class CleanupTempFiles extends Command {
     /**
      * Supprime un fichier
      */
-    private function deleteFile(string $path, bool $dryRun): void {
+    private function deleteFile(string $path, bool $dryRun): void
+    {
         $size = filesize($path);
         $filename = basename($path);
 
@@ -178,7 +184,8 @@ class CleanupTempFiles extends Command {
     /**
      * Supprime un dossier et son contenu
      */
-    private function deleteDirectory(string $path, bool $dryRun): void {
+    private function deleteDirectory(string $path, bool $dryRun): void
+    {
         $dirname = basename($path);
         $totalSize = $this->getDirectorySize($path);
 
@@ -195,7 +202,8 @@ class CleanupTempFiles extends Command {
     /**
      * Calcule la taille d'un dossier
      */
-    private function getDirectorySize(string $path): int {
+    private function getDirectorySize(string $path): int
+    {
         $size = 0;
         $files = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS)
@@ -211,7 +219,8 @@ class CleanupTempFiles extends Command {
     /**
      * Supprime récursivement un dossier
      */
-    private function recursiveDelete(string $path): void {
+    private function recursiveDelete(string $path): void
+    {
         if (is_dir($path)) {
             $files = array_diff(scandir($path), ['.', '..']);
             foreach ($files as $file) {
@@ -226,7 +235,8 @@ class CleanupTempFiles extends Command {
     /**
      * Formate une taille en bytes
      */
-    private function formatBytes(int $bytes): string {
+    private function formatBytes(int $bytes): string
+    {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {

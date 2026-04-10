@@ -9,10 +9,12 @@ use Illuminate\Support\Facades\Log;
 
 // Services de synchronisation des relations
 
-class MergeService {
+class MergeService
+{
     private AuditService $auditService;
 
-    public function __construct(AuditService $auditService) {
+    public function __construct(AuditService $auditService)
+    {
         $this->auditService = $auditService;
     }
 
@@ -109,7 +111,8 @@ class MergeService {
     /**
      * Ajoute les données relationnelles au diff pour affichage
      */
-    private function addRelationalDataToDiff(Client $client, array $relationalData, array &$diff): void {
+    private function addRelationalDataToDiff(Client $client, array $relationalData, array &$diff): void
+    {
         // Labels pour les champs relationnels
         $relationalLabels = [
             'client_passifs' => 'Crédits / Passifs',
@@ -152,7 +155,8 @@ class MergeService {
     /**
      * Récupère la valeur actuelle d'un champ relationnel
      */
-    private function getCurrentRelationalValue(Client $client, string $field): mixed {
+    private function getCurrentRelationalValue(Client $client, string $field): mixed
+    {
         return match ($field) {
             'client_passifs' => $client->passifs?->map(fn ($p) => [
                 'type' => $p->type,
@@ -194,7 +198,8 @@ class MergeService {
     /**
      * Formate les données relationnelles pour l'affichage
      */
-    private function formatRelationalForDisplay(mixed $value): string {
+    private function formatRelationalForDisplay(mixed $value): string
+    {
         if (empty($value)) {
             return '(vide)';
         }
@@ -230,7 +235,8 @@ class MergeService {
     /**
      * Extrait les noms de champs d'une donnée relationnelle pour l'affichage.
      */
-    private function extractRelationalFields(mixed $value): array {
+    private function extractRelationalFields(mixed $value): array
+    {
         if (! is_array($value)) {
             return [];
         }
@@ -257,7 +263,8 @@ class MergeService {
     /**
      * Calcule le diff entre les données du client et les données extraites
      */
-    public function calculateDiff(Client $client, array $extractedData): array {
+    public function calculateDiff(Client $client, array $extractedData): array
+    {
         $diff = [];
 
         // Ne traiter que les champs scalaires du client (pas les relations)
@@ -409,7 +416,8 @@ class MergeService {
     /**
      * Applique un changement relationnel via le service approprié
      */
-    private function applyRelationalChange(Client $client, string $field, array $data): void {
+    private function applyRelationalChange(Client $client, string $field, array $data): void
+    {
         Log::info("🔄 [MERGE] Application du champ relationnel: $field", [
             'client_id' => $client->id,
             'data_count' => count($data),
@@ -417,44 +425,44 @@ class MergeService {
 
         switch ($field) {
             case 'client_passifs':
-                $service = new ClientPassifsSyncService();
+                $service = new ClientPassifsSyncService;
                 $service->syncPassifs($client, $data);
                 break;
 
             case 'client_actifs_financiers':
-                $service = new ClientActifsFinanciersSyncService();
+                $service = new ClientActifsFinanciersSyncService;
                 $service->syncActifsFinanciers($client, $data);
                 break;
 
             case 'client_biens_immobiliers':
-                $service = new ClientBiensImmobiliersSyncService();
+                $service = new ClientBiensImmobiliersSyncService;
                 $service->syncBiensImmobiliers($client, $data);
                 break;
 
             case 'client_autres_epargnes':
-                $service = new ClientAutresEpargnesSyncService();
+                $service = new ClientAutresEpargnesSyncService;
                 $service->syncAutresEpargnes($client, $data);
                 break;
 
             case 'client_revenus':
-                $service = new ClientRevenusSyncService();
+                $service = new ClientRevenusSyncService;
                 $service->syncRevenus($client, $data);
                 break;
 
             case 'conjoint':
-                $service = new ConjointSyncService();
+                $service = new ConjointSyncService;
                 $service->syncConjoint($client, $data);
                 break;
 
             case 'enfants':
-                $service = new EnfantSyncService();
+                $service = new EnfantSyncService;
                 $service->syncEnfants($client, $data);
                 break;
 
             case 'bae_prevoyance':
             case 'bae_retraite':
             case 'bae_epargne':
-                $baeService = new BaeService();
+                $baeService = new BaeService;
                 $baeService->syncBaeData($client, [$field => $data]);
                 break;
 
@@ -466,7 +474,8 @@ class MergeService {
     /**
      * Normalise une valeur modifiée par l'utilisateur selon le type attendu.
      */
-    private function normalizeOverrideValue(mixed $override, mixed $baseline): mixed {
+    private function normalizeOverrideValue(mixed $override, mixed $baseline): mixed
+    {
         if (is_string($override)) {
             $trimmed = trim($override);
             if ((is_array($baseline) || is_object($baseline)) && $trimmed !== '') {
@@ -549,7 +558,8 @@ class MergeService {
     /**
      * Vérifie si deux valeurs sont différentes
      */
-    private function valuesAreDifferent($current, $new): bool {
+    private function valuesAreDifferent($current, $new): bool
+    {
         // Si la nouvelle valeur est vide, pas de changement à faire
         if ($this->isEmpty($new)) {
             return false;
@@ -567,7 +577,8 @@ class MergeService {
     /**
      * Vérifie si une valeur est vide
      */
-    private function isEmpty($value): bool {
+    private function isEmpty($value): bool
+    {
         if ($value === null) {
             return true;
         }
@@ -584,7 +595,8 @@ class MergeService {
     /**
      * Normalise une valeur pour la comparaison
      */
-    private function normalizeValue($value) {
+    private function normalizeValue($value)
+    {
         if (is_string($value)) {
             return strtolower(trim($value));
         }
@@ -603,7 +615,8 @@ class MergeService {
     /**
      * Formate une valeur pour l'affichage
      */
-    private function formatForDisplay($value): string {
+    private function formatForDisplay($value): string
+    {
         if ($this->isEmpty($value)) {
             return '(vide)';
         }

@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class QuestionnaireRisqueQuiz extends Model {
+class QuestionnaireRisqueQuiz extends Model
+{
     protected $fillable = [
         'questionnaire_risque_id',
         'volatilite_risque_gain',
@@ -47,7 +48,8 @@ class QuestionnaireRisqueQuiz extends Model {
         'score_quiz' => 'integer',
     ];
 
-    public function questionnaireRisque(): BelongsTo {
+    public function questionnaireRisque(): BelongsTo
+    {
         return $this->belongsTo(QuestionnaireRisque::class);
     }
 }

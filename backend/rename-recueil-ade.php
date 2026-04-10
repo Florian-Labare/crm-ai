@@ -27,7 +27,7 @@ copy($templatePath, $backupPath);
 echo '   Backup créée: '.basename($backupPath)."\n";
 
 // 2. Ouvrir le template
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 if ($zip->open($templatePath) !== true) {
     echo "   ❌ Impossible d'ouvrir le fichier\n";
     exit(1);
@@ -128,7 +128,7 @@ $zip->addFromString('word/document.xml', $xml);
 $zip->close();
 
 // 7. Vérifier les nouvelles variables
-$zip = new ZipArchive();
+$zip = new ZipArchive;
 $zip->open($templatePath);
 $xmlAfter = $zip->getFromName('word/document.xml');
 $zip->close();

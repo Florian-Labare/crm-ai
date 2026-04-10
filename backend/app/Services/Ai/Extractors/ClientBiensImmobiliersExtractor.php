@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des biens immobiliers multiples (résidence principale, secondaire, locatif, etc.)
  * - Retourne un array de biens avec designation, detenteur, forme, valeurs, année
  */
-class ClientBiensImmobiliersExtractor {
+class ClientBiensImmobiliersExtractor
+{
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array {
+    public function extract(string $transcription, array $currentData = []): array
+    {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -46,7 +48,8 @@ class ClientBiensImmobiliersExtractor {
         }
     }
 
-    private function buildPrompt(string $transcription): string {
+    private function buildPrompt(string $transcription): string
+    {
         return <<<PROMPT
 Analyse cette transcription et détecte les BIENS IMMOBILIERS du client.
 
@@ -65,7 +68,8 @@ PROMPT;
      * Logique : Si 2 biens ont une désignation similaire (même type de bien),
      * on les fusionne en gardant toutes les informations disponibles.
      */
-    private function deduplicateBiens(array $biens): array {
+    private function deduplicateBiens(array $biens): array
+    {
         if (count($biens) <= 1) {
             return $biens;
         }
@@ -99,7 +103,8 @@ PROMPT;
      * Normalise la clé d'un bien pour la déduplication
      * Ex: "Studio locatif" et "Studio en location" → "studio_locatif"
      */
-    private function normalizeBienKey(string $designation): string {
+    private function normalizeBienKey(string $designation): string
+    {
         $designation = strtolower($designation);
 
         // Types de biens principaux
@@ -129,7 +134,8 @@ PROMPT;
     /**
      * Fusionne deux biens en gardant les informations les plus complètes
      */
-    private function mergeBienData(array $existing, array $new): array {
+    private function mergeBienData(array $existing, array $new): array
+    {
         $fields = ['designation', 'detenteur', 'forme_propriete', 'valeur_actuelle_estimee', 'annee_acquisition', 'valeur_acquisition'];
 
         foreach ($fields as $field) {
@@ -148,7 +154,8 @@ PROMPT;
         return $existing;
     }
 
-    private function getSystemPrompt(): string {
+    private function getSystemPrompt(): string
+    {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de BIENS IMMOBILIERS clients.
 

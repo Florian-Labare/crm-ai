@@ -6,14 +6,17 @@ use App\Models\Assureur;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class AssureurController extends Controller {
-    public function index(): JsonResponse {
+class AssureurController extends Controller
+{
+    public function index(): JsonResponse
+    {
         $assureurs = Assureur::orderBy('nom')->get(['id', 'nom', 'lien_espace_client']);
 
         return response()->json(['data' => $assureurs]);
     }
 
-    public function updateLien(Request $request, Assureur $assureur): JsonResponse {
+    public function updateLien(Request $request, Assureur $assureur): JsonResponse
+    {
         $request->validate([
             'lien_espace_client' => 'nullable|url|max:500',
         ]);

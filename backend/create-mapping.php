@@ -22,7 +22,8 @@ echo '🔍 Analyse de '.count($allVariables)." variables\n";
 echo '📊 Mapping existant: '.count($existingMapping)." variables\n\n";
 
 // Fonction pour normaliser une chaîne (supprimer accents, espaces, minuscules)
-function normalize($str) {
+function normalize($str)
+{
     $str = mb_strtolower($str);
     $str = str_replace([' ', '-', '_', 'é', 'è', 'ê', 'à', 'â', 'ô', 'î', 'ï', 'ù', 'û', 'ç'],
         ['', '', '', 'e', 'e', 'e', 'a', 'a', 'o', 'i', 'i', 'u', 'u', 'c'], $str);

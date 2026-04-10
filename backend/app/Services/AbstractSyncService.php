@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
  * Classe de base pour synchroniser des entités à partir de données d'analyse IA.
  * Exemple : ClientSyncService, ProspectSyncService, InteractionSyncService...
  */
-abstract class AbstractSyncService {
+abstract class AbstractSyncService
+{
     /**
      * Retourne le nom de la classe du modèle Eloquent.
      * Exemple : return Client::class;
@@ -24,7 +25,8 @@ abstract class AbstractSyncService {
     /**
      * Synchronise (création ou mise à jour) une entité à partir d'un tableau de données.
      */
-    public function findOrCreate(array $data): Model {
+    public function findOrCreate(array $data): Model
+    {
         $modelClass = $this->getModelClass();
 
         // 1️⃣ Normalisation
@@ -46,7 +48,8 @@ abstract class AbstractSyncService {
     /**
      * Recherche une entité existante en fonction des champs de correspondance.
      */
-    protected function findExisting(array $data): ?Model {
+    protected function findExisting(array $data): ?Model
+    {
         $modelClass = $this->getModelClass();
         $matchFields = $this->getMatchFields();
 
@@ -65,7 +68,8 @@ abstract class AbstractSyncService {
      * Normalise les données pour éviter les incohérences
      * (espaces inutiles, casse, formatage...).
      */
-    protected function normalizeData(array $data): array {
+    protected function normalizeData(array $data): array
+    {
         return collect($data)
             ->map(function ($value) {
                 if (is_string($value)) {

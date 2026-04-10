@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class AudioRecordController extends Controller {
+class AudioRecordController extends Controller
+{
     public function __construct(
         private readonly AuditService $auditService
     ) {}
@@ -18,7 +19,8 @@ class AudioRecordController extends Controller {
     /**
      * Lister tous les enregistrements audio de la team (avec client associé)
      */
-    public function index(): JsonResponse {
+    public function index(): JsonResponse
+    {
         // La team scope filtre automatiquement par team_id
         $records = AudioRecord::with('client:id,nom,prenom')
             ->orderByDesc('created_at')
@@ -30,7 +32,8 @@ class AudioRecordController extends Controller {
     /**
      * Voir le détail d'un enregistrement audio
      */
-    public function show(int $id): JsonResponse {
+    public function show(int $id): JsonResponse
+    {
         $record = AudioRecord::with('client')->findOrFail($id);
 
         // Vérifier l'autorisation via la policy
@@ -43,7 +46,8 @@ class AudioRecordController extends Controller {
      * Supprimer un enregistrement audio (et le fichier associé)
      * Inclut la suppression en cascade des logs de diarisation
      */
-    public function destroy(int $id): JsonResponse {
+    public function destroy(int $id): JsonResponse
+    {
         $record = AudioRecord::findOrFail($id);
 
         // Vérifier l'autorisation via la policy
@@ -82,7 +86,8 @@ class AudioRecordController extends Controller {
     /**
      * Nettoie les fichiers temporaires associés à un enregistrement
      */
-    private function cleanupTempFiles(AudioRecord $record): void {
+    private function cleanupTempFiles(AudioRecord $record): void
+    {
         $tempDir = storage_path('app/temp');
 
         // Supprimer les fichiers de diarisation temporaires

@@ -6,11 +6,13 @@ use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-class TeamSeeder extends Seeder {
+class TeamSeeder extends Seeder
+{
     /**
      * Seed the teams table with a default team.
      */
-    public function run(): void {
+    public function run(): void
+    {
         // Créer une équipe par défaut si elle n'existe pas
         $team = Team::firstOrCreate(
             ['id' => 1],

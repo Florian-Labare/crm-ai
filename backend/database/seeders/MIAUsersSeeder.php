@@ -8,13 +8,15 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
-class MIAUsersSeeder extends Seeder {
+class MIAUsersSeeder extends Seeder
+{
     /**
      * Run the database seeder.
      * Crée des utilisateurs avec le rôle MIA (Chargé de clientèle)
      * pour peupler les selects de prise de rendez-vous et génération DER
      */
-    public function run(): void {
+    public function run(): void
+    {
         // Créer le rôle MIA s'il n'existe pas
         $miaRole = Role::firstOrCreate(['name' => 'MIA']);
 

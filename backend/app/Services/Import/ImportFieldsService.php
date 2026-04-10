@@ -17,7 +17,8 @@ use App\Models\Entreprise;
 use App\Models\QuestionnaireRisque;
 use App\Models\SanteSouhait;
 
-class ImportFieldsService {
+class ImportFieldsService
+{
     /**
      * Configuration des tables liées au client avec leurs métadonnées
      */
@@ -319,12 +320,13 @@ class ImportFieldsService {
     /**
      * Récupère tous les champs mappables groupés par table
      */
-    public function getAllMappableFields(): array {
+    public function getAllMappableFields(): array
+    {
         $result = [];
 
         foreach (self::TABLE_CONFIG as $tableName => $config) {
             $modelClass = $config['model'];
-            $model = new $modelClass();
+            $model = new $modelClass;
             $fillable = $model->getFillable();
 
             // Filtrer les champs exclus
@@ -370,7 +372,8 @@ class ImportFieldsService {
     /**
      * Récupère une liste plate de tous les champs pour un select
      */
-    public function getFlatFieldsList(): array {
+    public function getFlatFieldsList(): array
+    {
         $allFields = $this->getAllMappableFields();
         $flatList = [];
 
@@ -395,7 +398,8 @@ class ImportFieldsService {
     /**
      * Récupère les champs groupés pour un select avec optgroup
      */
-    public function getGroupedFieldsForSelect(): array {
+    public function getGroupedFieldsForSelect(): array
+    {
         $allFields = $this->getAllMappableFields();
         $grouped = [];
 
@@ -421,7 +425,8 @@ class ImportFieldsService {
     /**
      * Récupère le label français d'un champ
      */
-    private function getFieldLabel(string $field): string {
+    private function getFieldLabel(string $field): string
+    {
         if (isset(self::FIELD_LABELS[$field])) {
             return self::FIELD_LABELS[$field];
         }
@@ -433,7 +438,8 @@ class ImportFieldsService {
     /**
      * Génère la clé complète pour un champ
      */
-    private function getFullKey(string $tableName, string $field, array $config): string {
+    private function getFullKey(string $tableName, string $field, array $config): string
+    {
         if ($tableName === 'client') {
             return $field;
         }
@@ -451,9 +457,10 @@ class ImportFieldsService {
     /**
      * Parse une clé de mapping pour retrouver table, champ et index
      */
-    public function parseFieldKey(string $fullKey): ?array {
+    public function parseFieldKey(string $fullKey): ?array
+    {
         // Client direct (pas de préfixe)
-        $clientModel = new Client();
+        $clientModel = new Client;
         if (in_array($fullKey, $clientModel->getFillable())) {
             return [
                 'table' => 'client',
@@ -498,14 +505,16 @@ class ImportFieldsService {
     /**
      * Récupère la configuration d'une table
      */
-    public function getTableConfig(string $tableName): ?array {
+    public function getTableConfig(string $tableName): ?array
+    {
         return self::TABLE_CONFIG[$tableName] ?? null;
     }
 
     /**
      * Récupère toutes les configurations de tables
      */
-    public function getAllTableConfigs(): array {
+    public function getAllTableConfigs(): array
+    {
         return self::TABLE_CONFIG;
     }
 }
