@@ -5,10 +5,10 @@
  * (sans connexion BDD)
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 echo "🔍 VÉRIFICATION DE LA CONFORMITÉ DES VARIABLES DES TEMPLATES\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 // =============================================================================
 // ÉTAPE 1: Définir manuellement les colonnes de chaque table (d'après les migrations)
@@ -112,17 +112,17 @@ $dbColumns = [
 
 echo "✅ Schéma de base de données chargé\n";
 foreach ($dbColumns as $table => $columns) {
-    echo "   - {$table}: " . count($columns) . " colonnes\n";
+    echo "   - {$table}: ".count($columns)." colonnes\n";
 }
 
-echo "\n" . str_repeat("-", 80) . "\n\n";
+echo "\n".str_repeat('-', 80)."\n\n";
 
 // =============================================================================
 // ÉTAPE 2: Extraire toutes les variables des templates
 // =============================================================================
 
-$templatesDir = __DIR__ . '/storage/app/templates';
-$templates = glob($templatesDir . '/*.docx');
+$templatesDir = __DIR__.'/storage/app/templates';
+$templates = glob($templatesDir.'/*.docx');
 
 $allTemplateVariables = [];
 
@@ -138,16 +138,18 @@ foreach ($templates as $templatePath) {
 
     try {
         $zip = new ZipArchive();
-        if ($zip->open($templatePath) !== TRUE) {
+        if ($zip->open($templatePath) !== true) {
             echo "   ❌ Impossible d'ouvrir le fichier\n";
+
             continue;
         }
 
         $xml = $zip->getFromName('word/document.xml');
         $zip->close();
 
-        if (!$xml) {
+        if (! $xml) {
             echo "   ❌ Impossible de lire document.xml\n";
+
             continue;
         }
 
@@ -159,25 +161,25 @@ foreach ($templates as $templatePath) {
         preg_match_all('/\{\{([^}]+)\}\}/', $fullText, $varMatches);
         $variables = array_unique($varMatches[1]);
         $variables = array_map('trim', $variables);
-        $variables = array_filter($variables, fn($v) => !empty($v));
+        $variables = array_filter($variables, fn ($v) => ! empty($v));
 
         $allTemplateVariables[$templateName] = $variables;
 
-        echo "   Variables détectées: " . count($variables) . "\n";
+        echo '   Variables détectées: '.count($variables)."\n";
 
     } catch (\Exception $e) {
-        echo "   ❌ Erreur: " . $e->getMessage() . "\n";
+        echo '   ❌ Erreur: '.$e->getMessage()."\n";
     }
 }
 
-echo "\n" . str_repeat("-", 80) . "\n\n";
+echo "\n".str_repeat('-', 80)."\n\n";
 
 // =============================================================================
 // ÉTAPE 3: Vérifier la conformité de chaque variable
 // =============================================================================
 
 echo "🔍 VÉRIFICATION DE LA CONFORMITÉ\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 $totalVariables = 0;
 $validVariables = 0;
@@ -187,7 +189,7 @@ $issues = [];
 
 foreach ($allTemplateVariables as $templateName => $variables) {
     echo "📄 Template: {$templateName}\n";
-    echo str_repeat("-", 80) . "\n";
+    echo str_repeat('-', 80)."\n";
 
     $templateIssues = 0;
 
@@ -199,6 +201,7 @@ foreach ($allTemplateVariables as $templateName => $variables) {
             // echo "   🔵 {$variable} (computed) ✅\n";
             $computedVariables++;
             $validVariables++;
+
             continue;
         }
 
@@ -209,7 +212,7 @@ foreach ($allTemplateVariables as $templateName => $variables) {
             $column = $parts[3];
 
             // Vérifier si la table existe
-            if (!isset($dbColumns[$table])) {
+            if (! isset($dbColumns[$table])) {
                 echo "   ❌ {$variable} → Table '{$table}' introuvable\n";
                 $invalidVariables++;
                 $templateIssues++;
@@ -219,6 +222,7 @@ foreach ($allTemplateVariables as $templateName => $variables) {
                     'issue' => "Table '{$table}' n'existe pas",
                     'type' => 'table_not_found',
                 ];
+
                 continue;
             }
 
@@ -227,11 +231,12 @@ foreach ($allTemplateVariables as $templateName => $variables) {
                 // echo "   🔵 {$variable} (computed) ✅\n";
                 $computedVariables++;
                 $validVariables++;
+
                 continue;
             }
 
             // Vérifier si la colonne existe
-            if (!in_array($column, $dbColumns[$table])) {
+            if (! in_array($column, $dbColumns[$table])) {
                 echo "   ❌ {$variable} → Colonne '{$column}' introuvable dans '{$table}'\n";
                 $invalidVariables++;
                 $templateIssues++;
@@ -243,6 +248,7 @@ foreach ($allTemplateVariables as $templateName => $variables) {
                     'table' => $table,
                     'column' => $column,
                 ];
+
                 continue;
             }
 
@@ -258,7 +264,7 @@ foreach ($allTemplateVariables as $templateName => $variables) {
             $issues[] = [
                 'template' => $templateName,
                 'variable' => $variable,
-                'issue' => "Format invalide (attendu: table.colonne ou table[index].colonne)",
+                'issue' => 'Format invalide (attendu: table.colonne ou table[index].colonne)',
                 'type' => 'invalid_format',
             ];
         }
@@ -277,9 +283,9 @@ foreach ($allTemplateVariables as $templateName => $variables) {
 // ÉTAPE 4: Résumé
 // =============================================================================
 
-echo str_repeat("=", 80) . "\n";
+echo str_repeat('=', 80)."\n";
 echo "📊 RÉSUMÉ\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 echo "Total de variables analysées: {$totalVariables}\n";
 echo "  ✅ Variables valides: {$validVariables}\n";
@@ -293,16 +299,16 @@ echo "\n📈 Taux de conformité: {$successRate}%\n";
 $issuesByType = [];
 foreach ($issues as $issue) {
     $type = $issue['type'];
-    if (!isset($issuesByType[$type])) {
+    if (! isset($issuesByType[$type])) {
         $issuesByType[$type] = [];
     }
     $issuesByType[$type][] = $issue;
 }
 
-if (!empty($issues)) {
-    echo "\n" . str_repeat("=", 80) . "\n";
+if (! empty($issues)) {
+    echo "\n".str_repeat('=', 80)."\n";
     echo "🚨 PROBLÈMES DÉTECTÉS ({$invalidVariables} au total)\n";
-    echo str_repeat("=", 80) . "\n\n";
+    echo str_repeat('=', 80)."\n\n";
 
     // Colonnes manquantes par table
     $missingColumns = [];
@@ -310,20 +316,20 @@ if (!empty($issues)) {
         if ($issue['type'] === 'column_not_found') {
             $table = $issue['table'];
             $column = $issue['column'];
-            if (!isset($missingColumns[$table])) {
+            if (! isset($missingColumns[$table])) {
                 $missingColumns[$table] = [];
             }
-            if (!in_array($column, $missingColumns[$table])) {
+            if (! in_array($column, $missingColumns[$table])) {
                 $missingColumns[$table][] = $column;
             }
         }
     }
 
-    if (!empty($missingColumns)) {
+    if (! empty($missingColumns)) {
         echo "📋 Colonnes manquantes par table:\n";
-        echo str_repeat("-", 80) . "\n";
+        echo str_repeat('-', 80)."\n";
         foreach ($missingColumns as $table => $columns) {
-            echo "\n❌ Table '{$table}' - " . count($columns) . " colonne(s) manquante(s):\n";
+            echo "\n❌ Table '{$table}' - ".count($columns)." colonne(s) manquante(s):\n";
             foreach ($columns as $column) {
                 echo "   - {$column}\n";
             }
@@ -333,8 +339,8 @@ if (!empty($issues)) {
 
     // Variables au format invalide
     if (isset($issuesByType['invalid_format'])) {
-        echo "\n⚠️  Variables au format invalide (" . count($issuesByType['invalid_format']) . "):\n";
-        echo str_repeat("-", 80) . "\n";
+        echo "\n⚠️  Variables au format invalide (".count($issuesByType['invalid_format'])."):\n";
+        echo str_repeat('-', 80)."\n";
         foreach ($issuesByType['invalid_format'] as $issue) {
             echo "   - {{$issue['variable']}} dans {$issue['template']}\n";
         }
@@ -344,5 +350,5 @@ if (!empty($issues)) {
     echo "\n✅ Aucun problème détecté ! Tous les templates sont 100% conformes.\n";
 }
 
-echo "\n" . str_repeat("=", 80) . "\n";
+echo "\n".str_repeat('=', 80)."\n";
 echo "🏁 Vérification terminée.\n";

@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClientActifFinancier extends Model
-{
+class ClientActifFinancier extends Model {
     protected $table = 'client_actifs_financiers';
 
     protected $fillable = [
@@ -23,8 +22,7 @@ class ClientActifFinancier extends Model
         'valeur_actuelle' => 'decimal:2',
     ];
 
-    public function client(): BelongsTo
-    {
+    public function client(): BelongsTo {
         return $this->belongsTo(Client::class);
     }
 }

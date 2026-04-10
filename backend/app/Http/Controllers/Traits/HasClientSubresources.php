@@ -12,8 +12,7 @@ use Illuminate\Http\Request;
  * Utilisé par ClientController pour éliminer la duplication
  * des blocs store/update/delete identiques.
  */
-trait HasClientSubresources
-{
+trait HasClientSubresources {
     /**
      * Crée un item dans une relation HasMany du client.
      */
@@ -26,6 +25,7 @@ trait HasClientSubresources
         $this->authorize('update', $client);
         $validated = $request->validate($rules);
         $item = $client->{$relation}()->create($validated);
+
         return response()->json($item, 201);
     }
 
@@ -43,6 +43,7 @@ trait HasClientSubresources
         $item = $client->{$relation}()->findOrFail($itemId);
         $validated = $request->validate($rules);
         $item->update($validated);
+
         return response()->json($item);
     }
 
@@ -57,6 +58,7 @@ trait HasClientSubresources
         $this->authorize('update', $client);
         $item = $client->{$relation}()->findOrFail($itemId);
         $item->delete();
+
         return response()->json(null, 204);
     }
 
@@ -77,25 +79,27 @@ trait HasClientSubresources
         }
 
         $validated = $request->validate($rules);
-        $existing  = $client->{$relation};
+        $existing = $client->{$relation};
 
         if ($existing) {
             $existing->update($validated);
+
             return response()->json($existing);
         }
 
         $validated['client_id'] = $client->id;
         $item = $client->{$relation}()->create($validated);
+
         return response()->json($item, 201);
     }
 
     /**
      * Supprime un singleton HasOne du client.
      */
-    protected function deleteSingleton(Client $client, string $relation): JsonResponse
-    {
+    protected function deleteSingleton(Client $client, string $relation): JsonResponse {
         $this->authorize('update', $client);
         $client->{$relation}?->delete();
+
         return response()->json(null, 204);
     }
 }

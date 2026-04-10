@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\AudioRecord;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Service de diarisation audio avec pyannote
@@ -12,26 +11,23 @@ use Illuminate\Support\Facades\Storage;
  * Identifie automatiquement le courtier et le client dans un enregistrement
  * et extrait uniquement les segments du client pour transcription
  */
-class DiarizationService
-{
+class DiarizationService {
     private ?DiarizationMonitoringService $monitoringService = null;
 
-    public function __construct(?DiarizationMonitoringService $monitoringService = null)
-    {
+    public function __construct(?DiarizationMonitoringService $monitoringService = null) {
         $this->monitoringService = $monitoringService ?? app(DiarizationMonitoringService::class);
     }
 
     /**
      * Effectue la diarisation d'un fichier audio
      *
-     * @param string $audioPath Chemin complet vers le fichier audio
+     * @param  string  $audioPath  Chemin complet vers le fichier audio
      * @return array{success: bool, client_segments: array, stats: array, error?: string}
      */
     /**
      * Vérifie si pyannote est disponible et fonctionnel
      */
-    public function isAvailable(): bool
-    {
+    public function isAvailable(): bool {
         static $available = null;
 
         if ($available !== null) {
@@ -42,9 +38,9 @@ class DiarizationService
         exec('python3 -c "import pyannote.audio" 2>&1', $output, $returnCode);
         $available = ($returnCode === 0);
 
-        if (!$available) {
+        if (! $available) {
             Log::warning('[DIARIZATION] Pyannote non disponible - diarisation désactivée', [
-                'output' => implode("\n", $output)
+                'output' => implode("\n", $output),
             ]);
         }
 
@@ -54,12 +50,10 @@ class DiarizationService
     /**
      * Effectue la diarisation avec monitoring et stockage des résultats
      *
-     * @param string $audioPath Chemin vers le fichier audio
-     * @param array $context Contexte optionnel (audio_record_id, team_id, user_id, etc.)
-     * @return array
+     * @param  string  $audioPath  Chemin vers le fichier audio
+     * @param  array  $context  Contexte optionnel (audio_record_id, team_id, user_id, etc.)
      */
-    public function diarizeWithMonitoring(string $audioPath, array $context = []): array
-    {
+    public function diarizeWithMonitoring(string $audioPath, array $context = []): array {
         $startTime = microtime(true);
         $fileSize = file_exists($audioPath) ? filesize($audioPath) : null;
 
@@ -111,48 +105,48 @@ class DiarizationService
     /**
      * Met à jour un AudioRecord avec les résultats de diarisation
      */
-    public function updateAudioRecordWithDiarization(AudioRecord $audioRecord, array $diarizationResult): void
-    {
+    public function updateAudioRecordWithDiarization(AudioRecord $audioRecord, array $diarizationResult): void {
         $audioRecord->update([
             'diarization_data' => $diarizationResult,
             'diarization_success' => $diarizationResult['success'] ?? false,
         ]);
     }
 
-    public function diarize(string $audioPath): array
-    {
+    public function diarize(string $audioPath): array {
         // Vérifier si pyannote est disponible
-        if (!$this->isAvailable()) {
+        if (! $this->isAvailable()) {
             Log::info('[DIARIZATION] Pyannote non disponible - fallback sur transcription complète');
+
             return [
                 'success' => false,
                 'client_segments' => [],
                 'error' => 'Pyannote non disponible',
-                'fallback' => true
+                'fallback' => true,
             ];
         }
 
-        if (!file_exists($audioPath)) {
+        if (! file_exists($audioPath)) {
             Log::error('[DIARIZATION] Fichier audio introuvable', ['path' => $audioPath]);
+
             return [
                 'success' => false,
                 'client_segments' => [],
-                'error' => 'Fichier audio introuvable'
+                'error' => 'Fichier audio introuvable',
             ];
         }
 
         Log::info('🎙️ [DIARIZATION] Début de la diarisation', [
             'audio_path' => $audioPath,
-            'file_size' => filesize($audioPath)
+            'file_size' => filesize($audioPath),
         ]);
 
         try {
             // Créer un fichier temporaire pour les résultats JSON
-            $outputJson = storage_path('app/temp/diarization_' . bin2hex(random_bytes(8)) . '.json');
+            $outputJson = storage_path('app/temp/diarization_'.bin2hex(random_bytes(8)).'.json');
 
             // Créer le dossier temp s'il n'existe pas
             $tempDir = storage_path('app/temp');
-            if (!is_dir($tempDir)) {
+            if (! is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
 
@@ -178,20 +172,20 @@ class DiarizationService
                 'PATH' => $_SERVER['PATH'] ?? '/usr/local/bin:/usr/bin:/bin',
             ]);
             // Nettoyer les variables qui ne sont pas des strings
-            $processEnv = array_filter($processEnv, fn($v) => is_string($v));
+            $processEnv = array_filter($processEnv, fn ($v) => is_string($v));
 
             // Exécuter la diarisation avec timeout (5 minutes max)
             $timeout = 300; // 5 minutes
             $descriptors = [
                 0 => ['pipe', 'r'],
                 1 => ['pipe', 'w'],
-                2 => ['pipe', 'w']
+                2 => ['pipe', 'w'],
             ];
 
             // SECURITE: Passer l'environnement via le 5ème paramètre de proc_open
             $process = proc_open($command, $descriptors, $pipes, null, $processEnv);
 
-            if (!is_resource($process)) {
+            if (! is_resource($process)) {
                 throw new \Exception('Impossible de démarrer le processus de diarisation');
             }
 
@@ -208,7 +202,7 @@ class DiarizationService
             while (true) {
                 $status = proc_get_status($process);
 
-                if (!$status['running']) {
+                if (! $status['running']) {
                     break;
                 }
 
@@ -219,10 +213,11 @@ class DiarizationService
                     proc_close($process);
 
                     Log::error('[DIARIZATION] Timeout dépassé', ['timeout' => $timeout]);
+
                     return [
                         'success' => false,
                         'client_segments' => [],
-                        'error' => "Timeout de diarisation dépassé ({$timeout}s)"
+                        'error' => "Timeout de diarisation dépassé ({$timeout}s)",
                     ];
                 }
 
@@ -231,23 +226,23 @@ class DiarizationService
 
             $stdout = stream_get_contents($pipes[1]);
             $stderr = stream_get_contents($pipes[2]);
-            $output = array_filter(explode("\n", $stdout . $stderr));
+            $output = array_filter(explode("\n", $stdout.$stderr));
 
             fclose($pipes[1]);
             fclose($pipes[2]);
             $returnCode = proc_close($process);
 
             // Lire les résultats
-            if (!file_exists($outputJson)) {
+            if (! file_exists($outputJson)) {
                 Log::error('[DIARIZATION] Fichier de résultats non créé', [
                     'output' => implode("\n", $output),
-                    'return_code' => $returnCode
+                    'return_code' => $returnCode,
                 ]);
 
                 return [
                     'success' => false,
                     'client_segments' => [],
-                    'error' => 'Échec de la diarisation: ' . implode("\n", $output)
+                    'error' => 'Échec de la diarisation: '.implode("\n", $output),
                 ];
             }
 
@@ -256,9 +251,9 @@ class DiarizationService
             // Nettoyer le fichier temporaire
             @unlink($outputJson);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 Log::error('[DIARIZATION] Échec de la diarisation', [
-                    'error' => $result['error'] ?? 'Erreur inconnue'
+                    'error' => $result['error'] ?? 'Erreur inconnue',
                 ]);
 
                 return $result;
@@ -268,7 +263,7 @@ class DiarizationService
                 'total_speakers' => $result['total_speakers'] ?? 'N/A',
                 'client_segments' => count($result['client_segments']),
                 'client_duration' => $result['stats']['client_duration'] ?? 0,
-                'courtier_duration' => $result['stats']['courtier_duration'] ?? 0
+                'courtier_duration' => $result['stats']['courtier_duration'] ?? 0,
             ]);
 
             return $result;
@@ -276,13 +271,13 @@ class DiarizationService
         } catch (\Exception $e) {
             Log::error('[DIARIZATION] Exception', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
                 'client_segments' => [],
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -290,19 +285,18 @@ class DiarizationService
     /**
      * Extrait les segments audio du client depuis un fichier audio
      *
-     * @param string $audioPath Chemin vers l'audio complet
-     * @param array $segments Segments du client avec start/end timestamps
+     * @param  string  $audioPath  Chemin vers l'audio complet
+     * @param  array  $segments  Segments du client avec start/end timestamps
      * @return string|null Chemin vers le fichier audio contenant uniquement les segments du client
      */
-    public function extractClientAudio(string $audioPath, array $segments): ?string
-    {
+    public function extractClientAudio(string $audioPath, array $segments): ?string {
         if (empty($segments)) {
             return null;
         }
 
         try {
             // Créer un fichier de sortie temporaire
-            $outputPath = storage_path('app/temp/client_audio_' . uniqid() . '.wav');
+            $outputPath = storage_path('app/temp/client_audio_'.uniqid().'.wav');
 
             // Construire la commande ffmpeg pour extraire et concaténer les segments
             $filterComplex = [];
@@ -315,7 +309,7 @@ class DiarizationService
                 $concatInputs[] = "[a{$i}]";
             }
 
-            $filterComplex[] = implode('', $concatInputs) . 'concat=n=' . count($segments) . ':v=0:a=1[out]';
+            $filterComplex[] = implode('', $concatInputs).'concat=n='.count($segments).':v=0:a=1[out]';
             $filterComplexStr = implode(';', $filterComplex);
 
             $command = sprintf(
@@ -327,25 +321,27 @@ class DiarizationService
 
             exec($command, $output, $returnCode);
 
-            if ($returnCode !== 0 || !file_exists($outputPath)) {
+            if ($returnCode !== 0 || ! file_exists($outputPath)) {
                 Log::error('[DIARIZATION] Échec extraction audio client', [
                     'command' => $command,
-                    'output' => implode("\n", $output)
+                    'output' => implode("\n", $output),
                 ]);
+
                 return null;
             }
 
             Log::info('✅ [DIARIZATION] Audio client extrait', [
                 'output_path' => $outputPath,
-                'file_size' => filesize($outputPath)
+                'file_size' => filesize($outputPath),
             ]);
 
             return $outputPath;
 
         } catch (\Exception $e) {
             Log::error('[DIARIZATION] Exception lors de l\'extraction audio', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -353,8 +349,7 @@ class DiarizationService
     /**
      * Nettoie les fichiers temporaires
      */
-    public function cleanup(string $audioPath): void
-    {
+    public function cleanup(string $audioPath): void {
         if (file_exists($audioPath) && strpos($audioPath, '/temp/') !== false) {
             @unlink($audioPath);
             Log::info('🗑️ [DIARIZATION] Fichier temporaire supprimé', ['path' => $audioPath]);

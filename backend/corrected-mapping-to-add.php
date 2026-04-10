@@ -10,34 +10,34 @@ return [
     // On mappe vers les champs niveau_* existants au lieu de créer des souhaite_*
     'AnalyseImagerie' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_analyses_imagerie ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_analyses_imagerie ? 'Oui' : 'Non',
     ],
     'AuxiliairesMédicaux' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_auxiliaires_medicaux ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_auxiliaires_medicaux ? 'Oui' : 'Non',
     ],
     'Dentaire' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_dentaire ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_dentaire ? 'Oui' : 'Non',
     ],
     'Hospitalisation' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_hospitalisation ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_hospitalisation ? 'Oui' : 'Non',
     ],
     'MédecinGénéralisteetspécialiste' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_medecin_generaliste ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_medecin_generaliste ? 'Oui' : 'Non',
     ],
     'autresprotheses' => ['source' => 'sante_souhait', 'field' => 'souhaite_autres_protheses', 'format' => 'boolean'],
     'curesthermales' => ['source' => 'sante_souhait', 'field' => 'souhaite_cures_thermales', 'format' => 'boolean'],
     'medecinedouce' => ['source' => 'sante_souhait', 'field' => 'souhaite_medecine_douce', 'format' => 'boolean'],
     'optiquelentilles' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_optique ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_optique ? 'Oui' : 'Non',
     ],
     'protheseauditive' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_protheses_auditives ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_protheses_auditives ? 'Oui' : 'Non',
     ],
     'protectionjuridique' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique', 'format' => 'boolean'],
     'protectionjuridiqueconjoint' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique_conjoint', 'format' => 'boolean'],
@@ -49,9 +49,10 @@ return [
     'Leclientdispose-t-ilduneépargnedisponible(liquide)' => [
         'source' => 'computed',
         'computed' => function ($client) {
-            if (!$client->baeEpargne || !$client->baeEpargne->montant_epargne_disponible) {
+            if (! $client->baeEpargne || ! $client->baeEpargne->montant_epargne_disponible) {
                 return 'Non';
             }
+
             return $client->baeEpargne->montant_epargne_disponible > 0 ? 'Oui' : 'Non';
         },
     ],
@@ -59,11 +60,11 @@ return [
     // === PROFIL DE RISQUE - Mapping vers questionnaire_risque_financiers ===
     'Latoléranceaurisqueduclientest' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->tolerance_risque ?? 'Non défini',
+        'computed' => fn ($client) => $client->questionnaireRisque?->questionnaireFinancier?->tolerance_risque ?? 'Non défini',
     ],
     'Pourcentagemaxperte' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->pourcentage_perte_max ?? '',
+        'computed' => fn ($client) => $client->questionnaireRisque?->questionnaireFinancier?->pourcentage_perte_max ?? '',
     ],
     'Votrehorizond\'investissement' => [
         'source' => 'questionnaire_financier',
@@ -121,15 +122,15 @@ return [
     'genre' => ['source' => 'client', 'field' => 'genre', 'format' => 'enum'],
     'SOCOGEAvousindique' => [
         'source' => 'computed',
-        'computed' => fn($client) => 'SOCOGEA vous indique',
+        'computed' => fn ($client) => 'SOCOGEA vous indique',
     ],
     'SOCOGEAvousindiqueque' => [
         'source' => 'computed',
-        'computed' => fn($client) => 'SOCOGEA vous indique que',
+        'computed' => fn ($client) => 'SOCOGEA vous indique que',
     ],
     'Leprésentrapportrépond' => [
         'source' => 'computed',
-        'computed' => fn($client) => 'Le présent rapport répond',
+        'computed' => fn ($client) => 'Le présent rapport répond',
     ],
 
     // === CONJOINT ===

@@ -12,17 +12,16 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-class DeduplicateClients extends Command
-{
+class DeduplicateClients extends Command {
     protected $signature = 'clients:deduplicate {--merge : Fusionner automatiquement les doublons détectés}';
 
     protected $description = 'Détecte (et optionnellement fusionne) les doublons clients par utilisateur.';
 
-    public function handle(): int
-    {
+    public function handle(): int {
         $clients = Client::with(['conjoint', 'enfants', 'santeSouhait'])->get();
         if ($clients->isEmpty()) {
             $this->info('Aucun client enregistré.');
+
             return self::SUCCESS;
         }
 
@@ -30,6 +29,7 @@ class DeduplicateClients extends Command
 
         if ($duplicates->isEmpty()) {
             $this->info('Aucun doublon détecté 🎉');
+
             return self::SUCCESS;
         }
 
@@ -46,7 +46,7 @@ class DeduplicateClients extends Command
             }
         }
 
-        if (!$merge) {
+        if (! $merge) {
             $this->line('');
             $this->comment('Ajoutez --merge pour fusionner automatiquement les doublons.');
         }
@@ -54,8 +54,7 @@ class DeduplicateClients extends Command
         return self::SUCCESS;
     }
 
-    private function detectDuplicates(Collection $clients): Collection
-    {
+    private function detectDuplicates(Collection $clients): Collection {
         $groups = collect();
 
         $clients->groupBy(function (Client $client) {
@@ -63,10 +62,11 @@ class DeduplicateClients extends Command
                 $client->user_id,
                 $this->normalize($client->email),
             ];
+
             return implode('|', $keyParts);
         })->each(function (Collection $group) use ($groups) {
-            if ($group->filter(fn (Client $c) => !empty($c->email))->count() > 1) {
-                $groups->push($group->filter(fn (Client $c) => !empty($c->email)));
+            if ($group->filter(fn (Client $c) => ! empty($c->email))->count() > 1) {
+                $groups->push($group->filter(fn (Client $c) => ! empty($c->email)));
             }
         });
 
@@ -75,10 +75,11 @@ class DeduplicateClients extends Command
                 $client->user_id,
                 $this->normalizePhone($client->telephone),
             ];
+
             return implode('|', $keyParts);
         })->each(function (Collection $group) use ($groups) {
-            if ($group->filter(fn (Client $c) => !empty($this->normalizePhone($c->telephone)))->count() > 1) {
-                $groups->push($group->filter(fn (Client $c) => !empty($this->normalizePhone($c->telephone))));
+            if ($group->filter(fn (Client $c) => ! empty($this->normalizePhone($c->telephone)))->count() > 1) {
+                $groups->push($group->filter(fn (Client $c) => ! empty($this->normalizePhone($c->telephone))));
             }
         });
 
@@ -100,12 +101,12 @@ class DeduplicateClients extends Command
         });
     }
 
-    private function formatGroupSummary(Collection $group): string
-    {
+    private function formatGroupSummary(Collection $group): string {
         $first = $group->first();
         $ids = $group->pluck('id')->implode(', ');
+
         return sprintf(
-            "User #%d • %s %s • %d doublon(s) [IDs: %s]",
+            'User #%d • %s %s • %d doublon(s) [IDs: %s]',
             $first->user_id,
             $first->prenom,
             $first->nom,
@@ -114,8 +115,7 @@ class DeduplicateClients extends Command
         );
     }
 
-    private function mergeGroup(Collection $group): void
-    {
+    private function mergeGroup(Collection $group): void {
         $master = $group->sortBy('created_at')->first();
         $duplicates = $group->where('id', '!=', $master->id);
 
@@ -124,8 +124,7 @@ class DeduplicateClients extends Command
         }
     }
 
-    private function mergeClient(Client $master, Client $duplicate): void
-    {
+    private function mergeClient(Client $master, Client $duplicate): void {
         foreach ($master->getFillable() as $field) {
             if (blank($master->{$field}) && filled($duplicate->{$field})) {
                 $master->{$field} = $duplicate->{$field};
@@ -144,17 +143,16 @@ class DeduplicateClients extends Command
         $this->info(sprintf('→ Fusion du client #%d dans #%d effectuée', $duplicate->id, $master->id));
     }
 
-    private function normalize(?string $value): ?string
-    {
+    private function normalize(?string $value): ?string {
         if (empty($value)) {
             return null;
         }
         $normalized = Str::ascii(Str::lower(trim($value)));
+
         return $normalized === '' ? null : $normalized;
     }
 
-    private function normalizePhone(?string $value): ?string
-    {
+    private function normalizePhone(?string $value): ?string {
         if (empty($value)) {
             return null;
         }
@@ -165,7 +163,7 @@ class DeduplicateClients extends Command
         }
 
         if (str_starts_with($digits, '33') && strlen($digits) === 11) {
-            $digits = '0' . substr($digits, 2);
+            $digits = '0'.substr($digits, 2);
         }
 
         return $digits;

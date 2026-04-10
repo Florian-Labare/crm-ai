@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class MeetingSummary extends Model
-{
+class MeetingSummary extends Model {
     protected $fillable = [
         'client_id',
         'audio_record_id',
@@ -19,18 +18,15 @@ class MeetingSummary extends Model
         'summary_json' => 'array',
     ];
 
-    public function client(): BelongsTo
-    {
+    public function client(): BelongsTo {
         return $this->belongsTo(Client::class);
     }
 
-    public function audioRecord(): BelongsTo
-    {
+    public function audioRecord(): BelongsTo {
         return $this->belongsTo(AudioRecord::class);
     }
 
-    public function author(): BelongsTo
-    {
+    public function author(): BelongsTo {
         return $this->belongsTo(User::class, 'created_by');
     }
 }

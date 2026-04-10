@@ -10,18 +10,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class DatabaseConnectionController extends Controller
-{
+class DatabaseConnectionController extends Controller {
     public function __construct(
         private DatabaseConnectorService $connector
-    ) {
-    }
+    ) {}
 
     /**
      * List database connections for the team
      */
-    public function index(Request $request): JsonResponse
-    {
+    public function index(Request $request): JsonResponse {
         $teamId = $request->user()->currentTeam()?->id;
 
         $connections = DatabaseConnection::forTeam($teamId)
@@ -54,8 +51,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Get available drivers
      */
-    public function drivers(): JsonResponse
-    {
+    public function drivers(): JsonResponse {
         return response()->json([
             'success' => true,
             'data' => DatabaseConnection::getAvailableDrivers(),
@@ -65,8 +61,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Create a new database connection
      */
-    public function store(Request $request): JsonResponse
-    {
+    public function store(Request $request): JsonResponse {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'driver' => ['required', Rule::in($this->connector->getSupportedDrivers())],
@@ -93,7 +88,7 @@ class DatabaseConnectionController extends Controller
         ]);
 
         // Set password separately (uses encryption)
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $connection->password = $validated['password'];
             $connection->save();
         }
@@ -108,8 +103,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Get a specific connection
      */
-    public function show(DatabaseConnection $databaseConnection): JsonResponse
-    {
+    public function show(DatabaseConnection $databaseConnection): JsonResponse {
         return response()->json([
             'success' => true,
             'data' => [
@@ -131,8 +125,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Update a database connection
      */
-    public function update(Request $request, DatabaseConnection $databaseConnection): JsonResponse
-    {
+    public function update(Request $request, DatabaseConnection $databaseConnection): JsonResponse {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'driver' => ['sometimes', Rule::in($this->connector->getSupportedDrivers())],
@@ -164,8 +157,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Delete a database connection
      */
-    public function destroy(DatabaseConnection $databaseConnection): JsonResponse
-    {
+    public function destroy(DatabaseConnection $databaseConnection): JsonResponse {
         // Check if connection is used by any import sessions
         $usedCount = ImportSession::where('database_connection_id', $databaseConnection->id)->count();
         if ($usedCount > 0) {
@@ -186,8 +178,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Test a database connection
      */
-    public function test(Request $request, ?DatabaseConnection $databaseConnection = null): JsonResponse
-    {
+    public function test(Request $request, ?DatabaseConnection $databaseConnection = null): JsonResponse {
         // If testing a saved connection
         if ($databaseConnection) {
             $config = $databaseConnection->getConnectionConfig();
@@ -227,8 +218,7 @@ class DatabaseConnectionController extends Controller
     /**
      * List tables in a database connection
      */
-    public function tables(DatabaseConnection $databaseConnection): JsonResponse
-    {
+    public function tables(DatabaseConnection $databaseConnection): JsonResponse {
         try {
             $tables = $this->connector->listTables($databaseConnection->getConnectionConfig());
 
@@ -239,7 +229,7 @@ class DatabaseConnectionController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des tables: ' . $e->getMessage(),
+                'message' => 'Erreur lors de la récupération des tables: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -247,10 +237,9 @@ class DatabaseConnectionController extends Controller
     /**
      * Get columns for a specific table
      */
-    public function columns(DatabaseConnection $databaseConnection, string $table): JsonResponse
-    {
+    public function columns(DatabaseConnection $databaseConnection, string $table): JsonResponse {
         // Validate table name early (also validated inside getTableColumns, but explicit here for a clean 422)
-        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+        if (! preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Nom de table invalide',
@@ -270,7 +259,7 @@ class DatabaseConnectionController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des colonnes: ' . $e->getMessage(),
+                'message' => 'Erreur lors de la récupération des colonnes: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -278,8 +267,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Preview data from a table
      */
-    public function preview(Request $request, DatabaseConnection $databaseConnection): JsonResponse
-    {
+    public function preview(Request $request, DatabaseConnection $databaseConnection): JsonResponse {
         $validated = $request->validate([
             'table' => 'required_without:query|string|max:255',
             'query' => 'required_without:table|string|max:5000',
@@ -287,7 +275,7 @@ class DatabaseConnectionController extends Controller
         ]);
 
         try {
-            if (!empty($validated['table'])) {
+            if (! empty($validated['table'])) {
                 $data = $this->connector->getSampleData(
                     $databaseConnection->getConnectionConfig(),
                     $validated['table'],
@@ -311,13 +299,13 @@ class DatabaseConnectionController extends Controller
                 'data' => [
                     'rows' => $data,
                     'total_count' => $rowCount,
-                    'columns' => !empty($data) ? array_keys($data[0]) : [],
+                    'columns' => ! empty($data) ? array_keys($data[0]) : [],
                 ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la prévisualisation: ' . $e->getMessage(),
+                'message' => 'Erreur lors de la prévisualisation: '.$e->getMessage(),
             ], 422);
         }
     }
@@ -325,8 +313,7 @@ class DatabaseConnectionController extends Controller
     /**
      * Create an import session from a database connection
      */
-    public function createImportSession(Request $request, DatabaseConnection $databaseConnection): JsonResponse
-    {
+    public function createImportSession(Request $request, DatabaseConnection $databaseConnection): JsonResponse {
         $validated = $request->validate([
             'table' => 'required_without:query|string|max:255',
             'query' => 'required_without:table|string|max:5000',
@@ -335,7 +322,7 @@ class DatabaseConnectionController extends Controller
 
         try {
             // Get row count
-            if (!empty($validated['table'])) {
+            if (! empty($validated['table'])) {
                 $rowCount = $this->connector->getTableRowCount(
                     $databaseConnection->getConnectionConfig(),
                     $validated['table']
@@ -344,7 +331,7 @@ class DatabaseConnectionController extends Controller
             } else {
                 // For custom queries, we'll count during processing
                 $rowCount = 0;
-                $sourceName = "Requête personnalisée";
+                $sourceName = 'Requête personnalisée';
             }
 
             $session = ImportSession::create([
@@ -370,7 +357,7 @@ class DatabaseConnectionController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création de la session: ' . $e->getMessage(),
+                'message' => 'Erreur lors de la création de la session: '.$e->getMessage(),
             ], 422);
         }
     }

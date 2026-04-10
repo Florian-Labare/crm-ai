@@ -16,8 +16,7 @@ use Illuminate\Queue\SerializesModels;
  *
  * Email envoyé au prospect avec le Document d'Entrée en Relation en pièce jointe
  */
-class DerMail extends Mailable
-{
+class DerMail extends Mailable {
     use Queueable, SerializesModels;
 
     /**
@@ -32,18 +31,16 @@ class DerMail extends Mailable
     /**
      * Get the message envelope.
      */
-    public function envelope(): Envelope
-    {
+    public function envelope(): Envelope {
         return new Envelope(
-            subject: 'Votre Document d\'Entrée en Relation - ' . $this->client->prenom . ' ' . strtoupper($this->client->nom),
+            subject: 'Votre Document d\'Entrée en Relation - '.$this->client->prenom.' '.strtoupper($this->client->nom),
         );
     }
 
     /**
      * Get the message content definition.
      */
-    public function content(): Content
-    {
+    public function content(): Content {
         return new Content(
             view: 'emails.der',
             with: [
@@ -56,11 +53,10 @@ class DerMail extends Mailable
     /**
      * Get the attachments for the message.
      */
-    public function attachments(): array
-    {
+    public function attachments(): array {
         return [
             Attachment::fromPath($this->derFilePath)
-                ->as('DER_' . $this->client->nom . '_' . $this->client->prenom . '.docx')
+                ->as('DER_'.$this->client->nom.'_'.$this->client->prenom.'.docx')
                 ->withMime('application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
         ];
     }

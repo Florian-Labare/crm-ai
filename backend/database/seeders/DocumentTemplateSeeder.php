@@ -3,16 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\DocumentTemplate;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class DocumentTemplateSeeder extends Seeder
-{
+class DocumentTemplateSeeder extends Seeder {
     /**
      * Run the database seeds.
      */
-    public function run(): void
-    {
+    public function run(): void {
         // Utiliser updateOrCreate pour éviter les doublons
         DocumentTemplate::updateOrCreate(
             ['file_path' => 'templates/recueil-global-pp-2025.docx'],

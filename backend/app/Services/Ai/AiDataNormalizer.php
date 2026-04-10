@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Service de normalisation des données extraites par l'IA.
- * 
+ *
  * Centralise toutes les règles de normalisation :
  * - Dates, téléphones, emails, codes postaux
  * - Booléens (détection négations/affirmations orales)
@@ -15,22 +15,20 @@ use Illuminate\Support\Facades\Log;
  * - Adresse → code_postal + ville
  * - besoins / besoins_action (logique corrigée)
  */
-class AiDataNormalizer
-{
+class AiDataNormalizer {
     /**
      * Normalise les données extraites par l'IA.
      *
-     * @param array $data Données brutes extraites
-     * @param string $transcription Transcription originale pour corrections contextuelles
+     * @param  array  $data  Données brutes extraites
+     * @param  string  $transcription  Transcription originale pour corrections contextuelles
      * @return array Données normalisées
      */
-    public function normalize(array $data, string $transcription): array
-    {
+    public function normalize(array $data, string $transcription): array {
         // 🗺️ Mapping des anciens noms vers les nouveaux
         $data = $this->mapLegacyFieldNames($data);
 
         // 🔧 Correction email incomplet
-        if (isset($data['email']) && !empty($data['email']) && !str_contains($data['email'], '@')) {
+        if (isset($data['email']) && ! empty($data['email']) && ! str_contains($data['email'], '@')) {
             Log::warning('⚠️ Email incomplet détecté (pas de @)', ['email' => $data['email']]);
             $fixedEmail = $this->tryFixIncompleteEmail($transcription, $data['email']);
             if ($fixedEmail) {
@@ -42,23 +40,23 @@ class AiDataNormalizer
         // 📅 Normalisation des dates
         $dateFields = ['date_naissance', 'date_situation_matrimoniale', 'date_evenement_professionnel'];
         foreach ($dateFields as $field) {
-            if (isset($data[$field]) && !empty($data[$field])) {
+            if (isset($data[$field]) && ! empty($data[$field])) {
                 $data[$field] = $this->normalizeDateToISO($data[$field]);
             }
         }
 
         // 📞 Normalisation du téléphone
-        if (isset($data['telephone']) && !empty($data['telephone'])) {
+        if (isset($data['telephone']) && ! empty($data['telephone'])) {
             $data['telephone'] = $this->normalizePhone($data['telephone']);
         }
 
         // 📧 Normalisation de l'email
-        if (isset($data['email']) && !empty($data['email'])) {
+        if (isset($data['email']) && ! empty($data['email'])) {
             $data['email'] = $this->normalizeEmail($data['email']);
         }
 
         // 📮 Normalisation du code postal
-        if (isset($data['code_postal']) && !empty($data['code_postal'])) {
+        if (isset($data['code_postal']) && ! empty($data['code_postal'])) {
             $data['code_postal'] = $this->normalizePostalCode($data['code_postal']);
         }
 
@@ -108,7 +106,7 @@ class AiDataNormalizer
 
         // 🛡️ GARDE-FOU : Cohérence activités sportives
         // Si details_activites_sportives est rempli → activites_sportives DOIT être true
-        if (!empty($data['details_activites_sportives']) || !empty($data['niveau_activites_sportives'])) {
+        if (! empty($data['details_activites_sportives']) || ! empty($data['niveau_activites_sportives'])) {
             if (empty($data['activites_sportives']) || $data['activites_sportives'] === false) {
                 Log::info('🏃 [SPORTS GARDE-FOU] Correction incohérence: details remplis mais boolean false → forcé à true');
                 $data['activites_sportives'] = true;
@@ -139,8 +137,7 @@ class AiDataNormalizer
     /**
      * Mapping des anciens noms de champs vers les nouveaux.
      */
-    private function mapLegacyFieldNames(array $data): array
-    {
+    private function mapLegacyFieldNames(array $data): array {
         $fieldMapping = [
             'datedenaissance' => 'date_naissance',
             'lieudenaissance' => 'lieu_naissance',
@@ -150,7 +147,7 @@ class AiDataNormalizer
         ];
 
         foreach ($fieldMapping as $oldName => $newName) {
-            if (isset($data[$oldName]) && !isset($data[$newName])) {
+            if (isset($data[$oldName]) && ! isset($data[$newName])) {
                 $data[$newName] = $data[$oldName];
                 unset($data[$oldName]);
             }
@@ -160,7 +157,7 @@ class AiDataNormalizer
         if (isset($data['enfants'])) {
             if (is_numeric($data['enfants'])) {
                 // Ancien système: enfants est un nombre → convertir en nombre_enfants
-                if (!isset($data['nombre_enfants'])) {
+                if (! isset($data['nombre_enfants'])) {
                     $data['nombre_enfants'] = (int) $data['enfants'];
                 }
                 unset($data['enfants']);
@@ -217,8 +214,7 @@ class AiDataNormalizer
     /**
      * Normalise une date vers le format ISO (YYYY-MM-DD).
      */
-    private function normalizeDateToISO(string $date): ?string
-    {
+    private function normalizeDateToISO(string $date): ?string {
         try {
             $date = trim($date);
             if ($date === '') {
@@ -243,10 +239,12 @@ class AiDataNormalizer
             // Tentative avec Carbon (formats et mois FR)
             $normalizedDate = $this->normalizeFrenchDateString($date);
             $carbonDate = \Carbon\Carbon::parse($normalizedDate);
+
             return $carbonDate->format('Y-m-d');
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser la date', ['date' => $date, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -254,8 +252,7 @@ class AiDataNormalizer
     /**
      * Normalise une date avec mois français vers une chaîne parsable par Carbon.
      */
-    private function normalizeFrenchDateString(string $date): string
-    {
+    private function normalizeFrenchDateString(string $date): string {
         $normalized = mb_strtolower($date, 'UTF-8');
         $normalized = preg_replace('/\b1er\b/u', '1', $normalized);
 
@@ -282,7 +279,7 @@ class AiDataNormalizer
         ];
 
         foreach ($monthMap as $fr => $en) {
-            $normalized = preg_replace('/\b' . $fr . '\b/', $en, $normalized);
+            $normalized = preg_replace('/\b'.$fr.'\b/', $en, $normalized);
         }
 
         return $normalized;
@@ -291,8 +288,7 @@ class AiDataNormalizer
     /**
      * Normalise un numéro de téléphone.
      */
-    private function normalizePhone(string $phone): ?string
-    {
+    private function normalizePhone(string $phone): ?string {
         try {
             // Supprimer espaces, points, tirets, parenthèses
             $normalized = preg_replace('/[\s.\-()]/', '', $phone);
@@ -306,10 +302,12 @@ class AiDataNormalizer
             }
 
             Log::warning('Format de téléphone invalide', ['phone' => $phone]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser le téléphone', ['phone' => $phone, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -317,8 +315,7 @@ class AiDataNormalizer
     /**
      * Normalise une adresse email.
      */
-    private function normalizeEmail(string $email): ?string
-    {
+    private function normalizeEmail(string $email): ?string {
         try {
             $normalized = trim($email);
             $normalized = strtolower($normalized);
@@ -328,10 +325,12 @@ class AiDataNormalizer
             }
 
             Log::warning('Format email invalide', ['email' => $email]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser l\'email', ['email' => $email, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -339,8 +338,7 @@ class AiDataNormalizer
     /**
      * Normalise un code postal français.
      */
-    private function normalizePostalCode(string $postalCode): ?string
-    {
+    private function normalizePostalCode(string $postalCode): ?string {
         try {
             $normalized = trim($postalCode);
             $normalized = preg_replace('/[^0-9]/', '', $normalized);
@@ -350,10 +348,12 @@ class AiDataNormalizer
             }
 
             Log::warning('Format code postal invalide', ['code_postal' => $postalCode]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser le code postal', ['code_postal' => $postalCode, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -361,8 +361,7 @@ class AiDataNormalizer
     /**
      * Normalise les entrées booléennes (true/false, oui/non).
      */
-    private function normalizeBoolean(mixed $value): ?bool
-    {
+    private function normalizeBoolean(mixed $value): ?bool {
         if (is_bool($value)) {
             return $value;
         }
@@ -401,29 +400,29 @@ class AiDataNormalizer
     /**
      * Normalise le tableau enfants.
      */
-    private function normalizeEnfants(array $data): array
-    {
+    private function normalizeEnfants(array $data): array {
         Log::info('👶 [ENFANTS] Normalisation du tableau enfants', ['count' => count($data['enfants'])]);
         $normalizedEnfants = [];
 
         foreach ($data['enfants'] as $index => $enfant) {
-            if (!is_array($enfant)) {
+            if (! is_array($enfant)) {
                 Log::warning("👶 [ENFANTS] Enfant #{$index} ignoré (pas un tableau)");
+
                 continue;
             }
 
             Log::info("👶 [ENFANTS] Normalisation enfant #{$index}", ['data' => $enfant]);
             $normalizedEnfant = [];
 
-            if (isset($enfant['nom']) && !empty($enfant['nom'])) {
+            if (isset($enfant['nom']) && ! empty($enfant['nom'])) {
                 $normalizedEnfant['nom'] = trim($enfant['nom']);
             }
 
-            if (isset($enfant['prenom']) && !empty($enfant['prenom'])) {
+            if (isset($enfant['prenom']) && ! empty($enfant['prenom'])) {
                 $normalizedEnfant['prenom'] = trim($enfant['prenom']);
             }
 
-            if (isset($enfant['date_naissance']) && !empty($enfant['date_naissance'])) {
+            if (isset($enfant['date_naissance']) && ! empty($enfant['date_naissance'])) {
                 $normalizedDate = $this->normalizeDateToISO($enfant['date_naissance']);
                 if ($normalizedDate) {
                     $normalizedEnfant['date_naissance'] = $normalizedDate;
@@ -448,10 +447,10 @@ class AiDataNormalizer
             Log::info("👶 [ENFANTS] Enfant #{$index} normalisé", ['normalized' => $normalizedEnfant]);
         }
 
-        if (!empty($normalizedEnfants)) {
+        if (! empty($normalizedEnfants)) {
             $data['enfants'] = $normalizedEnfants;
             // Déduire nombre_enfants si pas déjà défini
-            if (!isset($data['nombre_enfants'])) {
+            if (! isset($data['nombre_enfants'])) {
                 $data['nombre_enfants'] = count($normalizedEnfants);
             }
             Log::info('✅ [ENFANTS] Normalisation terminée', ['count' => count($normalizedEnfants)]);
@@ -466,8 +465,7 @@ class AiDataNormalizer
     /**
      * Applique les négations/affirmations orales détectées dans la transcription.
      */
-    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void
-    {
+    private function applyBooleanNegationsFromTranscript(string $transcription, array &$data): void {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $fieldPatterns = [
@@ -570,14 +568,15 @@ class AiDataNormalizer
             foreach ($patterns['negative'] as $regex) {
                 if (preg_match($regex, $text)) {
                     $data[$field] = false;
+
                     continue 2;
                 }
             }
 
-            if (!empty($patterns['positive'])) {
+            if (! empty($patterns['positive'])) {
                 foreach ($patterns['positive'] as $regex) {
                     if (preg_match($regex, $text)) {
-                        if (!array_key_exists($field, $data) || $data[$field] === null) {
+                        if (! array_key_exists($field, $data) || $data[$field] === null) {
                             $data[$field] = true;
                         }
                         break;
@@ -591,8 +590,7 @@ class AiDataNormalizer
      * Détecte et extrait les activités sportives depuis la transcription.
      * Remplit activites_sportives (boolean) et details_activites_sportives (string).
      */
-    private function detectSportsFromTranscript(string $transcription, array &$data): void
-    {
+    private function detectSportsFromTranscript(string $transcription, array &$data): void {
         $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
 
         // Liste des sports à détecter
@@ -683,18 +681,18 @@ class AiDataNormalizer
 
         // Chercher les sports mentionnés directement
         foreach ($sportsMap as $keyword => $sportName) {
-            $pattern = '/\b' . preg_quote($keyword, '/') . '\b/ui';
-            if (preg_match($pattern, $text) && !in_array($sportName, $detectedSports)) {
+            $pattern = '/\b'.preg_quote($keyword, '/').'\b/ui';
+            if (preg_match($pattern, $text) && ! in_array($sportName, $detectedSports)) {
                 // Vérifier que ce n'est pas dans un contexte négatif
-                $negativePattern = "/(?:pas|plus|jamais|aucun)\s+(?:de\s+)?" . preg_quote($keyword, '/') . "/ui";
-                if (!preg_match($negativePattern, $text)) {
+                $negativePattern = "/(?:pas|plus|jamais|aucun)\s+(?:de\s+)?".preg_quote($keyword, '/').'/ui';
+                if (! preg_match($negativePattern, $text)) {
                     $detectedSports[] = $sportName;
                 }
             }
         }
 
         // Si des sports ont été détectés
-        if (!empty($detectedSports)) {
+        if (! empty($detectedSports)) {
             $uniqueSports = array_unique($detectedSports);
 
             // Mettre activites_sportives à true
@@ -716,8 +714,7 @@ class AiDataNormalizer
     /**
      * Hydrate les champs entreprise depuis la transcription.
      */
-    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void
-    {
+    private function hydrateEnterpriseFieldsFromTranscript(string $transcription, array &$data): void {
         $text = mb_strtolower(str_replace(['’', '‘'], "'", $transcription), 'UTF-8');
 
         $patterns = [
@@ -780,6 +777,7 @@ class AiDataNormalizer
                 if (preg_match($negativeRegex, $text)) {
                     Log::info("🔍 [ENTREPRISE] Pattern négatif trouvé pour $field", ['pattern' => $negativeRegex]);
                     $data[$field] = false;
+
                     continue 2;
                 }
             }
@@ -795,7 +793,7 @@ class AiDataNormalizer
                 }
             }
 
-            if (!$matched) {
+            if (! $matched) {
                 Log::info("❌ [ENTREPRISE] Aucun pattern trouvé pour $field");
             }
         }
@@ -825,7 +823,7 @@ class AiDataNormalizer
             ];
 
             foreach ($statutKeywords as $needle => $label) {
-                $pattern = '/\b' . preg_quote($needle, '/') . '\b/u';
+                $pattern = '/\b'.preg_quote($needle, '/').'\b/u';
                 if (preg_match($pattern, $text)) {
                     $data['statut'] = $label;
                     break;
@@ -837,8 +835,7 @@ class AiDataNormalizer
     /**
      * Hydrate code_postal et ville depuis l'adresse complète.
      */
-    private function hydrateAddressComponents(array &$data): void
-    {
+    private function hydrateAddressComponents(array &$data): void {
         if (empty($data['adresse'])) {
             return;
         }
@@ -853,14 +850,14 @@ class AiDataNormalizer
         if (preg_match_all('/\b(\d{5})\b(?:\s+([A-Za-zÀ-ÖØ-öø-ÿ\'\-\s]+))?/u', $address, $postalMatches, PREG_SET_ORDER)) {
             $match = end($postalMatches);
 
-            if (!empty($match[1]) && (empty($data['code_postal']) || strlen((string) $data['code_postal']) < 5)) {
+            if (! empty($match[1]) && (empty($data['code_postal']) || strlen((string) $data['code_postal']) < 5)) {
                 $normalizedPostal = $this->normalizePostalCode($match[1]);
                 if ($normalizedPostal) {
                     $data['code_postal'] = $normalizedPostal;
                 }
             }
 
-            if (empty($data['ville']) && !empty($match[2])) {
+            if (empty($data['ville']) && ! empty($match[2])) {
                 $cityCandidate = trim(preg_replace('/[^A-Za-zÀ-ÖØ-öø-ÿ\'\-\s]/u', '', $match[2]));
                 if ($cityCandidate !== '') {
                     $data['ville'] = $cityCandidate;
@@ -874,7 +871,7 @@ class AiDataNormalizer
             $lastSegment = trim(end($segments));
             $lastSegment = preg_replace('/^\d{5}\s*/', '', $lastSegment);
 
-            if ($lastSegment !== '' && !preg_match('/\d{3,}/', $lastSegment)) {
+            if ($lastSegment !== '' && ! preg_match('/\d{3,}/', $lastSegment)) {
                 $data['ville'] = $lastSegment;
             }
         }
@@ -883,8 +880,7 @@ class AiDataNormalizer
     /**
      * Tente de corriger un email incomplet en analysant la transcription.
      */
-    private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string
-    {
+    private function tryFixIncompleteEmail(string $transcription, string $incompleteEmail): ?string {
         try {
             $lowerTranscription = mb_strtolower($transcription);
 
@@ -905,6 +901,7 @@ class AiDataNormalizer
 
             if (empty($emailContext)) {
                 Log::warning('❌ Aucun contexte email trouvé dans la transcription');
+
                 return null;
             }
 
@@ -930,10 +927,11 @@ class AiDataNormalizer
                     $local = preg_replace('/[^\w.\-_]/', '', $parts[0]);
                     $domain = preg_replace('/[^\w.\-]/', '', $parts[1]);
 
-                    if (!empty($local) && !empty($domain) && str_contains($domain, '.')) {
-                        $finalEmail = strtolower($local . '@' . $domain);
+                    if (! empty($local) && ! empty($domain) && str_contains($domain, '.')) {
+                        $finalEmail = strtolower($local.'@'.$domain);
                         if (filter_var($finalEmail, FILTER_VALIDATE_EMAIL)) {
                             Log::info('✅ Email nettoyé et validé', ['final' => $finalEmail]);
+
                             return $finalEmail;
                         }
                     }
@@ -941,24 +939,25 @@ class AiDataNormalizer
             }
 
             Log::warning('❌ Impossible de reconstruire un email valide', ['reconstructed' => $reconstructed]);
+
             return null;
 
         } catch (\Throwable $e) {
             Log::error('Erreur lors de la correction d\'email', ['error' => $e->getMessage()]);
+
             return null;
         }
     }
 
     /**
      * Normalise les besoins et besoins_action (LOGIQUE CORRIGÉE).
-     * 
+     *
      * Règles :
      * - Si besoins non vide ET besoins_action absent/invalide → "add"
      * - Si besoins vide/null → besoins_action = null
      * - Jamais "replace" par défaut
      */
-    private function normalizeBesoins(array $data): array
-    {
+    private function normalizeBesoins(array $data): array {
         // S'assurer que besoins est un tableau
         if (isset($data['besoins'])) {
             if (is_string($data['besoins'])) {
@@ -968,7 +967,7 @@ class AiDataNormalizer
                 } else {
                     $data['besoins'] = [$data['besoins']];
                 }
-            } elseif (!is_array($data['besoins'])) {
+            } elseif (! is_array($data['besoins'])) {
                 $data['besoins'] = [];
             }
 
@@ -979,8 +978,10 @@ class AiDataNormalizer
                     if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                         return $decoded;
                     }
+
                     return trim($besoin);
                 }
+
                 return $besoin;
             }, $data['besoins']);
 
@@ -990,6 +991,7 @@ class AiDataNormalizer
                     return array_merge($carry, $item);
                 }
                 $carry[] = $item;
+
                 return $carry;
             }, []);
         } else {
@@ -997,9 +999,9 @@ class AiDataNormalizer
         }
 
         // 🎯 LOGIQUE CORRIGÉE - besoins_action
-        if (isset($data['besoins']) && !empty($data['besoins'])) {
+        if (isset($data['besoins']) && ! empty($data['besoins'])) {
             // Si besoins non vide
-            if (!isset($data['besoins_action']) || !in_array($data['besoins_action'], ['add', 'remove'])) {
+            if (! isset($data['besoins_action']) || ! in_array($data['besoins_action'], ['add', 'remove'])) {
                 // Si action absente ou invalide → forcer "add"
                 Log::info('🔧 [BESOINS] Correction besoins_action → "add"', [
                     'besoins' => $data['besoins'],
@@ -1023,8 +1025,7 @@ class AiDataNormalizer
      * - "activités sportives ?" "oui tout à fait"
      * - "pratiquez-vous une activité sportive ?" "oui"
      */
-    private function detectPositiveSportsResponse(string $transcription): bool
-    {
+    private function detectPositiveSportsResponse(string $transcription): bool {
         $text = mb_strtolower(str_replace(["\u{2019}", "\u{2018}"], "'", $transcription), 'UTF-8');
 
         // Pattern 1: Question sur le sport suivie d'une réponse positive
@@ -1058,17 +1059,18 @@ class AiDataNormalizer
             }
         }
 
-        if (!$hasQuestionAboutSport) {
+        if (! $hasQuestionAboutSport) {
             return false;
         }
 
         // Chercher une réponse positive dans le contexte du sport
         // On vérifie si "oui" apparaît dans les 200 caractères suivant une mention du sport
         foreach ($questionPatterns as $questionPattern) {
-            if (preg_match("/{$questionPattern}.{0,200}(" . implode('|', array_map('preg_quote', $positiveResponses)) . ")/ui", $text)) {
+            if (preg_match("/{$questionPattern}.{0,200}(".implode('|', array_map('preg_quote', $positiveResponses)).')/ui', $text)) {
                 Log::info('🏃 [SPORTS DETECTION] Pattern question+réponse positive trouvé', [
-                    'pattern' => $questionPattern
+                    'pattern' => $questionPattern,
                 ]);
+
                 return true;
             }
         }
@@ -1076,10 +1078,11 @@ class AiDataNormalizer
         // Pattern 2: Réponse positive directe suivie d'une mention de sport
         foreach ($positiveResponses as $response) {
             $escaped = preg_quote($response, '/');
-            if (preg_match("/{$escaped}.{0,100}(" . implode('|', $questionPatterns) . ")/ui", $text)) {
+            if (preg_match("/{$escaped}.{0,100}(".implode('|', $questionPatterns).')/ui', $text)) {
                 Log::info('🏃 [SPORTS DETECTION] Pattern réponse+sport trouvé', [
-                    'response' => $response
+                    'response' => $response,
                 ]);
+
                 return true;
             }
         }

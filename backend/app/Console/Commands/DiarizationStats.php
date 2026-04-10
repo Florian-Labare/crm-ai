@@ -5,8 +5,7 @@ namespace App\Console\Commands;
 use App\Services\DiarizationMonitoringService;
 use Illuminate\Console\Command;
 
-class DiarizationStats extends Command
-{
+class DiarizationStats extends Command {
     /**
      * The name and signature of the console command.
      */
@@ -22,8 +21,7 @@ class DiarizationStats extends Command
     /**
      * Execute the console command.
      */
-    public function handle(DiarizationMonitoringService $monitoringService): int
-    {
+    public function handle(DiarizationMonitoringService $monitoringService): int {
         $days = (int) $this->option('days');
         $json = $this->option('json');
 
@@ -37,6 +35,7 @@ class DiarizationStats extends Command
                 'health_summary' => $healthSummary,
                 'recent_failures' => $recentFailures,
             ], JSON_PRETTY_PRINT));
+
             return Command::SUCCESS;
         }
 
@@ -59,7 +58,7 @@ class DiarizationStats extends Command
 
         // 24h Stats
         $this->newLine();
-        $this->info("Last 24 hours:");
+        $this->info('Last 24 hours:');
         $this->line(sprintf(
             '  Success rate: %s%% (%d/%d)',
             $healthSummary['last_24h']['success_rate'],
@@ -82,28 +81,28 @@ class DiarizationStats extends Command
                 ['Failed', $stats['totals']['failed']],
                 ['Timeouts', $stats['totals']['timeout']],
                 ['Fallbacks', $stats['totals']['fallback']],
-                ['Success rate', $stats['rates']['success_rate'] . '%'],
-                ['Avg duration', round($stats['performance']['avg_success_duration_ms']) . ' ms'],
+                ['Success rate', $stats['rates']['success_rate'].'%'],
+                ['Avg duration', round($stats['performance']['avg_success_duration_ms']).' ms'],
                 ['Avg speakers', $stats['performance']['avg_speakers_detected']],
-                ['Single speaker rate', $stats['rates']['single_speaker_rate'] . '%'],
+                ['Single speaker rate', $stats['rates']['single_speaker_rate'].'%'],
             ]
         );
 
         // Top Errors
-        if (!empty($stats['top_errors'])) {
+        if (! empty($stats['top_errors'])) {
             $this->newLine();
             $this->error('Top errors:');
             $this->table(
                 ['Error', 'Count'],
-                array_map(fn($e) => [
-                    substr($e['error_message'], 0, 60) . (strlen($e['error_message']) > 60 ? '...' : ''),
-                    $e['count']
+                array_map(fn ($e) => [
+                    substr($e['error_message'], 0, 60).(strlen($e['error_message']) > 60 ? '...' : ''),
+                    $e['count'],
                 ], $stats['top_errors'])
             );
         }
 
         // Recent Failures
-        if (!empty($recentFailures)) {
+        if (! empty($recentFailures)) {
             $this->newLine();
             $this->warn('Recent failures:');
             foreach ($recentFailures as $failure) {

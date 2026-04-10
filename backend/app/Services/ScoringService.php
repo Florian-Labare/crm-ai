@@ -5,8 +5,7 @@ namespace App\Services;
 use App\Models\QuestionnaireRisque;
 use Illuminate\Support\Str;
 
-class ScoringService
-{
+class ScoringService {
     private const REPONSES_QUIZ = [
         'volatilite_risque_gain' => 'vrai',
         'instruments_tous_cotes' => 'faux',
@@ -136,8 +135,7 @@ class ScoringService
         ],
     ];
 
-    public function calculerScoreQuiz(array $quiz): int
-    {
+    public function calculerScoreQuiz(array $quiz): int {
         $bonnesReponses = 0;
 
         foreach (self::REPONSES_QUIZ as $question => $bonneReponse) {
@@ -149,8 +147,7 @@ class ScoringService
         return ($bonnesReponses * 100) / count(self::REPONSES_QUIZ);
     }
 
-    public function scorerEtSauvegarder(QuestionnaireRisque $questionnaire, array $data): QuestionnaireRisque
-    {
+    public function scorerEtSauvegarder(QuestionnaireRisque $questionnaire, array $data): QuestionnaireRisque {
         $financier = $data['financier'] ?? [];
         $connaissances = $data['connaissances'] ?? [];
         $quiz = $data['quiz'] ?? [];
@@ -192,8 +189,7 @@ class ScoringService
         return $questionnaire->fresh();
     }
 
-    private function scorerComportemental(array $data): int
-    {
+    private function scorerComportemental(array $data): int {
         $score = 0;
 
         foreach (self::COMPORTEMENT_MAPPINGS as $champ => $valeurs) {
@@ -226,8 +222,7 @@ class ScoringService
         return $score;
     }
 
-    private function scorerConnaissances(array $data): int
-    {
+    private function scorerConnaissances(array $data): int {
         $score = 0;
         $produitsConnus = 0;
 
@@ -255,8 +250,7 @@ class ScoringService
         return (int) round($score);
     }
 
-    private function determinerProfil(int $score): string
-    {
+    private function determinerProfil(int $score): string {
         if ($score < 45) {
             return 'Prudent';
         }
@@ -268,8 +262,7 @@ class ScoringService
         return 'Dynamique';
     }
 
-    private function genererRecommandation(int $score): string
-    {
+    private function genererRecommandation(int $score): string {
         if ($score < 45) {
             $texte = "Votre profil est **Prudent**. Vous privilégiez la sécurité du capital. Nous recommandons des placements à faible volatilité : fonds euros, obligations d'État, livrets réglementés. Diversification limitée sur des supports à risque modéré.";
         } elseif ($score <= 75) {
@@ -281,8 +274,7 @@ class ScoringService
         return Str::ascii($texte);
     }
 
-    private function normaliserScoreComportemental(int $score): int
-    {
+    private function normaliserScoreComportemental(int $score): int {
         $max = 0;
         foreach (self::COMPORTEMENT_MAPPINGS as $valeurs) {
             $max += max($valeurs);

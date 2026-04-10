@@ -4,18 +4,15 @@ namespace App\Services;
 
 use Illuminate\Support\Str;
 
-class DocumentTemplateFieldService
-{
-    public function tableNameForPath(string $filePath): string
-    {
+class DocumentTemplateFieldService {
+    public function tableNameForPath(string $filePath): string {
         $baseName = pathinfo($filePath, PATHINFO_FILENAME);
         $slug = Str::slug($baseName, '_');
 
         return "document_{$slug}_entries";
     }
 
-    public function normalizeVariableToColumn(string $variable): string
-    {
+    public function normalizeVariableToColumn(string $variable): string {
         $normalized = str_replace(['.', '[', ']'], '_', $variable);
         $normalized = preg_replace('/_+/', '_', $normalized);
         $normalized = Str::of($normalized)->lower()->ascii()->toString();
@@ -33,8 +30,7 @@ class DocumentTemplateFieldService
      * @param  string[]  $variables
      * @return array<string, string>
      */
-    public function mapVariablesToColumns(array $variables): array
-    {
+    public function mapVariablesToColumns(array $variables): array {
         $mapping = [];
         $used = [];
 
@@ -44,7 +40,7 @@ class DocumentTemplateFieldService
             $suffix = 2;
 
             while (in_array($column, $used, true)) {
-                $column = $this->limitColumnLength($base . '_' . $suffix, $variable);
+                $column = $this->limitColumnLength($base.'_'.$suffix, $variable);
                 $suffix++;
             }
 
@@ -55,22 +51,20 @@ class DocumentTemplateFieldService
         return $mapping;
     }
 
-    private function limitColumnLength(string $column, string $variable): string
-    {
+    private function limitColumnLength(string $column, string $variable): string {
         $maxLength = 64;
         if (strlen($column) <= $maxLength) {
             return $column;
         }
 
         $hash = substr(sha1($variable), 0, 8);
-        $suffix = '_' . $hash;
+        $suffix = '_'.$hash;
         $trimLength = $maxLength - strlen($suffix);
 
-        return substr($column, 0, $trimLength) . $suffix;
+        return substr($column, 0, $trimLength).$suffix;
     }
 
-    public function labelForVariable(string $variable): string
-    {
+    public function labelForVariable(string $variable): string {
         $label = $variable;
         $suffix = '';
 
@@ -103,14 +97,13 @@ class DocumentTemplateFieldService
         $label = str_replace(['.', '_'], ' ', $label);
         $label = Str::of($label)->replace('  ', ' ')->trim()->title()->toString();
 
-        return $label . $suffix;
+        return $label.$suffix;
     }
 
     /**
      * Parse les variables au format legacy pour extraire le label et le suffixe contextuel
      */
-    private function parseLegacyVariable(string $variable): array
-    {
+    private function parseLegacyVariable(string $variable): array {
         $lower = strtolower($variable);
 
         // Champs spécifiques avec labels clairs
@@ -123,7 +116,8 @@ class DocumentTemplateFieldService
         if (str_ends_with($lower, 'conjoint')) {
             $base = substr($variable, 0, -8);
             $fieldSuffix = $this->getFieldTypeSuffix($base);
-            return ['label' => $base, 'suffix' => $fieldSuffix . ' (conjoint)'];
+
+            return ['label' => $base, 'suffix' => $fieldSuffix.' (conjoint)'];
         }
 
         // Enfants: nomprenomenfant1, datenaissanceenfant11, fiscalcharge1, etc.
@@ -181,19 +175,22 @@ class DocumentTemplateFieldService
         // Nature d'emprunt: natureA, natureB, natureC, etc.
         if (preg_match('/^nature([A-E])$/i', $variable, $m)) {
             $index = ord(strtoupper($m[1])) - ord('A') + 1;
+
             return ['label' => 'Nature', 'suffix' => " (emprunt {$index})"];
         }
         if (preg_match('/^periodicite([A-E])$/i', $variable, $m)) {
             $index = ord(strtoupper($m[1])) - ord('A') + 1;
+
             return ['label' => 'Périodicité', 'suffix' => " (charge {$index})"];
         }
         if (preg_match('/^montant([A-E])$/i', $variable, $m)) {
             $index = ord(strtoupper($m[1])) - ord('A') + 1;
+
             return ['label' => 'Montant', 'suffix' => " (charge {$index})"];
         }
 
         // Questionnaire risque: opcvmdominanteactionoperation, etc.
-        if (preg_match('/operation|opert|real/i', $variable) && !preg_match('/montant/i', $variable)) {
+        if (preg_match('/operation|opert|real/i', $variable) && ! preg_match('/montant/i', $variable)) {
             return ['label' => $variable, 'suffix' => ' - opérations'];
         }
         if (preg_match('/montant.*annuel|montannuel|montaannuel/i', $variable)) {
@@ -206,8 +203,7 @@ class DocumentTemplateFieldService
     /**
      * Retourne un label spécifique pour certaines variables connues
      */
-    private function getSpecificLabel(string $variable): ?array
-    {
+    private function getSpecificLabel(string $variable): ?array {
         $map = [
             // Client - Identité
             'nom' => ['label' => 'Nom', 'suffix' => ''],
@@ -287,8 +283,7 @@ class DocumentTemplateFieldService
     /**
      * Retourne un suffixe de type de champ pour les champs composés
      */
-    private function getFieldTypeSuffix(string $fieldName): string
-    {
+    private function getFieldTypeSuffix(string $fieldName): string {
         $lower = strtolower($fieldName);
 
         if (str_contains($lower, 'datenaissance')) {
@@ -303,7 +298,7 @@ class DocumentTemplateFieldService
         if (str_contains($lower, 'ville')) {
             return ' - ville';
         }
-        if (str_contains($lower, 'adresse') && !str_contains($lower, 'code') && !str_contains($lower, 'ville')) {
+        if (str_contains($lower, 'adresse') && ! str_contains($lower, 'code') && ! str_contains($lower, 'ville')) {
             return ' - adresse';
         }
 

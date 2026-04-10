@@ -10,18 +10,16 @@ use Illuminate\Support\Facades\Log;
  *
  * Retourne un tableau de sections : ["client", "prevoyance", "retraite", "epargne"]
  */
-class RouterService
-{
+class RouterService {
     use LlmClientTrait;
 
     /**
      * Détecte les sections concernées par la transcription.
      *
-     * @param string $transcription Transcription vocale
+     * @param  string  $transcription  Transcription vocale
      * @return array Tableau de sections (ex: ["client", "prevoyance"])
      */
-    public function detectSections(string $transcription): array
-    {
+    public function detectSections(string $transcription): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -32,8 +30,9 @@ class RouterService
                 true
             );
 
-            if (!is_array($data) || !isset($data['sections'])) {
+            if (! is_array($data) || ! isset($data['sections'])) {
                 Log::warning('[RouterService] Format de réponse invalide', ['content' => $data]);
+
                 // Par défaut, considérer que c'est une transcription client
                 return ['client'];
             }
@@ -41,13 +40,13 @@ class RouterService
             $sections = $data['sections'];
 
             // Validation : sections doit être un tableau
-            if (!is_array($sections)) {
+            if (! is_array($sections)) {
                 return ['client'];
             }
 
             // Filtrer les sections invalides
             $validSections = ['client', 'conjoint', 'prevoyance', 'retraite', 'epargne', 'sante', 'emprunteur', 'revenus', 'passifs', 'actifs_financiers', 'biens_immobiliers', 'autres_epargnes'];
-            $sections = array_filter($sections, fn($s) => in_array($s, $validSections));
+            $sections = array_filter($sections, fn ($s) => in_array($s, $validSections));
 
             // Si aucune section détectée, par défaut "client"
             if (empty($sections)) {
@@ -63,13 +62,13 @@ class RouterService
 
         } catch (\Throwable $e) {
             Log::error('[RouterService] Erreur lors de la détection', ['message' => $e->getMessage()]);
+
             // En cas d'erreur, par défaut "client"
             return ['client'];
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détermine quelles sections sont concernées.
 
@@ -90,8 +89,7 @@ PROMPT;
      *
      * Garde-fou pour s'assurer que la section conjoint est détectée même si le LLM ne l'a pas fait.
      */
-    private function forceConjointDetection(string $transcription, array $sections): array
-    {
+    private function forceConjointDetection(string $transcription, array $sections): array {
         // Normaliser la transcription en minuscules pour la détection
         $text = mb_strtolower($transcription, 'UTF-8');
 
@@ -114,7 +112,7 @@ PROMPT;
         foreach ($conjointPatterns as $pattern) {
             if (preg_match($pattern, $text)) {
                 // Ajouter "conjoint" si pas déjà présent
-                if (!in_array('conjoint', $sections)) {
+                if (! in_array('conjoint', $sections)) {
                     $sections[] = 'conjoint';
                     Log::info('🔒 [RouterService] Section "conjoint" forcée par détection de mots-clés', [
                         'pattern_matched' => $pattern,
@@ -127,8 +125,7 @@ PROMPT;
         return $sections;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en routing de conversations pour un CRM d'assurance.
 

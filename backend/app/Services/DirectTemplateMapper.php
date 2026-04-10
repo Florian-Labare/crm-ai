@@ -18,8 +18,7 @@ use Illuminate\Support\Str;
  * - {{enfants[0].prenom}}
  * - {{current_date}}
  */
-class DirectTemplateMapper
-{
+class DirectTemplateMapper {
     /**
      * Mapping des noms de tables vers les relations Eloquent
      */
@@ -79,8 +78,7 @@ class DirectTemplateMapper
     /**
      * Mappe toutes les variables d'un template avec les données du client
      */
-    public function mapVariables(Client $client, array $templateVariables): array
-    {
+    public function mapVariables(Client $client, array $templateVariables): array {
         // Charger toutes les relations nécessaires
         $this->loadRelations($client, $templateVariables);
 
@@ -101,8 +99,7 @@ class DirectTemplateMapper
     /**
      * Charge dynamiquement les relations nécessaires basées sur les variables du template
      */
-    private function loadRelations(Client $client, array $variables): void
-    {
+    private function loadRelations(Client $client, array $variables): void {
         $relationsToLoad = [];
 
         foreach ($variables as $variable) {
@@ -112,14 +109,14 @@ class DirectTemplateMapper
 
                 if (isset(self::TABLE_RELATIONS[$tableName]) && self::TABLE_RELATIONS[$tableName] !== null) {
                     $relation = self::TABLE_RELATIONS[$tableName];
-                    if (!in_array($relation, $relationsToLoad)) {
+                    if (! in_array($relation, $relationsToLoad)) {
                         $relationsToLoad[] = $relation;
                     }
                 }
             }
         }
 
-        if (!empty($relationsToLoad)) {
+        if (! empty($relationsToLoad)) {
             $client->load($relationsToLoad);
         }
     }
@@ -127,8 +124,7 @@ class DirectTemplateMapper
     /**
      * Résout la valeur d'une variable
      */
-    private function resolveVariable(Client $client, string $variable): string
-    {
+    private function resolveVariable(Client $client, string $variable): string {
         if (in_array($variable, ['bae_epargne.actifs_financiers_total', 'actifs_financiers_total'], true)) {
             $computedTotal = $this->computeActifsFinanciersTotal($client);
             if ($computedTotal !== null) {
@@ -160,18 +156,19 @@ class DirectTemplateMapper
 
         // Cas spéciaux - fiscalcharge1, fiscalcharge2, fiscalcharge3 (ancien format)
         if (preg_match('/^fiscalcharge(\d+)$/i', $variable, $matches)) {
-            $index = (int)$matches[1] - 1; // fiscalcharge1 = index 0
+            $index = (int) $matches[1] - 1; // fiscalcharge1 = index 0
             $enfant = $client->enfants->get($index);
             if ($enfant) {
                 return $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
             }
+
             return '';
         }
 
         // Parser la variable au format: table.colonne ou table[index].colonne
         if (preg_match('/^([a-z_]+)(?:\[(\d+)\])?\.(.+)$/i', $variable, $matches)) {
             $tableName = $matches[1];
-            $index = isset($matches[2]) ? (int)$matches[2] : null;
+            $index = isset($matches[2]) ? (int) $matches[2] : null;
             $columnName = $matches[3];
 
             return $this->getValueFromTable($client, $tableName, $columnName, $index);
@@ -179,14 +176,14 @@ class DirectTemplateMapper
 
         // Variable non reconnue
         Log::warning('DirectTemplateMapper: Variable format not recognized', ['variable' => $variable]);
+
         return '';
     }
 
     /**
      * Récupère la valeur depuis une table/relation
      */
-    private function getValueFromTable(Client $client, string $tableName, string $columnName, ?int $index = null): string
-    {
+    private function getValueFromTable(Client $client, string $tableName, string $columnName, ?int $index = null): string {
         // Cas spécial: count des enfants
         if ($tableName === 'enfants' && $columnName === 'count') {
             return (string) $client->enfants->count();
@@ -196,14 +193,16 @@ class DirectTemplateMapper
         if ($tableName === 'enfants' && $columnName === 'full_name') {
             $enfant = $index !== null ? $client->enfants->get($index) : null;
             if ($enfant) {
-                return trim($enfant->prenom . ' ' . $enfant->nom);
+                return trim($enfant->prenom.' '.$enfant->nom);
             }
+
             return '';
         }
 
         // Table principale (clients)
         if ($tableName === 'clients') {
             $value = $client->{$columnName} ?? null;
+
             return $this->formatValue($value, $columnName);
         }
 
@@ -212,6 +211,7 @@ class DirectTemplateMapper
 
         if ($relationName === null) {
             Log::warning('DirectTemplateMapper: Unknown table', ['table' => $tableName]);
+
             return '';
         }
 
@@ -240,8 +240,7 @@ class DirectTemplateMapper
         return $this->formatValue($value, $columnName);
     }
 
-    private function resolveLegacyImmoVariable(Client $client, string $variable): ?string
-    {
+    private function resolveLegacyImmoVariable(Client $client, string $variable): ?string {
         $lower = strtolower($variable);
         $number = null;
         $field = null;
@@ -262,33 +261,32 @@ class DirectTemplateMapper
 
         $client->loadMissing('biensImmobiliers');
         $bien = $client->biensImmobiliers->get($index);
-        if (!$bien) {
+        if (! $bien) {
             return '';
         }
 
-        if (!$field && str_starts_with($lower, 'designation')) {
+        if (! $field && str_starts_with($lower, 'designation')) {
             $field = 'designation';
-        } elseif (!$field && str_starts_with($lower, 'detenteur')) {
+        } elseif (! $field && str_starts_with($lower, 'detenteur')) {
             $field = 'detenteur';
-        } elseif (!$field && (str_contains($lower, 'formedeproprio') || str_contains($lower, 'formeproprio'))) {
+        } elseif (! $field && (str_contains($lower, 'formedeproprio') || str_contains($lower, 'formeproprio'))) {
             $field = 'forme_propriete';
-        } elseif (!$field && (str_contains($lower, 'valeuractuelleestimee') || str_contains($lower, 'valeurestimee'))) {
+        } elseif (! $field && (str_contains($lower, 'valeuractuelleestimee') || str_contains($lower, 'valeurestimee'))) {
             $field = 'valeur_actuelle_estimee';
-        } elseif (!$field && (str_contains($lower, 'anneeacquisition') || str_contains($lower, 'anneeacqusiition'))) {
+        } elseif (! $field && (str_contains($lower, 'anneeacquisition') || str_contains($lower, 'anneeacqusiition'))) {
             $field = 'annee_acquisition';
-        } elseif (!$field && str_contains($lower, 'valeuracquisition')) {
+        } elseif (! $field && str_contains($lower, 'valeuracquisition')) {
             $field = 'valeur_acquisition';
         }
 
-        if (!$field) {
+        if (! $field) {
             return null;
         }
 
         return $this->formatValue($bien->{$field} ?? null, $field);
     }
 
-    private function resolveLegacyFinancierVariable(Client $client, string $variable): ?string
-    {
+    private function resolveLegacyFinancierVariable(Client $client, string $variable): ?string {
         $lower = strtolower($variable);
         $number = null;
 
@@ -308,7 +306,7 @@ class DirectTemplateMapper
         }
 
         $financierItem = $this->getLegacyFinancierItem($client, $index);
-        if (!$financierItem) {
+        if (! $financierItem) {
             return '';
         }
 
@@ -326,7 +324,7 @@ class DirectTemplateMapper
             $field = 'valeur_actuelle';
         }
 
-        if (!$field) {
+        if (! $field) {
             return null;
         }
 
@@ -341,8 +339,7 @@ class DirectTemplateMapper
         return $this->formatValue($financierItem['model']->{$field} ?? null, $field);
     }
 
-    private function getLegacyFinancierItem(Client $client, int $index): ?array
-    {
+    private function getLegacyFinancierItem(Client $client, int $index): ?array {
         $client->loadMissing(['actifsFinanciers', 'autresEpargnes', 'baeEpargne']);
         $items = [];
 
@@ -351,7 +348,7 @@ class DirectTemplateMapper
         }
 
         $cryptoEntries = $this->getBaeEpargneOtherEntries($client, true);
-        if (!empty($cryptoEntries)) {
+        if (! empty($cryptoEntries)) {
             foreach ($cryptoEntries as $entry) {
                 $items[] = ['type' => 'other', 'model' => $entry];
             }
@@ -369,8 +366,7 @@ class DirectTemplateMapper
         return null;
     }
 
-    private function filterCryptoEpargnes(Client $client): \Illuminate\Support\Collection
-    {
+    private function filterCryptoEpargnes(Client $client): \Illuminate\Support\Collection {
         return $client->autresEpargnes
             ->filter(function ($epargne) {
                 return $this->isCryptoDesignation($epargne->designation ?? '');
@@ -378,8 +374,7 @@ class DirectTemplateMapper
             ->values();
     }
 
-    private function isCryptoDesignation(string $designation): bool
-    {
+    private function isCryptoDesignation(string $designation): bool {
         $value = Str::lower($designation);
         $keywords = [
             'crypto', 'cryptomonnaie', 'cryptocurrency', 'bitcoin', 'btc', 'ethereum', 'eth',
@@ -395,8 +390,7 @@ class DirectTemplateMapper
         return false;
     }
 
-    private function formatCryptoFinancierValue($epargne, string $field): string
-    {
+    private function formatCryptoFinancierValue($epargne, string $field): string {
         if ($field === 'nature') {
             return (string) ($epargne->designation ?? '');
         }
@@ -412,8 +406,7 @@ class DirectTemplateMapper
         return '';
     }
 
-    private function formatOtherFinancierValue(array $entry, string $field): string
-    {
+    private function formatOtherFinancierValue(array $entry, string $field): string {
         if ($field === 'nature') {
             return (string) ($entry['designation'] ?? '');
         }
@@ -429,8 +422,7 @@ class DirectTemplateMapper
         return '';
     }
 
-    private function getBaeEpargneOtherEntries(Client $client, bool $onlyCrypto = false): array
-    {
+    private function getBaeEpargneOtherEntries(Client $client, bool $onlyCrypto = false): array {
         $details = $client->baeEpargne?->actifs_autres_details;
         if (is_string($details)) {
             $decoded = json_decode($details, true);
@@ -441,7 +433,7 @@ class DirectTemplateMapper
             }
         }
 
-        if (!is_array($details) || empty($details)) {
+        if (! is_array($details) || empty($details)) {
             return [];
         }
 
@@ -449,7 +441,7 @@ class DirectTemplateMapper
         foreach ($details as $detail) {
             if (is_array($detail)) {
                 $designation = $detail['designation'] ?? ($detail['label'] ?? '');
-                if ($onlyCrypto && !$this->isCryptoDesignation($designation)) {
+                if ($onlyCrypto && ! $this->isCryptoDesignation($designation)) {
                     continue;
                 }
                 $entries[] = [
@@ -457,16 +449,17 @@ class DirectTemplateMapper
                     'valeur' => $detail['valeur'] ?? $this->parseNumericValue($detail['montant'] ?? null),
                     'detenteur' => $detail['detenteur'] ?? null,
                 ];
+
                 continue;
             }
 
-            if (!is_string($detail)) {
+            if (! is_string($detail)) {
                 continue;
             }
 
             $parts = array_map('trim', explode(':', $detail, 2));
             $designation = $parts[0] ?? '';
-            if ($onlyCrypto && !$this->isCryptoDesignation($designation)) {
+            if ($onlyCrypto && ! $this->isCryptoDesignation($designation)) {
                 continue;
             }
             $valeur = isset($parts[1]) ? $this->parseNumericValue($parts[1]) : null;
@@ -481,8 +474,7 @@ class DirectTemplateMapper
         return $entries;
     }
 
-    private function parseNumericValue($value): ?float
-    {
+    private function parseNumericValue($value): ?float {
         if ($value === null) {
             return null;
         }
@@ -504,15 +496,14 @@ class DirectTemplateMapper
             $clean = str_replace(',', '.', $clean);
         }
 
-        if (!is_numeric($clean)) {
+        if (! is_numeric($clean)) {
             return null;
         }
 
         return (float) $clean;
     }
 
-    private function computeActifsFinanciersTotal(Client $client): ?float
-    {
+    private function computeActifsFinanciersTotal(Client $client): ?float {
         $client->loadMissing(['actifsFinanciers', 'autresEpargnes', 'baeEpargne']);
         if ($client->actifsFinanciers->isEmpty()
             && $client->autresEpargnes->isEmpty()
@@ -525,28 +516,28 @@ class DirectTemplateMapper
         $total = 0.0;
 
         foreach ($client->actifsFinanciers as $actif) {
-            if (!is_null($actif->valeur_actuelle)) {
+            if (! is_null($actif->valeur_actuelle)) {
                 $total += (float) $actif->valeur_actuelle;
             }
         }
 
         $cryptoEntries = $this->getBaeEpargneOtherEntries($client, true);
-        if (!empty($cryptoEntries)) {
+        if (! empty($cryptoEntries)) {
             $cryptoSum = 0.0;
             foreach ($cryptoEntries as $entry) {
-                if (!is_null($entry['valeur'] ?? null)) {
+                if (! is_null($entry['valeur'] ?? null)) {
                     $cryptoSum += (float) $entry['valeur'];
                 }
             }
             if ($cryptoSum > 0) {
                 $total += $cryptoSum;
-            } elseif (!is_null($client->baeEpargne?->actifs_autres_total)) {
+            } elseif (! is_null($client->baeEpargne?->actifs_autres_total)) {
                 $total += (float) $client->baeEpargne->actifs_autres_total;
             }
         } else {
             $cryptoEpargnes = $this->filterCryptoEpargnes($client);
             foreach ($cryptoEpargnes as $crypto) {
-                if (!is_null($crypto->valeur)) {
+                if (! is_null($crypto->valeur)) {
                     $total += (float) $crypto->valeur;
                 }
             }
@@ -555,8 +546,7 @@ class DirectTemplateMapper
         return $total > 0 ? $total : null;
     }
 
-    private function computeBiensImmobiliersTotal(Client $client): ?float
-    {
+    private function computeBiensImmobiliersTotal(Client $client): ?float {
         $client->loadMissing('biensImmobiliers');
         if ($client->biensImmobiliers->isEmpty()) {
             return null;
@@ -564,12 +554,13 @@ class DirectTemplateMapper
 
         $total = 0.0;
         foreach ($client->biensImmobiliers as $bien) {
-            if (!is_null($bien->valeur_actuelle_estimee)) {
+            if (! is_null($bien->valeur_actuelle_estimee)) {
                 $total += (float) $bien->valeur_actuelle_estimee;
+
                 continue;
             }
 
-            if (!is_null($bien->valeur_acquisition)) {
+            if (! is_null($bien->valeur_acquisition)) {
                 $total += (float) $bien->valeur_acquisition;
             }
         }
@@ -580,8 +571,7 @@ class DirectTemplateMapper
     /**
      * Formate une valeur selon son type
      */
-    private function formatValue($value, string $columnName): string
-    {
+    private function formatValue($value, string $columnName): string {
         // Si la valeur est null ou vide
         if ($value === null || $value === '') {
             return '';
@@ -619,7 +609,8 @@ class DirectTemplateMapper
             if ($value == 0) {
                 return '';
             }
-            return number_format((float) $value, 2, ',', ' ') . ' €';
+
+            return number_format((float) $value, 2, ',', ' ').' €';
         }
 
         // Formatage des booléens
@@ -634,10 +625,9 @@ class DirectTemplateMapper
     /**
      * Extrait toutes les variables d'un template Word
      */
-    public function extractTemplateVariables(string $templatePath): array
-    {
+    public function extractTemplateVariables(string $templatePath): array {
         $zip = new \ZipArchive();
-        if ($zip->open($templatePath) !== TRUE) {
+        if ($zip->open($templatePath) !== true) {
             throw new \Exception("Cannot open template file: {$templatePath}");
         }
 
@@ -653,7 +643,7 @@ class DirectTemplateMapper
         preg_match_all('/\{\{([^}]+)\}\}/', $fullText, $varMatches);
         $variables = array_unique($varMatches[1]);
         $variables = array_map('trim', $variables);
-        $variables = array_filter($variables, fn($v) => !empty($v));
+        $variables = array_filter($variables, fn ($v) => ! empty($v));
 
         return array_values($variables);
     }
@@ -662,8 +652,7 @@ class DirectTemplateMapper
      * Mappe les variables au format legacy (ancien format sans préfixe de table)
      * Ex: nom, prenom, datenaissance, nomconjoint, etc.
      */
-    public function mapLegacyVariables(Client $client): array
-    {
+    public function mapLegacyVariables(Client $client): array {
         // Charger toutes les relations
         $client->load([
             'conjoint',
@@ -706,12 +695,12 @@ class DirectTemplateMapper
             $enfant = $client->enfants->get($i - 1);
 
             if ($enfant) {
-                $variables["nomprenomenfant{$i}"] = trim(($enfant->prenom ?? '') . ' ' . ($enfant->nom ?? ''));
-                $variables['datenaissanceenfant' . ($i == 1 ? '11' : $i)] = $this->formatDateSafe($enfant->date_naissance);
+                $variables["nomprenomenfant{$i}"] = trim(($enfant->prenom ?? '').' '.($enfant->nom ?? ''));
+                $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = $this->formatDateSafe($enfant->date_naissance);
                 $variables["fiscalcharge{$i}"] = $enfant->fiscalement_a_charge ? 'Oui' : 'Non';
             } else {
                 $variables["nomprenomenfant{$i}"] = '';
-                $variables['datenaissanceenfant' . ($i == 1 ? '11' : $i)] = '';
+                $variables['datenaissanceenfant'.($i == 1 ? '11' : $i)] = '';
                 $variables["fiscalcharge{$i}"] = '';
             }
         }
@@ -777,9 +766,9 @@ class DirectTemplateMapper
         }
 
         // Parents
-        $variables['parents'] = trim(($client->prenom ?? '') . ' ' . ($client->nom ?? ''));
+        $variables['parents'] = trim(($client->prenom ?? '').' '.($client->nom ?? ''));
         if ($conjoint) {
-            $variables['parents'] .= ' et ' . trim(($conjoint->prenom ?? '') . ' ' . ($conjoint->nom ?? ''));
+            $variables['parents'] .= ' et '.trim(($conjoint->prenom ?? '').' '.($conjoint->nom ?? ''));
         }
 
         return $variables;
@@ -788,8 +777,7 @@ class DirectTemplateMapper
     /**
      * Formate une date de façon sécurisée
      */
-    private function formatDateSafe(?string $date): string
-    {
+    private function formatDateSafe(?string $date): string {
         if (empty($date)) {
             return '';
         }
@@ -808,8 +796,7 @@ class DirectTemplateMapper
     /**
      * Retourne les statistiques de mapping
      */
-    public function getMappingStats(Client $client, array $variables): array
-    {
+    public function getMappingStats(Client $client, array $variables): array {
         $total = count($variables);
         $mapped = 0;
         $empty = 0;

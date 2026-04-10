@@ -6,8 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ImportMapping extends Model
-{
+class ImportMapping extends Model {
     protected $fillable = [
         'team_id',
         'name',
@@ -21,13 +20,11 @@ class ImportMapping extends Model
         'default_values' => 'array',
     ];
 
-    public function team(): BelongsTo
-    {
+    public function team(): BelongsTo {
         return $this->belongsTo(Team::class);
     }
 
-    public function sessions(): HasMany
-    {
+    public function sessions(): HasMany {
         return $this->hasMany(ImportSession::class);
     }
 }

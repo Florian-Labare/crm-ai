@@ -6,12 +6,10 @@ use App\Services\Ai\Extractors\RetraiteExtractor;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class RetraiteExtractorTest extends TestCase
-{
+class RetraiteExtractorTest extends TestCase {
     private RetraiteExtractor $extractor;
 
-    protected function setUp(): void
-    {
+    protected function setUp(): void {
         parent::setUp();
         $this->extractor = new RetraiteExtractor();
 
@@ -21,8 +19,7 @@ class RetraiteExtractorTest extends TestCase
         config(['mistral.fallback_to_openai' => false]);
     }
 
-    public function test_detects_retraite_need(): void
-    {
+    public function test_detects_retraite_need(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -33,14 +30,13 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux préparer ma retraite");
+        $data = $this->extractor->extract('Je veux préparer ma retraite');
 
         $this->assertContains('retraite', $data['besoins'] ?? []);
         $this->assertEquals('add', $data['besoins_action'] ?? null);
     }
 
-    public function test_extracts_age_depart(): void
-    {
+    public function test_extracts_age_depart(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -51,13 +47,12 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux partir à la retraite à 62 ans");
+        $data = $this->extractor->extract('Je veux partir à la retraite à 62 ans');
 
         $this->assertEquals(62, $data['bae_retraite']['age_depart_retraite'] ?? null);
     }
 
-    public function test_extracts_pourcentage_revenu(): void
-    {
+    public function test_extracts_pourcentage_revenu(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -68,13 +63,12 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux maintenir 70% de mes revenus à la retraite");
+        $data = $this->extractor->extract('Je veux maintenir 70% de mes revenus à la retraite');
 
         $this->assertEquals(70, $data['bae_retraite']['pourcentage_revenu_a_maintenir'] ?? null);
     }
 
-    public function test_extracts_tmi(): void
-    {
+    public function test_extracts_tmi(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -85,13 +79,12 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon TMI est de 30%");
+        $data = $this->extractor->extract('Mon TMI est de 30%');
 
         $this->assertEquals('30%', $data['bae_retraite']['tmi'] ?? null);
     }
 
-    public function test_extracts_revenus_foyer(): void
-    {
+    public function test_extracts_revenus_foyer(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -102,13 +95,12 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Le revenu foyer est de 80000 euros");
+        $data = $this->extractor->extract('Le revenu foyer est de 80000 euros');
 
         $this->assertEquals(80000, $data['bae_retraite']['revenus_annuels_foyer'] ?? null);
     }
 
-    public function test_extracts_contrat_existant(): void
-    {
+    public function test_extracts_contrat_existant(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -125,8 +117,7 @@ class RetraiteExtractorTest extends TestCase
         $this->assertTrue($data['bae_retraite']['complementaire_retraite_mise_en_place'] ?? false);
     }
 
-    public function test_action_remove_when_negation(): void
-    {
+    public function test_action_remove_when_negation(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -142,8 +133,7 @@ class RetraiteExtractorTest extends TestCase
         $this->assertEquals('remove', $data['besoins_action'] ?? null);
     }
 
-    public function test_returns_empty_when_no_retraite(): void
-    {
+    public function test_returns_empty_when_no_retraite(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -159,13 +149,12 @@ class RetraiteExtractorTest extends TestCase
         $this->assertEquals([], $data);
     }
 
-    public function test_returns_empty_on_api_error(): void
-    {
+    public function test_returns_empty_on_api_error(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
 
-        $data = $this->extractor->extract("Je veux préparer ma retraite");
+        $data = $this->extractor->extract('Je veux préparer ma retraite');
 
         $this->assertEquals([], $data);
     }

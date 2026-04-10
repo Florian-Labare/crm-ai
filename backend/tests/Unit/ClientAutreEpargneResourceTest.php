@@ -8,12 +8,10 @@ use App\Models\ClientAutreEpargne;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ClientAutreEpargneResourceTest extends TestCase
-{
+class ClientAutreEpargneResourceTest extends TestCase {
     use RefreshDatabase;
 
-    public function test_resource_returns_correct_structure(): void
-    {
+    public function test_resource_returns_correct_structure(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -43,8 +41,7 @@ class ClientAutreEpargneResourceTest extends TestCase
         $this->assertEquals(15000.00, $array['valeur']);
     }
 
-    public function test_resource_handles_null_values(): void
-    {
+    public function test_resource_handles_null_values(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -63,8 +60,7 @@ class ClientAutreEpargneResourceTest extends TestCase
         $this->assertNull($array['valeur']);
     }
 
-    public function test_valeur_is_decimal(): void
-    {
+    public function test_valeur_is_decimal(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',

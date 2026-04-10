@@ -12,12 +12,10 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des sources de revenus multiples (salaires, pensions, revenus locatifs, etc.)
  * - Retourne un array de revenus avec nature, periodicite, montant
  */
-class ClientRevenusExtractor
-{
+class ClientRevenusExtractor {
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -28,7 +26,7 @@ class ClientRevenusExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientRevenusExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -43,8 +41,7 @@ class ClientRevenusExtractor
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détecte les REVENUS du client.
 
@@ -57,8 +54,7 @@ Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de REVENUS clients.
 

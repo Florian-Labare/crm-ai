@@ -13,12 +13,10 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des données bae_retraite
  * - TOUJOURS utiliser "add" pour besoins_action (sauf négation explicite)
  */
-class RetraiteExtractor
-{
+class RetraiteExtractor {
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -29,7 +27,7 @@ class RetraiteExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[RetraiteExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -44,8 +42,7 @@ class RetraiteExtractor
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détecte si le client parle de RETRAITE.
 
@@ -58,8 +55,7 @@ Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de besoins RETRAITE.
 

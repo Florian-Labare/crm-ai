@@ -6,12 +6,10 @@ use App\Models\MeetingSummary;
 use App\Services\Ai\Traits\LlmClientTrait;
 use Illuminate\Support\Facades\Log;
 
-class MeetingSummaryService
-{
+class MeetingSummaryService {
     use LlmClientTrait;
 
-    public function generateSummary(string $transcription): array
-    {
+    public function generateSummary(string $transcription): array {
         $systemPrompt = <<<'SYSTEM'
 Tu es un assistant spécialisé en production de comptes-rendus d'entretien client en français.
 
@@ -75,7 +73,7 @@ PROMPT;
                 true
             );
 
-            if (!$summaryJson) {
+            if (! $summaryJson) {
                 return [
                     'summary_text' => null,
                     'summary_json' => null,
@@ -98,8 +96,7 @@ PROMPT;
         }
     }
 
-    public function storeSummary(int $clientId, int $userId, ?int $audioRecordId, array $payload): MeetingSummary
-    {
+    public function storeSummary(int $clientId, int $userId, ?int $audioRecordId, array $payload): MeetingSummary {
         $data = [
             'client_id' => $clientId,
             'created_by' => $userId,
@@ -117,10 +114,9 @@ PROMPT;
         );
     }
 
-    private function formatSummaryText(array $summaryJson): string
-    {
+    private function formatSummaryText(array $summaryJson): string {
         $parts = [];
-        if (!empty($summaryJson['overview'])) {
+        if (! empty($summaryJson['overview'])) {
             $parts[] = $summaryJson['overview'];
         }
 
@@ -128,15 +124,15 @@ PROMPT;
         foreach ($chronology as $phase) {
             $phaseTitle = $phase['phase'] ?? null;
             if ($phaseTitle) {
-                $parts[] = $phaseTitle . ':';
+                $parts[] = $phaseTitle.':';
             }
             foreach ($phase['topics'] ?? [] as $topic) {
                 $topicTitle = $topic['title'] ?? null;
                 if ($topicTitle) {
-                    $parts[] = '- ' . $topicTitle;
+                    $parts[] = '- '.$topicTitle;
                 }
                 foreach ($topic['details'] ?? [] as $detail) {
-                    $parts[] = '  • ' . $detail;
+                    $parts[] = '  • '.$detail;
                 }
             }
         }

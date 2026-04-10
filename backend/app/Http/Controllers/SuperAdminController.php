@@ -7,17 +7,14 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class SuperAdminController extends Controller
-{
-    private function authorizeSuperAdmin(): void
-    {
-        if (!auth()->user()->isSuperAdmin()) {
+class SuperAdminController extends Controller {
+    private function authorizeSuperAdmin(): void {
+        if (! auth()->user()->isSuperAdmin()) {
             abort(403, 'Super admin access required.');
         }
     }
 
-    public function index(): JsonResponse
-    {
+    public function index(): JsonResponse {
         $this->authorizeSuperAdmin();
 
         $users = User::withCount('teams')->get()->map(function (User $user) {
@@ -34,8 +31,7 @@ class SuperAdminController extends Controller
         return response()->json(['users' => $users]);
     }
 
-    public function toggleSuperAdmin(User $user): JsonResponse
-    {
+    public function toggleSuperAdmin(User $user): JsonResponse {
         $this->authorizeSuperAdmin();
 
         // Prevent removing own super admin status
@@ -43,7 +39,7 @@ class SuperAdminController extends Controller
             abort(400, 'Cannot remove your own super admin status.');
         }
 
-        $user->update(['is_super_admin' => !$user->is_super_admin]);
+        $user->update(['is_super_admin' => ! $user->is_super_admin]);
 
         return response()->json([
             'message' => 'Super admin status updated.',
@@ -51,8 +47,7 @@ class SuperAdminController extends Controller
         ]);
     }
 
-    public function allTeams(): JsonResponse
-    {
+    public function allTeams(): JsonResponse {
         $this->authorizeSuperAdmin();
 
         $teams = Team::with('owner')->withCount('users')->get()->map(function (Team $team) {
@@ -73,8 +68,7 @@ class SuperAdminController extends Controller
         return response()->json(['teams' => $teams]);
     }
 
-    public function deleteTeam(Team $team): JsonResponse
-    {
+    public function deleteTeam(Team $team): JsonResponse {
         $this->authorizeSuperAdmin();
 
         if ($team->personal_team) {
@@ -86,8 +80,7 @@ class SuperAdminController extends Controller
         return response()->json(null, 204);
     }
 
-    public function createTeam(Request $request): JsonResponse
-    {
+    public function createTeam(Request $request): JsonResponse {
         $this->authorizeSuperAdmin();
 
         $request->validate([

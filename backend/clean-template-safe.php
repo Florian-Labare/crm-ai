@@ -5,13 +5,13 @@
  * Reconstruit les variables fragmentées sans en perdre
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 $templateName = $argv[1] ?? 'Template Mandat.docx';
-$templatePath = __DIR__ . '/storage/app/templates/' . $templateName;
+$templatePath = __DIR__.'/storage/app/templates/'.$templateName;
 
-if (!file_exists($templatePath)) {
-    die("❌ Template non trouvé\n");
+if (! file_exists($templatePath)) {
+    exit("❌ Template non trouvé\n");
 }
 
 echo "🔧 Nettoyage SAFE du template : {$templateName}\n\n";
@@ -29,7 +29,7 @@ $fullText = html_entity_decode($fullText, ENT_XML1);
 preg_match_all('/\{\{([^}]+)\}\}/', $fullText, $varsFound);
 $variables = array_unique($varsFound[1]);
 
-echo "📋 Variables détectées (" . count($variables) . ") :\n";
+echo '📋 Variables détectées ('.count($variables).") :\n";
 foreach ($variables as $var) {
     echo "   - {$var}\n";
 }
@@ -38,7 +38,7 @@ echo "\n";
 // Étape 2: Pour chaque paragraphe, reconstruire les variables fragmentées
 $xml = preg_replace_callback(
     '/<w:p\b[^>]*>(.*?)<\/w:p>/s',
-    function($pMatch) use ($variables) {
+    function ($pMatch) use ($variables) {
         $paragraph = $pMatch[0];
 
         // Extraire tout le texte du paragraphe
@@ -48,24 +48,24 @@ $xml = preg_replace_callback(
 
         // Pour chaque variable, la nettoyer dans ce paragraphe
         foreach ($variables as $varName) {
-            $fullVar = '{{' . $varName . '}}';
+            $fullVar = '{{'.$varName.'}}';
 
             // Si cette variable est dans ce paragraphe
             if (strpos($paragraphText, $fullVar) !== false) {
                 // Créer un marqueur temporaire unique
-                $marker = '___VAR_' . md5($varName) . '___';
+                $marker = '___VAR_'.md5($varName).'___';
 
                 // Remplacer tout le contenu entre le premier {{ et le dernier }} correspondant
                 // par le marqueur
                 $paragraph = preg_replace(
-                    '/\{\{[^\}]*?' . preg_quote($varName, '/') . '[^\}]*?\}\}/sU',
+                    '/\{\{[^\}]*?'.preg_quote($varName, '/').'[^\}]*?\}\}/sU',
                     $marker,
                     $paragraph,
                     1 // Une seule fois
                 );
 
                 // Remplacer le marqueur par la variable propre
-                $cleanVar = '<w:r><w:t>' . $fullVar . '</w:t></w:r>';
+                $cleanVar = '<w:r><w:t>'.$fullVar.'</w:t></w:r>';
                 $paragraph = str_replace($marker, $cleanVar, $paragraph);
             }
         }
@@ -92,7 +92,7 @@ $zipCheck->close();
 $varsAfterClean = array_unique($varsAfter[1]);
 
 echo "✅ Nettoyage terminé !\n";
-echo "   Variables préservées : " . count($varsAfterClean) . "/" . count($variables) . "\n\n";
+echo '   Variables préservées : '.count($varsAfterClean).'/'.count($variables)."\n\n";
 
 if (count($varsAfterClean) < count($variables)) {
     echo "⚠️  Variables perdues :\n";

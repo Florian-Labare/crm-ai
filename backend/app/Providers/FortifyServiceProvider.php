@@ -13,21 +13,18 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
-class FortifyServiceProvider extends ServiceProvider
-{
+class FortifyServiceProvider extends ServiceProvider {
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
+    public function register(): void {
         //
     }
 
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
+    public function boot(): void {
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
@@ -36,8 +33,7 @@ class FortifyServiceProvider extends ServiceProvider
     /**
      * Configure Fortify actions.
      */
-    private function configureActions(): void
-    {
+    private function configureActions(): void {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
     }
@@ -45,8 +41,7 @@ class FortifyServiceProvider extends ServiceProvider
     /**
      * Configure Fortify views.
      */
-    private function configureViews(): void
-    {
+    private function configureViews(): void {
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'canRegister' => Features::enabled(Features::registration()),
@@ -76,8 +71,7 @@ class FortifyServiceProvider extends ServiceProvider
     /**
      * Configure rate limiting.
      */
-    private function configureRateLimiting(): void
-    {
+    private function configureRateLimiting(): void {
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });

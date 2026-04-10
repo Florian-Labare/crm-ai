@@ -13,8 +13,7 @@ use Illuminate\Http\UploadedFile;
  *
  * Gère la logique métier des enregistrements audio
  */
-class AudioService
-{
+class AudioService {
     /**
      * Upload et traite un fichier audio
      *
@@ -54,13 +53,12 @@ class AudioService
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
-    private function validateClientAccess(int $clientId, int $userId): void
-    {
+    private function validateClientAccess(int $clientId, int $userId): void {
         $exists = Client::where('id', $clientId)
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             throw new AuthorizationException(
                 'Le client spécifié n\'existe pas ou ne vous appartient pas.'
             );

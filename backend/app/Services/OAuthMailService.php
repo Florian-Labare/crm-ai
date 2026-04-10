@@ -7,8 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class OAuthMailService
-{
+class OAuthMailService {
     /**
      * Envoyer un email depuis le compte SSO du sender (Gmail ou Outlook).
      * Fallback SMTP si aucun compte SSO disponible ou si l'API échoue.
@@ -28,15 +27,17 @@ class OAuthMailService
             try {
                 if ($socialAccount->provider === 'google') {
                     $this->sendViaGmail($socialAccount, $sender, $to, $subject, $htmlBody, $attachmentPath, $attachmentName, $attachmentMime);
+
                     return;
                 }
 
                 if ($socialAccount->provider === 'azure') {
                     $this->sendViaGraph($socialAccount, $sender, $to, $subject, $htmlBody, $attachmentPath, $attachmentName, $attachmentMime);
+
                     return;
                 }
             } catch (\Exception $e) {
-                Log::warning("OAuthMailService: envoi OAuth échoué pour {$sender->email} via {$socialAccount->provider}, fallback SMTP. Erreur: " . $e->getMessage());
+                Log::warning("OAuthMailService: envoi OAuth échoué pour {$sender->email} via {$socialAccount->provider}, fallback SMTP. Erreur: ".$e->getMessage());
             }
         }
 
@@ -58,7 +59,7 @@ class OAuthMailService
 
         $mimeMessage = $this->buildMimeMessage(
             from: $sender->email,
-            fromName: trim(($sender->firstname ?? '') . ' ' . ($sender->name ?? '')),
+            fromName: trim(($sender->firstname ?? '').' '.($sender->name ?? '')),
             to: $to,
             subject: $subject,
             htmlBody: $htmlBody,
@@ -74,8 +75,8 @@ class OAuthMailService
                 'raw' => $encoded,
             ]);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('Gmail API error: ' . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('Gmail API error: '.$response->body());
         }
 
         Log::info("OAuthMailService: email envoyé via Gmail depuis {$sender->email} vers {$to}");
@@ -121,15 +122,14 @@ class OAuthMailService
         $response = Http::withToken($accessToken)
             ->post('https://graph.microsoft.com/v1.0/me/sendMail', $payload);
 
-        if (!$response->successful()) {
-            throw new \RuntimeException('Microsoft Graph API error: ' . $response->body());
+        if (! $response->successful()) {
+            throw new \RuntimeException('Microsoft Graph API error: '.$response->body());
         }
 
         Log::info("OAuthMailService: email envoyé via Graph depuis {$sender->email} vers {$to}");
     }
 
-    private function refreshGoogleToken($socialAccount): string
-    {
+    private function refreshGoogleToken($socialAccount): string {
         $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'client_id' => config('services.google.client_id'),
             'client_secret' => config('services.google.client_secret'),
@@ -137,8 +137,8 @@ class OAuthMailService
             'grant_type' => 'refresh_token',
         ]);
 
-        if (!$response->successful() || empty($response->json('access_token'))) {
-            throw new \RuntimeException('Google token refresh failed: ' . $response->body());
+        if (! $response->successful() || empty($response->json('access_token'))) {
+            throw new \RuntimeException('Google token refresh failed: '.$response->body());
         }
 
         $newToken = $response->json('access_token');
@@ -147,8 +147,7 @@ class OAuthMailService
         return $newToken;
     }
 
-    private function refreshAzureToken($socialAccount): string
-    {
+    private function refreshAzureToken($socialAccount): string {
         $tenant = config('services.azure.tenant', 'common');
 
         $response = Http::asForm()->post("https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/token", [
@@ -159,8 +158,8 @@ class OAuthMailService
             'scope' => 'https://graph.microsoft.com/Mail.Send offline_access',
         ]);
 
-        if (!$response->successful() || empty($response->json('access_token'))) {
-            throw new \RuntimeException('Azure token refresh failed: ' . $response->body());
+        if (! $response->successful() || empty($response->json('access_token'))) {
+            throw new \RuntimeException('Azure token refresh failed: '.$response->body());
         }
 
         $newToken = $response->json('access_token');
@@ -188,8 +187,8 @@ class OAuthMailService
         ?string $attachmentName,
         ?string $attachmentMime
     ): string {
-        $boundary = '----=_Part_' . bin2hex(random_bytes(8));
-        $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+        $boundary = '----=_Part_'.bin2hex(random_bytes(8));
+        $encodedSubject = '=?UTF-8?B?'.base64_encode($subject).'?=';
         $fromHeader = $fromName ? "\"{$fromName}\" <{$from}>" : $from;
 
         if ($attachmentPath && file_exists($attachmentPath)) {
@@ -197,30 +196,30 @@ class OAuthMailService
                 "From: {$fromHeader}",
                 "To: {$to}",
                 "Subject: {$encodedSubject}",
-                "MIME-Version: 1.0",
+                'MIME-Version: 1.0',
                 "Content-Type: multipart/mixed; boundary=\"{$boundary}\"",
             ]);
 
             $htmlPart = implode("\r\n", [
                 "--{$boundary}",
-                "Content-Type: text/html; charset=UTF-8",
-                "Content-Transfer-Encoding: base64",
-                "",
+                'Content-Type: text/html; charset=UTF-8',
+                'Content-Transfer-Encoding: base64',
+                '',
                 chunk_split(base64_encode($htmlBody)),
             ]);
 
             $attachmentContent = file_get_contents($attachmentPath);
             $attachmentPart = implode("\r\n", [
                 "--{$boundary}",
-                "Content-Type: " . ($attachmentMime ?? 'application/octet-stream') . "; name=\"{$attachmentName}\"",
-                "Content-Transfer-Encoding: base64",
+                'Content-Type: '.($attachmentMime ?? 'application/octet-stream')."; name=\"{$attachmentName}\"",
+                'Content-Transfer-Encoding: base64',
                 "Content-Disposition: attachment; filename=\"{$attachmentName}\"",
-                "",
+                '',
                 chunk_split(base64_encode($attachmentContent)),
                 "--{$boundary}--",
             ]);
 
-            return $headers . "\r\n\r\n" . $htmlPart . "\r\n" . $attachmentPart;
+            return $headers."\r\n\r\n".$htmlPart."\r\n".$attachmentPart;
         }
 
         // Sans pièce jointe
@@ -228,12 +227,12 @@ class OAuthMailService
             "From: {$fromHeader}",
             "To: {$to}",
             "Subject: {$encodedSubject}",
-            "MIME-Version: 1.0",
-            "Content-Type: text/html; charset=UTF-8",
-            "Content-Transfer-Encoding: base64",
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset=UTF-8',
+            'Content-Transfer-Encoding: base64',
         ]);
 
-        return $headers . "\r\n\r\n" . chunk_split(base64_encode($htmlBody));
+        return $headers."\r\n\r\n".chunk_split(base64_encode($htmlBody));
     }
 
     private function sendViaSmtp(
@@ -248,7 +247,7 @@ class OAuthMailService
         Mail::html($htmlBody, function ($message) use ($sender, $to, $subject, $attachmentPath, $attachmentName, $attachmentMime) {
             $message->to($to)
                 ->subject($subject)
-                ->replyTo($sender->email, trim(($sender->firstname ?? '') . ' ' . ($sender->name ?? '')));
+                ->replyTo($sender->email, trim(($sender->firstname ?? '').' '.($sender->name ?? '')));
 
             if ($attachmentPath && file_exists($attachmentPath)) {
                 $message->attach($attachmentPath, [

@@ -5,18 +5,16 @@ namespace App\Services;
 use App\Models\Client;
 use Illuminate\Support\Str;
 
-class ClientSyncService
-{
+class ClientSyncService {
     /**
      * Recherche un client existant ou en crée un nouveau en fonction des données vocales.
      *
-     * @param array $data Les données à synchroniser
-     * @param int $userId L'ID de l'utilisateur
-     * @param bool $updateExisting Si false, ne met pas à jour les clients existants (mode review)
+     * @param  array  $data  Les données à synchroniser
+     * @param  int  $userId  L'ID de l'utilisateur
+     * @param  bool  $updateExisting  Si false, ne met pas à jour les clients existants (mode review)
      * @return array ['client' => Client, 'was_existing' => bool, 'clean_data' => array]
      */
-    public function findOrCreateFromAnalysis(array $data, int $userId, bool $updateExisting = true): array
-    {
+    public function findOrCreateFromAnalysis(array $data, int $userId, bool $updateExisting = true): array {
         $existing = $this->findExistingClient($data, $userId);
 
         $cleanData = collect($data)
@@ -56,8 +54,7 @@ class ClientSyncService
         ];
     }
 
-    private function findExistingClient(array $data, int $userId): ?Client
-    {
+    private function findExistingClient(array $data, int $userId): ?Client {
         if (! empty($data['id'])) {
             return Client::where('user_id', $userId)->find($data['id']);
         }
@@ -115,8 +112,7 @@ class ClientSyncService
         });
     }
 
-    private function normalizeString(?string $value): ?string
-    {
+    private function normalizeString(?string $value): ?string {
         if (is_null($value)) {
             return null;
         }
@@ -126,8 +122,7 @@ class ClientSyncService
         return $normalized === '' ? null : $normalized;
     }
 
-    private function normalizePhone(?string $value): ?string
-    {
+    private function normalizePhone(?string $value): ?string {
         if (empty($value)) {
             return null;
         }

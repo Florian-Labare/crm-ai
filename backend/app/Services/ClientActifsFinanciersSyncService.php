@@ -6,16 +6,13 @@ use App\Models\Client;
 use App\Models\ClientActifFinancier;
 use Illuminate\Support\Facades\Log;
 
-class ClientActifsFinanciersSyncService
-{
+class ClientActifsFinanciersSyncService {
     /**
      * Synchronise les actifs financiers d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $actifsData  Tableau d'actifs financiers extraits par GPT
      */
-    public function syncActifsFinanciers(Client $client, array $actifsData): void
-    {
+    public function syncActifsFinanciers(Client $client, array $actifsData): void {
         $originalCount = count($actifsData);
 
         // 🔀 ÉTAPE 1: Nettoyer et dédupliquer les données entrantes
@@ -43,6 +40,7 @@ class ClientActifsFinanciersSyncService
 
             if (empty($actifData)) {
                 Log::info("📈 [ACTIFS FINANCIERS] Actif #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -70,14 +68,13 @@ class ClientActifsFinanciersSyncService
             Log::info("📈 [ACTIFS FINANCIERS] Conservation de {$keptActifs} actif(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [ACTIFS FINANCIERS] Synchronisation terminée - ' . count($processedIds) . ' actif(s) traité(s), total: ' . $client->actifsFinanciers()->count());
+        Log::info('✅ [ACTIFS FINANCIERS] Synchronisation terminée - '.count($processedIds).' actif(s) traité(s), total: '.$client->actifsFinanciers()->count());
     }
 
     /**
      * Trouve un actif existant correspondant aux données
      */
-    private function findMatchingActif($existingActifs, array $actifData): ?ClientActifFinancier
-    {
+    private function findMatchingActif($existingActifs, array $actifData): ?ClientActifFinancier {
         // Match par nature et etablissement
         if (isset($actifData['nature']) && isset($actifData['etablissement'])) {
             $match = $existingActifs->first(function ($actif) use ($actifData) {
@@ -111,8 +108,7 @@ class ClientActifsFinanciersSyncService
      * - Un autre avec la valeur
      * Cette méthode les fusionne en un seul objet complet
      */
-    private function deduplicateByNature(array $actifs): array
-    {
+    private function deduplicateByNature(array $actifs): array {
         if (count($actifs) <= 1) {
             return $actifs;
         }
@@ -136,15 +132,15 @@ class ClientActifsFinanciersSyncService
 
                 // Match si même nature ET (même établissement OU l'un des deux n'a pas d'établissement)
                 if ($existingNature === $nature) {
-                    if ($etablissement === $existingEtab || !$etablissement || !$existingEtab) {
+                    if ($etablissement === $existingEtab || ! $etablissement || ! $existingEtab) {
                         // Fusionner : garder les infos non vides de chaque côté
                         foreach ($actif as $field => $value) {
-                            if (!empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
+                            if (! empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
                                 $existing[$field] = $value;
                             }
                         }
                         // Si le nouveau a un établissement et l'existant non, utiliser le nouveau
-                        if (!empty($actif['etablissement']) && empty($existing['etablissement'])) {
+                        if (! empty($actif['etablissement']) && empty($existing['etablissement'])) {
                             $existing['etablissement'] = $actif['etablissement'];
                         }
                         $found = true;
@@ -157,8 +153,8 @@ class ClientActifsFinanciersSyncService
                 }
             }
 
-            if (!$found) {
-                $key = $nature . ($etablissement ? '_' . $etablissement : '');
+            if (! $found) {
+                $key = $nature.($etablissement ? '_'.$etablissement : '');
                 $merged[$key] = $actif;
             }
         }
@@ -166,14 +162,13 @@ class ClientActifsFinanciersSyncService
         $result = array_values($merged);
 
         if (count($result) < count($actifs)) {
-            Log::info("📈 [ACTIFS FINANCIERS] 🔀 Déduplication par nature: " . count($actifs) . " → " . count($result) . " actif(s)");
+            Log::info('📈 [ACTIFS FINANCIERS] 🔀 Déduplication par nature: '.count($actifs).' → '.count($result).' actif(s)');
         }
 
         return $result;
     }
 
-    private function sanitizeIncomingActifs(array $actifsData): array
-    {
+    private function sanitizeIncomingActifs(array $actifsData): array {
         $filtered = [];
         foreach ($actifsData as $actif) {
             $actif = $this->filterEmptyValues($actif);
@@ -187,9 +182,10 @@ class ClientActifsFinanciersSyncService
             }
 
             if ($this->isCryptoNature($nature)) {
-                Log::info("📈 [ACTIFS FINANCIERS] Actif crypto ignoré (autres épargnes)", [
+                Log::info('📈 [ACTIFS FINANCIERS] Actif crypto ignoré (autres épargnes)', [
                     'nature' => $actif['nature'] ?? 'inconnu',
                 ]);
+
                 continue;
             }
 
@@ -199,8 +195,7 @@ class ClientActifsFinanciersSyncService
         return $this->deduplicateByKey($filtered);
     }
 
-    private function deduplicateByKey(array $actifs): array
-    {
+    private function deduplicateByKey(array $actifs): array {
         $seen = [];
         $result = [];
 
@@ -208,11 +203,12 @@ class ClientActifsFinanciersSyncService
             $nature = $this->normalizeString($actif['nature'] ?? '');
             $etablissement = $this->normalizeString($actif['etablissement'] ?? '');
             $valueKey = isset($actif['valeur_actuelle']) ? number_format((float) $actif['valeur_actuelle'], 2, '.', '') : '';
-            $key = ($nature ?? '') . '|' . ($etablissement ?? '') . '|' . $valueKey;
+            $key = ($nature ?? '').'|'.($etablissement ?? '').'|'.$valueKey;
 
             if (isset($seen[$key])) {
                 $index = $seen[$key];
-                $result[$index] = array_merge($result[$index], array_filter($actif, fn($v) => $v !== null && $v !== ''));
+                $result[$index] = array_merge($result[$index], array_filter($actif, fn ($v) => $v !== null && $v !== ''));
+
                 continue;
             }
 
@@ -223,8 +219,7 @@ class ClientActifsFinanciersSyncService
         return $result;
     }
 
-    private function isCryptoNature(string $value): bool
-    {
+    private function isCryptoNature(string $value): bool {
         return str_contains($value, 'crypto')
             || str_contains($value, 'bitcoin')
             || str_contains($value, 'btc')
@@ -238,12 +233,12 @@ class ClientActifsFinanciersSyncService
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array
-    {
+    private function filterEmptyValues(array $data): array {
         return array_filter($data, function ($value, $key) {
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }
@@ -251,8 +246,7 @@ class ClientActifsFinanciersSyncService
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string
-    {
+    private function normalizeString(?string $value): ?string {
         if (is_null($value)) {
             return null;
         }

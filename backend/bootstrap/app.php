@@ -1,11 +1,11 @@
 <?php
 
+use App\Console\Commands\DeduplicateClients;
+use App\Http\Middleware\CorsMiddleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Console\Commands\DeduplicateClients;
-use App\Http\Middleware\CorsMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -39,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
                 $response->headers->set('Access-Control-Allow-Credentials', 'true');
             }
+
             return $response;
         });
     })

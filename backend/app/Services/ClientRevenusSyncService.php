@@ -6,16 +6,13 @@ use App\Models\Client;
 use App\Models\ClientRevenu;
 use Illuminate\Support\Facades\Log;
 
-class ClientRevenusSyncService
-{
+class ClientRevenusSyncService {
     /**
      * Synchronise les revenus d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $revenusData  Tableau de revenus extraits par GPT
      */
-    public function syncRevenus(Client $client, array $revenusData): void
-    {
+    public function syncRevenus(Client $client, array $revenusData): void {
         Log::info("💰 [REVENUS] Synchronisation des revenus pour le client #{$client->id}", [
             'nombre_revenus_recus' => count($revenusData),
         ]);
@@ -34,6 +31,7 @@ class ClientRevenusSyncService
 
             if (empty($revenuData)) {
                 Log::info("💰 [REVENUS] Revenu #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -61,14 +59,13 @@ class ClientRevenusSyncService
             Log::info("💰 [REVENUS] Conservation de {$keptRevenus} revenu(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [REVENUS] Synchronisation terminée - ' . count($processedIds) . ' revenu(s) traité(s), total: ' . $client->revenus()->count());
+        Log::info('✅ [REVENUS] Synchronisation terminée - '.count($processedIds).' revenu(s) traité(s), total: '.$client->revenus()->count());
     }
 
     /**
      * Trouve un revenu existant correspondant aux données
      */
-    private function findMatchingRevenu($existingRevenus, array $revenuData): ?ClientRevenu
-    {
+    private function findMatchingRevenu($existingRevenus, array $revenuData): ?ClientRevenu {
         $nature = $this->normalizeString($revenuData['nature'] ?? null);
         $details = $this->normalizeString($revenuData['details'] ?? null);
         $isAutre = $nature === 'autre';
@@ -79,13 +76,13 @@ class ClientRevenusSyncService
                 return $this->normalizeString($revenu->nature) === $this->normalizeString($revenuData['nature'])
                     && abs($revenu->montant - $revenuData['montant']) < 0.01;
             });
-            if ($match && (!$isAutre || $this->normalizeString($match->details ?? null) === $details)) {
+            if ($match && (! $isAutre || $this->normalizeString($match->details ?? null) === $details)) {
                 return $match;
             }
         }
 
         // Match par nature seule (si unique)
-        if (isset($revenuData['nature']) && !$isAutre) {
+        if (isset($revenuData['nature']) && ! $isAutre) {
             $matches = $existingRevenus->filter(function ($revenu) use ($revenuData) {
                 return $this->normalizeString($revenu->nature) === $this->normalizeString($revenuData['nature']);
             });
@@ -101,12 +98,12 @@ class ClientRevenusSyncService
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array
-    {
+    private function filterEmptyValues(array $data): array {
         return array_filter($data, function ($value, $key) {
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }
@@ -114,8 +111,7 @@ class ClientRevenusSyncService
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string
-    {
+    private function normalizeString(?string $value): ?string {
         if (is_null($value)) {
             return null;
         }

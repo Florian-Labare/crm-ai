@@ -5,15 +5,12 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreClientRequest extends FormRequest
-{
-    public function authorize(): bool
-    {
+class StoreClientRequest extends FormRequest {
+    public function authorize(): bool {
         return true;
     }
 
-    public function rules(): array
-    {
+    public function rules(): array {
         return [
             'civilite' => 'nullable|string|max:255',
             'nom' => 'required|string|max:255',

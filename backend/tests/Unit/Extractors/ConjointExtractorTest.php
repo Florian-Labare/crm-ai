@@ -6,12 +6,10 @@ use App\Services\Ai\Extractors\ConjointExtractor;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class ConjointExtractorTest extends TestCase
-{
+class ConjointExtractorTest extends TestCase {
     private ConjointExtractor $extractor;
 
-    protected function setUp(): void
-    {
+    protected function setUp(): void {
         parent::setUp();
         $this->extractor = new ConjointExtractor();
 
@@ -23,8 +21,7 @@ class ConjointExtractorTest extends TestCase
         config(['mistral.fallback_to_openai' => false]);
     }
 
-    public function test_extracts_conjoint_name(): void
-    {
+    public function test_extracts_conjoint_name(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -42,8 +39,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertEquals('Martin', $data['conjoint']['nom'] ?? null);
     }
 
-    public function test_extracts_conjoint_profession(): void
-    {
+    public function test_extracts_conjoint_profession(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -54,13 +50,12 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon mari est médecin");
+        $data = $this->extractor->extract('Mon mari est médecin');
 
         $this->assertEquals('médecin', $data['conjoint']['profession'] ?? null);
     }
 
-    public function test_extracts_conjoint_birth_date(): void
-    {
+    public function test_extracts_conjoint_birth_date(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -71,13 +66,12 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Ma femme Sophie est née le 20 août 1982");
+        $data = $this->extractor->extract('Ma femme Sophie est née le 20 août 1982');
 
         $this->assertEquals('1982-08-20', $data['conjoint']['date_naissance'] ?? null);
     }
 
-    public function test_extracts_conjoint_complete_info(): void
-    {
+    public function test_extracts_conjoint_complete_info(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -96,8 +90,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertEquals('infirmière', $data['conjoint']['profession'] ?? null);
     }
 
-    public function test_returns_empty_when_no_conjoint(): void
-    {
+    public function test_returns_empty_when_no_conjoint(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -113,8 +106,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertEquals([], $data);
     }
 
-    public function test_ignores_client_data(): void
-    {
+    public function test_ignores_client_data(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -137,8 +129,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertEquals('infirmière', $data['conjoint']['profession'] ?? null);
     }
 
-    public function test_extracts_with_mon_conjoint(): void
-    {
+    public function test_extracts_with_mon_conjoint(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -149,13 +140,12 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon conjoint est comptable");
+        $data = $this->extractor->extract('Mon conjoint est comptable');
 
         $this->assertEquals('comptable', $data['conjoint']['profession'] ?? null);
     }
 
-    public function test_extracts_with_mon_epouse(): void
-    {
+    public function test_extracts_with_mon_epouse(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -166,14 +156,13 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon épouse Marie est avocate");
+        $data = $this->extractor->extract('Mon épouse Marie est avocate');
 
         $this->assertEquals('Marie', $data['conjoint']['prenom'] ?? null);
         $this->assertEquals('avocate', $data['conjoint']['profession'] ?? null);
     }
 
-    public function test_extracts_with_elle_il_reference(): void
-    {
+    public function test_extracts_with_elle_il_reference(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -184,13 +173,12 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Ma femme travaille, elle est professeur");
+        $data = $this->extractor->extract('Ma femme travaille, elle est professeur');
 
         $this->assertEquals('professeur', $data['conjoint']['profession'] ?? null);
     }
 
-    public function test_extracts_chef_entreprise(): void
-    {
+    public function test_extracts_chef_entreprise(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -206,8 +194,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertTrue($data['conjoint']['chef_entreprise'] ?? false);
     }
 
-    public function test_extracts_risques_professionnels(): void
-    {
+    public function test_extracts_risques_professionnels(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -223,8 +210,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertTrue($data['conjoint']['risques_professionnels'] ?? false);
     }
 
-    public function test_returns_empty_on_api_error(): void
-    {
+    public function test_returns_empty_on_api_error(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
@@ -234,8 +220,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertEquals([], $data);
     }
 
-    public function test_returns_empty_on_invalid_json(): void
-    {
+    public function test_returns_empty_on_invalid_json(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -251,8 +236,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertEquals([], $data);
     }
 
-    public function test_ignores_children_data(): void
-    {
+    public function test_ignores_children_data(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -269,8 +253,7 @@ class ConjointExtractorTest extends TestCase
         $this->assertArrayNotHasKey('conjoint', $data);
     }
 
-    public function test_extracts_telephone(): void
-    {
+    public function test_extracts_telephone(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[

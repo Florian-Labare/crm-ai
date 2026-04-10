@@ -8,13 +8,11 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
-class MiaUserSeeder extends Seeder
-{
+class MiaUserSeeder extends Seeder {
     /**
      * Run the database seeds.
      */
-    public function run(): void
-    {
+    public function run(): void {
         // Créer le rôle MIA s'il n'existe pas
         $miaRole = Role::firstOrCreate(['name' => 'MIA']);
 
@@ -49,15 +47,15 @@ class MiaUserSeeder extends Seeder
             );
 
             // Assigner le rôle MIA
-            if (!$user->hasRole('MIA')) {
+            if (! $user->hasRole('MIA')) {
                 $user->assignRole('MIA');
             }
 
             // Créer une équipe personnelle si l'utilisateur n'en a pas
-            if (!$user->ownedTeams()->where('personal_team', true)->exists()) {
+            if (! $user->ownedTeams()->where('personal_team', true)->exists()) {
                 $team = Team::create([
                     'user_id' => $user->id,
-                    'name' => $user->firstname . "'s Team",
+                    'name' => $user->firstname."'s Team",
                     'personal_team' => true,
                 ]);
 
@@ -67,7 +65,7 @@ class MiaUserSeeder extends Seeder
             // Ajouter l'utilisateur MIA uniquement à l'équipe de l'utilisateur ID 33
             $targetTeam = Team::where('user_id', 33)->first();
 
-            if ($targetTeam && !$user->belongsToTeam($targetTeam)) {
+            if ($targetTeam && ! $user->belongsToTeam($targetTeam)) {
                 $user->teams()->attach($targetTeam, ['role' => 'admin']);
                 $this->command->info("Added {$user->name} to team {$targetTeam->name}");
             }

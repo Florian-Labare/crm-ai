@@ -11,16 +11,14 @@ use Illuminate\Foundation\Http\FormRequest;
  * Validation pour l'upload d'un fichier audio
  * Inclut la validation de l'appartenance du client à la team de l'utilisateur
  */
-class StoreAudioRequest extends FormRequest
-{
+class StoreAudioRequest extends FormRequest {
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool
-    {
+    public function authorize(): bool {
         // L'utilisateur doit être authentifié et avoir une team
         $user = $this->user();
-        if (!$user || !$user->currentTeam()) {
+        if (! $user || ! $user->currentTeam()) {
             return false;
         }
 
@@ -28,7 +26,7 @@ class StoreAudioRequest extends FormRequest
         $clientId = $this->input('client_id');
         if ($clientId) {
             $client = Client::find($clientId);
-            if (!$client || $client->team_id !== $user->currentTeam()->id) {
+            if (! $client || $client->team_id !== $user->currentTeam()->id) {
                 return false;
             }
         }
@@ -41,8 +39,7 @@ class StoreAudioRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
-    {
+    public function rules(): array {
         $teamId = $this->user()?->currentTeam()?->id;
 
         return [
@@ -61,7 +58,7 @@ class StoreAudioRequest extends FormRequest
                         $exists = Client::where('id', $value)
                             ->where('team_id', $teamId)
                             ->exists();
-                        if (!$exists) {
+                        if (! $exists) {
                             $fail('Le client spécifié n\'existe pas ou n\'appartient pas à votre équipe.');
                         }
                     }
@@ -75,8 +72,7 @@ class StoreAudioRequest extends FormRequest
      *
      * @return array<string, string>
      */
-    public function messages(): array
-    {
+    public function messages(): array {
         return [
             'audio.required' => 'Le fichier audio est requis.',
             'audio.file' => 'Le fichier doit être un fichier audio valide.',
@@ -89,8 +85,7 @@ class StoreAudioRequest extends FormRequest
     /**
      * Prépare les données pour validation
      */
-    protected function prepareForValidation(): void
-    {
+    protected function prepareForValidation(): void {
         // S'assurer que client_id est null si vide
         if ($this->client_id === '') {
             $this->merge(['client_id' => null]);
