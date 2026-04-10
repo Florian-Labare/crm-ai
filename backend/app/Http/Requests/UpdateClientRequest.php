@@ -10,21 +10,18 @@ use Illuminate\Validation\Rule;
  *
  * Validation pour la mise à jour d'un client existant
  */
-class UpdateClientRequest extends FormRequest
-{
+class UpdateClientRequest extends FormRequest {
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool
-    {
+    public function authorize(): bool {
         return true; // L'autorisation est gérée dans le contrôleur via where('user_id')
     }
 
     /**
      * Get the validation rules that apply to the request.
      */
-    public function rules(): array
-    {
+    public function rules(): array {
         return [
             // Informations personnelles
             'civilite' => ['sometimes', 'in:Monsieur,Madame'],

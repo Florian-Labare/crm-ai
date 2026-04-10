@@ -5,13 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\AudioRecord;
 use App\Models\Client;
 use App\Services\MeetingSummaryService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class MeetingSummaryController extends Controller
-{
-    public function showLatest(Client $client): JsonResponse
-    {
+class MeetingSummaryController extends Controller {
+    public function showLatest(Client $client): JsonResponse {
         $summary = $client->meetingSummaries()
             ->latest()
             ->first();
@@ -21,8 +19,7 @@ class MeetingSummaryController extends Controller
         ]);
     }
 
-    public function regenerate(Request $request, Client $client, MeetingSummaryService $summaryService): JsonResponse
-    {
+    public function regenerate(Request $request, Client $client, MeetingSummaryService $summaryService): JsonResponse {
         $audioRecordId = $request->input('audio_record_id');
 
         $audioRecordQuery = AudioRecord::where('client_id', $client->id);
@@ -35,7 +32,7 @@ class MeetingSummaryController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
-        if (!$audioRecord) {
+        if (! $audioRecord) {
             return response()->json(['message' => 'Aucun enregistrement audio trouvé.'], 404);
         }
 

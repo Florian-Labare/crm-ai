@@ -11,28 +11,26 @@ use Illuminate\Foundation\Http\FormRequest;
  * Validation pour finaliser une session d'enregistrement
  * Vérifie que la session appartient à l'utilisateur et sa team
  */
-class FinalizeRecordingRequest extends FormRequest
-{
+class FinalizeRecordingRequest extends FormRequest {
     /**
      * Determine if the user is authorized to make this request.
      */
-    public function authorize(): bool
-    {
+    public function authorize(): bool {
         $user = $this->user();
-        if (!$user || !$user->currentTeam()) {
+        if (! $user || ! $user->currentTeam()) {
             return false;
         }
 
         // Récupérer le session_id depuis la route
         $sessionId = $this->route('sessionId');
-        if (!$sessionId) {
+        if (! $sessionId) {
             return false;
         }
 
         // Vérifier que la session existe et appartient à l'utilisateur/team
         $session = RecordingSession::where('session_id', $sessionId)->first();
 
-        if (!$session) {
+        if (! $session) {
             return false;
         }
 
@@ -47,8 +45,7 @@ class FinalizeRecordingRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      */
-    public function rules(): array
-    {
+    public function rules(): array {
         return [
             // Pas de règles supplémentaires, le session_id vient de l'URL
         ];
@@ -57,8 +54,7 @@ class FinalizeRecordingRequest extends FormRequest
     /**
      * Get the error message for authorization failure.
      */
-    protected function failedAuthorization(): void
-    {
+    protected function failedAuthorization(): void {
         throw new \Illuminate\Auth\Access\AuthorizationException(
             'Cette session d\'enregistrement ne vous appartient pas ou n\'existe pas.'
         );

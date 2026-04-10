@@ -2,34 +2,32 @@
 
 namespace App\Jobs;
 
-use App\Models\Client;
 use App\Models\AudioRecord;
-use Illuminate\Bus\Queueable;
-use App\Services\Ai\AnalysisService; // Nouveau namespace
+use App\Models\Client;
+use App\Services\Ai\AnalysisService;
+use App\Services\AssetCategorizationService; // Nouveau namespace
 use App\Services\BaeService;
-use App\Services\EnfantSyncService;
-use App\Services\ConjointSyncService;
-use App\Services\ClientRevenusSyncService;
-use App\Services\ClientPassifsSyncService;
-use App\Services\ClientActifsFinanciersSyncService;
-use App\Services\ClientBiensImmobiliersSyncService;
-use App\Services\ClientAutresEpargnesSyncService;
 use App\Services\BesoinService;
-use App\Services\MergeService;
-use App\Services\AuditService;
-use App\Services\AssetCategorizationService;
-use Illuminate\Queue\SerializesModels;
+use App\Services\ClientActifsFinanciersSyncService;
+use App\Services\ClientAutresEpargnesSyncService;
+use App\Services\ClientBiensImmobiliersSyncService;
+use App\Services\ClientPassifsSyncService;
+use App\Services\ClientRevenusSyncService;
 use App\Services\ClientSyncService;
-use Illuminate\Queue\InteractsWithQueue;
-use App\Services\TranscriptionService;
+use App\Services\ConjointSyncService;
+use App\Services\EnfantSyncService;
 use App\Services\MeetingSummaryService;
+use App\Services\MergeService;
+use App\Services\TranscriptionService;
+use Exception;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
-class ProcessAudioRecording implements ShouldQueue
-{
+class ProcessAudioRecording implements ShouldQueue {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
@@ -66,12 +64,9 @@ class ProcessAudioRecording implements ShouldQueue
     /**
      * Créer une nouvelle instance du job
      *
-     * @param AudioRecord $audioRecord
-     * @param int|null $existingClientId
-     * @param bool $reviewMode Si true, crée des PendingChanges pour validation manuelle
+     * @param  bool  $reviewMode  Si true, crée des PendingChanges pour validation manuelle
      */
-    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null, bool $reviewMode = true)
-    {
+    public function __construct(AudioRecord $audioRecord, ?int $existingClientId = null, bool $reviewMode = true) {
         $this->audioRecord = $audioRecord;
         $this->existingClientId = $existingClientId;
         $this->reviewMode = $reviewMode;
@@ -97,7 +92,7 @@ class ProcessAudioRecording implements ShouldQueue
             try {
                 $summaryService = new MeetingSummaryService();
                 $summaryPayload = $summaryService->generateSummary($transcription);
-                if (!empty($summaryPayload['summary_text']) || !empty($summaryPayload['summary_json'])) {
+                if (! empty($summaryPayload['summary_text']) || ! empty($summaryPayload['summary_json'])) {
                     $summaryService->storeSummary(
                         $client->id,
                         $this->audioRecord->user_id,
@@ -121,7 +116,7 @@ class ProcessAudioRecording implements ShouldQueue
             $this->audioRecord->update(['status' => 'processing']);
 
             // 2️⃣ Transcription via Whisper API (ou réutilisation si déjà présente)
-            if (!empty($this->audioRecord->transcription)) {
+            if (! empty($this->audioRecord->transcription)) {
                 // Transcription déjà présente (ex: depuis LongRecorder)
                 Log::info("📝 Transcription déjà disponible pour audio #{$this->audioRecord->id}");
                 $transcription = $this->audioRecord->transcription;
@@ -131,14 +126,14 @@ class ProcessAudioRecording implements ShouldQueue
 
                 // Télécharger depuis S3 vers temp pour traitement
                 $tempDir = storage_path('app/temp/audio');
-                if (!is_dir($tempDir)) {
+                if (! is_dir($tempDir)) {
                     mkdir($tempDir, 0755, true);
                 }
 
-                $tempAudioPath = $tempDir . '/' . $this->audioRecord->id . '_' . basename($this->audioRecord->path);
+                $tempAudioPath = $tempDir.'/'.$this->audioRecord->id.'_'.basename($this->audioRecord->path);
 
                 // Vérifier si le fichier existe sur S3
-                if (!\Illuminate\Support\Facades\Storage::exists($this->audioRecord->path)) {
+                if (! \Illuminate\Support\Facades\Storage::exists($this->audioRecord->path)) {
                     $message = "Fichier audio introuvable sur S3 : {$this->audioRecord->path}";
                     Log::error("❌ {$message}");
                     $this->audioRecord->update([
@@ -146,6 +141,7 @@ class ProcessAudioRecording implements ShouldQueue
                         'transcription' => $message,
                     ]);
                     $this->fail(new Exception($message));
+
                     return;
                 }
 
@@ -155,7 +151,7 @@ class ProcessAudioRecording implements ShouldQueue
 
                 $audioPath = $tempAudioPath;
 
-                if (!file_exists($audioPath) || !is_file($audioPath)) {
+                if (! file_exists($audioPath) || ! is_file($audioPath)) {
                     $message = "Échec du téléchargement de l'audio vers temp : {$audioPath}";
                     Log::error("❌ {$message}");
                     $this->audioRecord->update([
@@ -163,6 +159,7 @@ class ProcessAudioRecording implements ShouldQueue
                         'transcription' => $message,
                     ]);
                     $this->fail(new Exception($message));
+
                     return;
                 }
 
@@ -174,14 +171,14 @@ class ProcessAudioRecording implements ShouldQueue
                 }
 
                 if (empty($transcription)) {
-                    throw new Exception("Transcription vide ou échec de Whisper API");
+                    throw new Exception('Transcription vide ou échec de Whisper API');
                 }
 
-                Log::info("✅ Transcription réussie : " . strlen($transcription) . " caractères");
+                Log::info('✅ Transcription réussie : '.strlen($transcription).' caractères');
             }
 
             // 3️⃣ Analyse GPT pour extraction des données
-            Log::info("💬 Analyse GPT-4 des données client...");
+            Log::info('💬 Analyse GPT-4 des données client...');
             $data = $analysisService->extractClientData($transcription);
 
             // 🛡️ GARDE-FOU : Validation et correction de la catégorisation des actifs
@@ -190,7 +187,7 @@ class ProcessAudioRecording implements ShouldQueue
 
             // 🔍 LOG DEBUG - Voir ce que GPT retourne pour les besoins
             if (isset($data['besoins']) || isset($data['besoins_action'])) {
-                Log::info("🔍 [DEBUG BESOINS] Réponse GPT", [
+                Log::info('🔍 [DEBUG BESOINS] Réponse GPT', [
                     'besoins' => $data['besoins'] ?? 'NON DÉFINI',
                     'besoins_action' => $data['besoins_action'] ?? 'NON DÉFINI',
                 ]);
@@ -236,7 +233,7 @@ class ProcessAudioRecording implements ShouldQueue
                         case 'remove':
                             $removedBesoins = $newBesoins; // Sauvegarder les besoins à supprimer
                             $data['besoins'] = array_values(array_diff($currentBesoins, $newBesoins));
-                            Log::info("🗑️ [BESOINS] Action: REMOVE", [
+                            Log::info('🗑️ [BESOINS] Action: REMOVE', [
                                 'besoins_retirés' => $removedBesoins,
                                 'besoins_finaux' => $data['besoins'],
                             ]);
@@ -245,7 +242,7 @@ class ProcessAudioRecording implements ShouldQueue
                         default:
                             // Par défaut: TOUJOURS ajouter aux besoins existants
                             $data['besoins'] = array_values(array_unique(array_merge($currentBesoins, $newBesoins)));
-                            Log::info("➕ [BESOINS] Action: ADD", [
+                            Log::info('➕ [BESOINS] Action: ADD', [
                                 'besoins_finaux' => $data['besoins'],
                             ]);
                             break;
@@ -253,7 +250,7 @@ class ProcessAudioRecording implements ShouldQueue
                     // Normaliser les besoins vers des slugs propres avant stockage
                     if (isset($data['besoins']) && is_array($data['besoins'])) {
                         $data['besoins'] = app(BesoinService::class)->normalizeSlugs($data['besoins']);
-                        Log::info("🔧 [BESOINS] Besoins normalisés en slugs", [
+                        Log::info('🔧 [BESOINS] Besoins normalisés en slugs', [
                             'besoins_slugs' => $data['besoins'],
                         ]);
                     }
@@ -270,7 +267,7 @@ class ProcessAudioRecording implements ShouldQueue
                     'bae_prevoyance', 'bae_retraite', 'bae_epargne',
                     'enfants', 'conjoint', 'client_revenus',
                     'client_passifs', 'client_actifs_financiers',
-                    'client_biens_immobiliers', 'client_autres_epargnes'
+                    'client_biens_immobiliers', 'client_autres_epargnes',
                 ];
 
                 foreach ($data as $key => $value) {
@@ -281,18 +278,20 @@ class ProcessAudioRecording implements ShouldQueue
 
                     // Stocker les données relationnelles séparément
                     if (in_array($key, $relationalFields)) {
-                        if (!empty($value) && (!is_array($value) || !empty(array_filter($value, fn($v) => !empty($v))))) {
+                        if (! empty($value) && (! is_array($value) || ! empty(array_filter($value, fn ($v) => ! empty($v))))) {
                             $relationalData[$key] = $value;
                             Log::info("📦 [MODE REVIEW] Données relationnelles détectées: $key", [
-                                'count' => is_array($value) ? count($value) : 1
+                                'count' => is_array($value) ? count($value) : 1,
                             ]);
                         }
+
                         continue;
                     }
 
                     // Vérifier si le champ est autorisé dans le modèle
-                    if (!in_array($key, $fillable)) {
+                    if (! in_array($key, $fillable)) {
                         Log::warning("⚠️ Champ '$key' ignoré car non présent dans fillable du modèle Client");
+
                         continue;
                     }
 
@@ -389,7 +388,7 @@ class ProcessAudioRecording implements ShouldQueue
                 $result = $clientSyncService->findOrCreateFromAnalysis(
                     $data,
                     $this->audioRecord->user_id,
-                    !$this->reviewMode // updateExisting = false si reviewMode = true
+                    ! $this->reviewMode // updateExisting = false si reviewMode = true
                 );
 
                 $client = $result['client'];
@@ -414,7 +413,7 @@ class ProcessAudioRecording implements ShouldQueue
 
                 // 🔒 MODE REVIEW : Si un client EXISTANT a été trouvé, créer un PendingChange
                 if ($wasExisting && $this->reviewMode) {
-                    Log::info("🔍 [MODE REVIEW] Client existant trouvé par recherche automatique - Création PendingChange");
+                    Log::info('🔍 [MODE REVIEW] Client existant trouvé par recherche automatique - Création PendingChange');
 
                     $pendingChange = $mergeService->createPendingChange(
                         $client,
@@ -442,7 +441,7 @@ class ProcessAudioRecording implements ShouldQueue
                     return; // Sortir - validation manuelle requise
                 }
 
-                Log::info("✅ Client #{$client->id} synchronisé (" . ($wasExisting ? 'trouvé' : 'créé') . ")");
+                Log::info("✅ Client #{$client->id} synchronisé (".($wasExisting ? 'trouvé' : 'créé').')');
 
                 // Restaurer les enfants pour la synchronisation ultérieure
                 if ($enfantsData) {
@@ -452,7 +451,7 @@ class ProcessAudioRecording implements ShouldQueue
 
             // 4️⃣ bis - Sauvegarde du questionnaire de risque si présent dans les données
             if ($questionnaireData) {
-                Log::info("📊 Détection de données de questionnaire de risque, sauvegarde...");
+                Log::info('📊 Détection de données de questionnaire de risque, sauvegarde...');
                 $analysisService->saveQuestionnaireRisque($client->id, ['questionnaire_risque' => $questionnaireData]);
             }
 
@@ -460,7 +459,7 @@ class ProcessAudioRecording implements ShouldQueue
             $baeService = new BaeService();
 
             // Supprimer les BAE des besoins retirés
-            if (!empty($removedBesoins)) {
+            if (! empty($removedBesoins)) {
                 $baeService->removeBaeForBesoins($client, $removedBesoins);
             }
 
@@ -468,50 +467,50 @@ class ProcessAudioRecording implements ShouldQueue
             $baeService->syncBaeData($client, $data);
 
             // 4️⃣ quater - Synchronisation des enfants
-            if (isset($data['enfants']) && is_array($data['enfants']) && !empty($data['enfants'])) {
-                Log::info("👶 Détection de données enfants, synchronisation...");
+            if (isset($data['enfants']) && is_array($data['enfants']) && ! empty($data['enfants'])) {
+                Log::info('👶 Détection de données enfants, synchronisation...');
                 $enfantService = new EnfantSyncService();
                 $enfantService->syncEnfants($client, $data['enfants']);
             }
 
             // 4️⃣ quinquies - Synchronisation du conjoint
-            if (isset($data['conjoint']) && is_array($data['conjoint']) && !empty($data['conjoint'])) {
-                Log::info("💑 Détection de données conjoint, synchronisation...");
+            if (isset($data['conjoint']) && is_array($data['conjoint']) && ! empty($data['conjoint'])) {
+                Log::info('💑 Détection de données conjoint, synchronisation...');
                 $conjointService = new ConjointSyncService();
                 $conjointService->syncConjoint($client, $data['conjoint']);
             }
 
             // 4️⃣ sextus - Synchronisation des revenus
-            if (isset($data['client_revenus']) && is_array($data['client_revenus']) && !empty($data['client_revenus'])) {
-                Log::info("💰 Détection de données revenus, synchronisation...");
+            if (isset($data['client_revenus']) && is_array($data['client_revenus']) && ! empty($data['client_revenus'])) {
+                Log::info('💰 Détection de données revenus, synchronisation...');
                 $revenusService = new ClientRevenusSyncService();
                 $revenusService->syncRevenus($client, $data['client_revenus']);
             }
 
             // 4️⃣ septimus - Synchronisation des passifs
-            if (isset($data['client_passifs']) && is_array($data['client_passifs']) && !empty($data['client_passifs'])) {
-                Log::info("📉 Détection de données passifs, synchronisation...");
+            if (isset($data['client_passifs']) && is_array($data['client_passifs']) && ! empty($data['client_passifs'])) {
+                Log::info('📉 Détection de données passifs, synchronisation...');
                 $passifsService = new ClientPassifsSyncService();
                 $passifsService->syncPassifs($client, $data['client_passifs']);
             }
 
             // 4️⃣ octavus - Synchronisation des actifs financiers
-            if (isset($data['client_actifs_financiers']) && is_array($data['client_actifs_financiers']) && !empty($data['client_actifs_financiers'])) {
-                Log::info("📈 Détection de données actifs financiers, synchronisation...");
+            if (isset($data['client_actifs_financiers']) && is_array($data['client_actifs_financiers']) && ! empty($data['client_actifs_financiers'])) {
+                Log::info('📈 Détection de données actifs financiers, synchronisation...');
                 $actifsService = new ClientActifsFinanciersSyncService();
                 $actifsService->syncActifsFinanciers($client, $data['client_actifs_financiers']);
             }
 
             // 4️⃣ nonus - Synchronisation des biens immobiliers
-            if (isset($data['client_biens_immobiliers']) && is_array($data['client_biens_immobiliers']) && !empty($data['client_biens_immobiliers'])) {
-                Log::info("🏠 Détection de données biens immobiliers, synchronisation...");
+            if (isset($data['client_biens_immobiliers']) && is_array($data['client_biens_immobiliers']) && ! empty($data['client_biens_immobiliers'])) {
+                Log::info('🏠 Détection de données biens immobiliers, synchronisation...');
                 $biensService = new ClientBiensImmobiliersSyncService();
                 $biensService->syncBiensImmobiliers($client, $data['client_biens_immobiliers']);
             }
 
             // 4️⃣ decimus - Synchronisation des autres épargnes
-            if (isset($data['client_autres_epargnes']) && is_array($data['client_autres_epargnes']) && !empty($data['client_autres_epargnes'])) {
-                Log::info("💎 Détection de données autres épargnes, synchronisation...");
+            if (isset($data['client_autres_epargnes']) && is_array($data['client_autres_epargnes']) && ! empty($data['client_autres_epargnes'])) {
+                Log::info('💎 Détection de données autres épargnes, synchronisation...');
                 $epargnesService = new ClientAutresEpargnesSyncService();
                 $epargnesService->syncAutresEpargnes($client, $data['client_autres_epargnes']);
             }
@@ -536,7 +535,7 @@ class ProcessAudioRecording implements ShouldQueue
             if ($this->attempts() >= $this->tries) {
                 $this->audioRecord->update([
                     'status' => 'failed',
-                    'transcription' => "Erreur : " . $e->getMessage(),
+                    'transcription' => 'Erreur : '.$e->getMessage(),
                 ]);
                 Log::error("💀 Échec définitif après {$this->tries} tentatives");
             }
@@ -549,9 +548,8 @@ class ProcessAudioRecording implements ShouldQueue
     /**
      * Corrige les champs entreprise mal placés par GPT
      */
-    private function fixEnterpriseFields(string $transcription, array &$data): void
-    {
-        Log::info("🏢 [FIX ENTREPRISE] Correction des champs entreprise");
+    private function fixEnterpriseFields(string $transcription, array &$data): void {
+        Log::info('🏢 [FIX ENTREPRISE] Correction des champs entreprise');
 
         $text = mb_strtolower($transcription, 'UTF-8');
 
@@ -587,21 +585,21 @@ class ProcessAudioRecording implements ShouldQueue
             $profession = mb_strtolower($data['profession'], 'UTF-8');
 
             // Si profession contient "chef d'entreprise" → corriger
-            if (str_contains($profession, "chef d'entreprise") || str_contains($profession, "chef entreprise")) {
+            if (str_contains($profession, "chef d'entreprise") || str_contains($profession, 'chef entreprise')) {
                 Log::info("🏢 [FIX] 'chef d'entreprise' trouvé dans profession → chef_entreprise: true");
                 $data['chef_entreprise'] = true;
                 unset($data['profession']); // Supprimer le champ incorrect
             }
 
             // Si profession contient "travailleur indépendant" → corriger
-            if (str_contains($profession, "travailleur") && str_contains($profession, "indépendant")) {
+            if (str_contains($profession, 'travailleur') && str_contains($profession, 'indépendant')) {
                 Log::info("🏢 [FIX] 'travailleur indépendant' trouvé dans profession → travailleur_independant: true");
                 $data['travailleur_independant'] = true;
                 unset($data['profession']);
             }
 
             // Si profession contient "mandataire social" → corriger
-            if (str_contains($profession, "mandataire") && str_contains($profession, "social")) {
+            if (str_contains($profession, 'mandataire') && str_contains($profession, 'social')) {
                 Log::info("🏢 [FIX] 'mandataire social' trouvé dans profession → mandataire_social: true");
                 $data['mandataire_social'] = true;
                 unset($data['profession']);
@@ -612,13 +610,13 @@ class ProcessAudioRecording implements ShouldQueue
         if (isset($data['situation_actuelle']) && is_string($data['situation_actuelle'])) {
             $situation = mb_strtolower($data['situation_actuelle'], 'UTF-8');
 
-            if (str_contains($situation, "travailleur") && str_contains($situation, "indépendant")) {
+            if (str_contains($situation, 'travailleur') && str_contains($situation, 'indépendant')) {
                 Log::info("🏢 [FIX] 'travailleur indépendant' trouvé dans situation_actuelle → travailleur_independant: true");
                 $data['travailleur_independant'] = true;
                 unset($data['situation_actuelle']);
             }
 
-            if (str_contains($situation, "chef") && str_contains($situation, "entreprise")) {
+            if (str_contains($situation, 'chef') && str_contains($situation, 'entreprise')) {
                 Log::info("🏢 [FIX] 'chef d'entreprise' trouvé dans situation_actuelle → chef_entreprise: true");
                 $data['chef_entreprise'] = true;
                 unset($data['situation_actuelle']);
@@ -638,7 +636,7 @@ class ProcessAudioRecording implements ShouldQueue
                 continue;
             }
 
-            if (!isset($data[$field]) || $data[$field] !== true) {
+            if (! isset($data[$field]) || $data[$field] !== true) {
                 if (preg_match($pattern, $text)) {
                     Log::info("🏢 [FIX] Pattern '$field' trouvé dans transcription → $field: true");
                     $data[$field] = true;
@@ -669,7 +667,7 @@ class ProcessAudioRecording implements ShouldQueue
             }
         }
 
-        Log::info("🏢 [FIX ENTREPRISE] Résultat final", [
+        Log::info('🏢 [FIX ENTREPRISE] Résultat final', [
             'chef_entreprise' => $data['chef_entreprise'] ?? 'non défini',
             'travailleur_independant' => $data['travailleur_independant'] ?? 'non défini',
             'mandataire_social' => $data['mandataire_social'] ?? 'non défini',
@@ -680,8 +678,7 @@ class ProcessAudioRecording implements ShouldQueue
     /**
      * Normalise la civilité pour correspondre à l'enum MySQL (Monsieur/Madame)
      */
-    private function normalizeCivilite(?string $civilite): ?string
-    {
+    private function normalizeCivilite(?string $civilite): ?string {
         if (empty($civilite)) {
             return null;
         }
@@ -709,19 +706,19 @@ class ProcessAudioRecording implements ShouldQueue
         }
 
         Log::warning("⚠️ Civilité non reconnue: '$civilite', ignorée");
+
         return null;
     }
 
     /**
      * Gestion de l'échec définitif du job
      */
-    public function failed(\Throwable $exception): void
-    {
+    public function failed(\Throwable $exception): void {
         Log::error("💀 Job ProcessAudioRecording #{$this->audioRecord->id} échoué définitivement");
 
         $this->audioRecord->update([
             'status' => 'failed',
-            'transcription' => "Échec définitif : " . $exception->getMessage(),
+            'transcription' => 'Échec définitif : '.$exception->getMessage(),
         ]);
     }
 }

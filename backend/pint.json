@@ -1,0 +1,14 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "new_with_parentheses": true,
+        "single_quote": true,
+        "not_operator_with_successor_space": true,
+        "trailing_comma_in_multiline": { "elements": ["arrays"] },
+        "class_definition": { "space_before_parenthesis": false },
+        "braces_position": {
+            "classes_opening_brace": "same_line",
+            "functions_opening_brace": "same_line"
+        }
+    }
+}

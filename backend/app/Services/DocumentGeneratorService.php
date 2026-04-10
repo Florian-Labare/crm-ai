@@ -11,12 +11,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-class DocumentGeneratorService
-{
+class DocumentGeneratorService {
     private DirectTemplateMapper $mapper;
 
-    public function __construct(DirectTemplateMapper $mapper)
-    {
+    public function __construct(DirectTemplateMapper $mapper) {
         $this->mapper = $mapper;
     }
 
@@ -67,7 +65,7 @@ class DocumentGeneratorService
         ]);
 
         // Appliquer les valeurs saisies par l'utilisateur si disponibles
-        if (!empty($overrides)) {
+        if (! empty($overrides)) {
             $variables = array_merge($variables, $overrides);
         }
 
@@ -89,14 +87,14 @@ class DocumentGeneratorService
             try {
                 $logoTempPath = $this->downloadLogoToTemp($team->logo_path);
                 $templateProcessor->setImageValue('logo_cabinet', [
-                    'path'   => $logoTempPath,
-                    'width'  => 150,
+                    'path' => $logoTempPath,
+                    'width' => 150,
                     'height' => 60,
-                    'ratio'  => true,
+                    'ratio' => true,
                 ]);
                 @unlink($logoTempPath);
             } catch (\Throwable $e) {
-                Log::warning('⚠️ Impossible d\'injecter le logo dans le document : ' . $e->getMessage());
+                Log::warning('⚠️ Impossible d\'injecter le logo dans le document : '.$e->getMessage());
                 $templateProcessor->setValue('logo_cabinet', '');
             }
         } else {
@@ -108,11 +106,11 @@ class DocumentGeneratorService
 
         // Générer localement dans le dossier temp, puis uploader vers S3
         $tempDir = Storage::disk('temp')->path('documents');
-        if (!is_dir($tempDir)) {
+        if (! is_dir($tempDir)) {
             mkdir($tempDir, 0755, true);
         }
 
-        $tempOutputPath = $tempDir . '/' . $fileName;
+        $tempOutputPath = $tempDir.'/'.$fileName;
 
         // Sauvegarder le document généré localement
         $templateProcessor->saveAs($tempOutputPath);
@@ -150,8 +148,7 @@ class DocumentGeneratorService
      * Mappe toutes les données du client aux variables du template
      * Note: Le template utilise des noms sans underscores (ex: datenaissance au lieu de date_naissance)
      */
-    private function mapClientDataToVariables(Client $client): array
-    {
+    private function mapClientDataToVariables(Client $client): array {
         // Charger toutes les relations
         $client->load([
             'conjoint',
@@ -278,24 +275,23 @@ class DocumentGeneratorService
     /**
      * Télécharge le logo depuis S3 vers un fichier temporaire local
      */
-    private function downloadLogoToTemp(string $s3Path): string
-    {
+    private function downloadLogoToTemp(string $s3Path): string {
         $content = Storage::disk('s3')->get($s3Path);
-        $tempPath = storage_path('app/temp/logo_' . uniqid() . '.png');
+        $tempPath = storage_path('app/temp/logo_'.uniqid().'.png');
 
-        if (!file_exists(storage_path('app/temp'))) {
+        if (! file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
         file_put_contents($tempPath, $content);
+
         return $tempPath;
     }
 
     /**
      * Génère un nom de fichier unique pour le document
      */
-    private function generateFileName(Client $client, DocumentTemplate $template, string $format): string
-    {
+    private function generateFileName(Client $client, DocumentTemplate $template, string $format): string {
         $timestamp = now()->format('Ymd_His');
         $clientName = Str::slug($client->nom.'_'.$client->prenom, '_');
         $templateSlug = Str::slug($template->name, '_');
@@ -306,8 +302,7 @@ class DocumentGeneratorService
     /**
      * Parse une date de façon sécurisée (gère les formats partiels comme "1961-XX-XX")
      */
-    private function safeFormatDate(?string $date): string
-    {
+    private function safeFormatDate(?string $date): string {
         if (empty($date)) {
             return '';
         }
@@ -329,8 +324,7 @@ class DocumentGeneratorService
     /**
      * Normalise une valeur pour PhpWord TemplateProcessor::setValue (qui attend du texte).
      */
-    private function normalizeTemplateValue(mixed $value): string
-    {
+    private function normalizeTemplateValue(mixed $value): string {
         if ($value === null) {
             return '';
         }
@@ -364,18 +358,18 @@ class DocumentGeneratorService
     /**
      * Convertit un fichier DOCX en PDF via Gotenberg
      *
-     * @param string $docxPath Chemin complet vers le fichier DOCX
+     * @param  string  $docxPath  Chemin complet vers le fichier DOCX
      * @return string Chemin complet vers le fichier PDF généré
+     *
      * @throws \Exception Si la conversion échoue
      */
-    private function convertToPdf(string $docxPath): string
-    {
+    private function convertToPdf(string $docxPath): string {
         try {
             // URL de Gotenberg (service Docker)
             $gotenbergUrl = 'http://gotenberg:3000/forms/libreoffice/convert';
 
             // Vérifier que le fichier existe et a une taille non-nulle
-            if (!file_exists($docxPath)) {
+            if (! file_exists($docxPath)) {
                 throw new \Exception("DOCX file not found: {$docxPath}");
             }
 

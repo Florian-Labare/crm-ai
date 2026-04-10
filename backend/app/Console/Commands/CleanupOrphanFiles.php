@@ -17,8 +17,7 @@ use RecursiveIteratorIterator;
  * Identifie et supprime les fichiers présents sur le système de fichiers
  * mais non référencés en base de données.
  */
-class CleanupOrphanFiles extends Command
-{
+class CleanupOrphanFiles extends Command {
     protected $signature = 'storage:cleanup-orphans
                             {--dry-run : Affiche les fichiers orphelins sans les supprimer}
                             {--delete : Supprime les fichiers orphelins (confirmation requise)}
@@ -27,29 +26,33 @@ class CleanupOrphanFiles extends Command
     protected $description = 'Nettoie les fichiers orphelins non référencés en base de données';
 
     private int $orphanCount = 0;
+
     private int $deletedCount = 0;
+
     private int $deletedBytes = 0;
+
     private array $dbReferences = [];
 
-    public function handle(): int
-    {
+    public function handle(): int {
         $dryRun = $this->option('dry-run');
         $delete = $this->option('delete');
         $force = $this->option('force');
 
-        if (!$dryRun && !$delete) {
+        if (! $dryRun && ! $delete) {
             $this->error('❌ Vous devez spécifier --dry-run ou --delete');
             $this->info('   Exemples:');
             $this->info('   php artisan storage:cleanup-orphans --dry-run');
             $this->info('   php artisan storage:cleanup-orphans --delete');
+
             return Command::FAILURE;
         }
 
         if ($dryRun) {
             $this->warn('🔍 Mode dry-run - Aucun fichier ne sera supprimé');
-        } elseif ($delete && !$force) {
-            if (!$this->confirm('⚠️  Confirmer la suppression des fichiers orphelins?')) {
+        } elseif ($delete && ! $force) {
+            if (! $this->confirm('⚠️  Confirmer la suppression des fichiers orphelins?')) {
                 $this->info('Opération annulée');
+
                 return Command::SUCCESS;
             }
         }
@@ -69,6 +72,7 @@ class CleanupOrphanFiles extends Command
 
         if ($this->orphanCount === 0) {
             $this->info('✅ Aucun fichier orphelin trouvé');
+
             return Command::SUCCESS;
         }
 
@@ -89,11 +93,11 @@ class CleanupOrphanFiles extends Command
         );
 
         if (count($orphans) > 20) {
-            $this->info("... et " . (count($orphans) - 20) . " autres fichiers");
+            $this->info('... et '.(count($orphans) - 20).' autres fichiers');
         }
 
         $this->newLine();
-        $this->info("Taille totale: " . $this->formatBytes($totalSize));
+        $this->info('Taille totale: '.$this->formatBytes($totalSize));
         $this->newLine();
 
         // Supprimer si demandé
@@ -147,8 +151,7 @@ class CleanupOrphanFiles extends Command
     /**
      * Charge toutes les références de fichiers en base de données
      */
-    private function loadDatabaseReferences(): void
-    {
+    private function loadDatabaseReferences(): void {
         $this->info('📚 Chargement des références en base de données...');
 
         // Audio records
@@ -157,22 +160,22 @@ class CleanupOrphanFiles extends Command
             ->pluck('path')
             ->toArray();
         $this->dbReferences = array_merge($this->dbReferences, $audioRecords);
-        $this->info("   - AudioRecord: " . count($audioRecords) . " fichiers");
+        $this->info('   - AudioRecord: '.count($audioRecords).' fichiers');
 
         // Compliance documents
         $complianceDocs = ClientComplianceDocument::pluck('file_path')->toArray();
         $this->dbReferences = array_merge($this->dbReferences, $complianceDocs);
-        $this->info("   - ClientComplianceDocument: " . count($complianceDocs) . " fichiers");
+        $this->info('   - ClientComplianceDocument: '.count($complianceDocs).' fichiers');
 
         // Generated documents
         $generatedDocs = GeneratedDocument::pluck('file_path')->toArray();
         $this->dbReferences = array_merge($this->dbReferences, $generatedDocs);
-        $this->info("   - GeneratedDocument: " . count($generatedDocs) . " fichiers");
+        $this->info('   - GeneratedDocument: '.count($generatedDocs).' fichiers');
 
         // Import sessions
         $importSessions = ImportSession::whereNotNull('file_path')->pluck('file_path')->toArray();
         $this->dbReferences = array_merge($this->dbReferences, $importSessions);
-        $this->info("   - ImportSession: " . count($importSessions) . " fichiers");
+        $this->info('   - ImportSession: '.count($importSessions).' fichiers');
 
         // Normaliser les chemins (enlever 'public/', 'private/' du début)
         $this->dbReferences = array_map(function ($path) {
@@ -182,19 +185,18 @@ class CleanupOrphanFiles extends Command
         // Dédupliquer
         $this->dbReferences = array_unique($this->dbReferences);
 
-        $this->info("   Total: " . count($this->dbReferences) . " références uniques");
+        $this->info('   Total: '.count($this->dbReferences).' références uniques');
         $this->newLine();
     }
 
     /**
      * Scanner un répertoire pour trouver les fichiers orphelins
      */
-    private function scanDirectory(string $dir): array
-    {
+    private function scanDirectory(string $dir): array {
         $orphans = [];
         $path = storage_path("app/{$dir}");
 
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return $orphans;
         }
 
@@ -204,7 +206,7 @@ class CleanupOrphanFiles extends Command
         );
 
         foreach ($iterator as $file) {
-            if (!$file->isFile()) {
+            if (! $file->isFile()) {
                 continue;
             }
 
@@ -221,8 +223,8 @@ class CleanupOrphanFiles extends Command
             // Vérifier si référencé en DB (essayer avec et sans le préfixe public/private)
             $fullPath = "{$dir}/{$relativePath}";
             if (
-                !in_array($relativePath, $this->dbReferences) &&
-                !in_array($fullPath, $this->dbReferences)
+                ! in_array($relativePath, $this->dbReferences) &&
+                ! in_array($fullPath, $this->dbReferences)
             ) {
                 $orphans[] = [
                     'path' => $file->getPathname(),
@@ -239,11 +241,10 @@ class CleanupOrphanFiles extends Command
     /**
      * Nettoyer les répertoires vides
      */
-    private function cleanupEmptyDirectories(string $dir): void
-    {
+    private function cleanupEmptyDirectories(string $dir): void {
         $path = storage_path("app/{$dir}");
 
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return;
         }
 
@@ -262,30 +263,31 @@ class CleanupOrphanFiles extends Command
     /**
      * Vérifie si un répertoire est vide
      */
-    private function isEmptyDirectory(string $dir): bool
-    {
+    private function isEmptyDirectory(string $dir): bool {
         $handle = opendir($dir);
         while (false !== ($entry = readdir($handle))) {
             if ($entry !== '.' && $entry !== '..') {
                 closedir($handle);
+
                 return false;
             }
         }
         closedir($handle);
+
         return true;
     }
 
     /**
      * Formate une taille en bytes
      */
-    private function formatBytes(int $bytes): string
-    {
+    private function formatBytes(int $bytes): string {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {
             $bytes /= 1024;
             $i++;
         }
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 }

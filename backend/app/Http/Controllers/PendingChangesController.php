@@ -5,24 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientPendingChange;
 use App\Services\MergeService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class PendingChangesController extends Controller
-{
+class PendingChangesController extends Controller {
     private MergeService $mergeService;
 
-    public function __construct(MergeService $mergeService)
-    {
+    public function __construct(MergeService $mergeService) {
         $this->mergeService = $mergeService;
     }
 
     /**
      * Liste tous les pending changes pour l'utilisateur connecté
      */
-    public function index(Request $request): JsonResponse
-    {
+    public function index(Request $request): JsonResponse {
         $pendingChanges = ClientPendingChange::forUser(auth()->id())
             ->whereIn('status', ['pending', 'reviewing'])
             ->with(['client:id,nom,prenom,email', 'audioRecord:id,path,created_at'])
@@ -36,7 +33,7 @@ class PendingChangesController extends Controller
                         'nom' => $pc->client->nom,
                         'prenom' => $pc->client->prenom,
                         'email' => $pc->client->email,
-                        'full_name' => trim(($pc->client->prenom ?? '') . ' ' . ($pc->client->nom ?? '')),
+                        'full_name' => trim(($pc->client->prenom ?? '').' '.($pc->client->nom ?? '')),
                     ] : null,
                     'source' => $pc->source,
                     'status' => $pc->status,
@@ -57,8 +54,7 @@ class PendingChangesController extends Controller
     /**
      * Affiche le détail d'un pending change avec le diff complet
      */
-    public function show(ClientPendingChange $pendingChange): JsonResponse
-    {
+    public function show(ClientPendingChange $pendingChange): JsonResponse {
         // Vérifier que l'utilisateur a accès
         $this->authorize('view', $pendingChange);
 
@@ -72,7 +68,7 @@ class PendingChangesController extends Controller
                 'nom' => $pendingChange->client->nom,
                 'prenom' => $pendingChange->client->prenom,
                 'email' => $pendingChange->client->email,
-                'full_name' => trim(($pendingChange->client->prenom ?? '') . ' ' . ($pendingChange->client->nom ?? '')),
+                'full_name' => trim(($pendingChange->client->prenom ?? '').' '.($pendingChange->client->nom ?? '')),
             ] : null,
             'source' => $pendingChange->source,
             'status' => $pendingChange->status,
@@ -96,13 +92,12 @@ class PendingChangesController extends Controller
     /**
      * Applique les changements sélectionnés
      */
-    public function apply(Request $request, ClientPendingChange $pendingChange): JsonResponse
-    {
+    public function apply(Request $request, ClientPendingChange $pendingChange): JsonResponse {
         // Vérifier que l'utilisateur a accès
         $this->authorize('update', $pendingChange);
 
         // Vérifier le statut
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
                 'status' => $pendingChange->status,
@@ -123,7 +118,7 @@ class PendingChangesController extends Controller
                 $request->input('overrides', [])
             );
 
-            Log::info("✅ [PENDING CHANGES] Changements appliqués", [
+            Log::info('✅ [PENDING CHANGES] Changements appliqués', [
                 'pending_change_id' => $pendingChange->id,
                 'applied_count' => count($result['applied']),
                 'rejected_count' => count($result['rejected']),
@@ -157,11 +152,10 @@ class PendingChangesController extends Controller
     /**
      * Accepte tous les changements
      */
-    public function acceptAll(ClientPendingChange $pendingChange): JsonResponse
-    {
+    public function acceptAll(ClientPendingChange $pendingChange): JsonResponse {
         $this->authorize('update', $pendingChange);
 
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
             ], 422);
@@ -196,11 +190,10 @@ class PendingChangesController extends Controller
     /**
      * Rejette tous les changements
      */
-    public function rejectAll(Request $request, ClientPendingChange $pendingChange): JsonResponse
-    {
+    public function rejectAll(Request $request, ClientPendingChange $pendingChange): JsonResponse {
         $this->authorize('update', $pendingChange);
 
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
             ], 422);
@@ -219,11 +212,10 @@ class PendingChangesController extends Controller
     /**
      * Applique automatiquement les changements "sûrs" (sans conflit)
      */
-    public function autoApplySafe(ClientPendingChange $pendingChange): JsonResponse
-    {
+    public function autoApplySafe(ClientPendingChange $pendingChange): JsonResponse {
         $this->authorize('update', $pendingChange);
 
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
             ], 422);
@@ -254,8 +246,7 @@ class PendingChangesController extends Controller
     /**
      * Compte les pending changes pour un client
      */
-    public function countForClient(Client $client): JsonResponse
-    {
+    public function countForClient(Client $client): JsonResponse {
         $count = ClientPendingChange::forClient($client->id)
             ->whereIn('status', ['pending', 'reviewing'])
             ->count();
@@ -269,8 +260,7 @@ class PendingChangesController extends Controller
     /**
      * Liste les pending changes pour un client spécifique
      */
-    public function forClient(Client $client): JsonResponse
-    {
+    public function forClient(Client $client): JsonResponse {
         $pendingChanges = ClientPendingChange::forClient($client->id)
             ->whereIn('status', ['pending', 'reviewing'])
             ->orderBy('created_at', 'desc')

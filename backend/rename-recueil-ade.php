@@ -4,31 +4,31 @@
  * Script pour renommer les variables du Template RECUEIL ADE
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
-$mapping = require __DIR__ . '/variable-mapping-complete.php';
+$mapping = require __DIR__.'/variable-mapping-complete.php';
 
-$templatePath = __DIR__ . '/storage/app/templates/recueil-ade.docx';
+$templatePath = __DIR__.'/storage/app/templates/recueil-ade.docx';
 
 echo "🔄 RENOMMAGE DES VARIABLES DANS LE TEMPLATE RECUEIL ADE\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
-if (!file_exists($templatePath)) {
+if (! file_exists($templatePath)) {
     echo "❌ Template non trouvé: recueil-ade.docx\n";
     exit(1);
 }
 
 echo "📄 Traitement: Template RECUEIL ADE\n";
-echo str_repeat("-", 80) . "\n";
+echo str_repeat('-', 80)."\n";
 
 // 1. Créer une backup avant modification
-$backupPath = $templatePath . '.backup_renaming_' . time();
+$backupPath = $templatePath.'.backup_renaming_'.time();
 copy($templatePath, $backupPath);
-echo "   Backup créée: " . basename($backupPath) . "\n";
+echo '   Backup créée: '.basename($backupPath)."\n";
 
 // 2. Ouvrir le template
 $zip = new ZipArchive();
-if ($zip->open($templatePath) !== TRUE) {
+if ($zip->open($templatePath) !== true) {
     echo "   ❌ Impossible d'ouvrir le fichier\n";
     exit(1);
 }
@@ -43,9 +43,9 @@ $fullText = html_entity_decode($fullText, ENT_XML1);
 preg_match_all('/\{\{([^}]+)\}\}/', $fullText, $varMatches);
 $variables = array_unique($varMatches[1]);
 $variables = array_map('trim', $variables);
-$variables = array_filter($variables, fn($v) => !empty($v));
+$variables = array_filter($variables, fn ($v) => ! empty($v));
 
-echo "   Variables trouvées: " . count($variables) . "\n";
+echo '   Variables trouvées: '.count($variables)."\n";
 
 $replacements = [];
 $notMapped = [];
@@ -58,10 +58,10 @@ foreach ($variables as $varName) {
         if (isset($config['type'])) {
             // Variable computed ou fixed
             if ($config['type'] === 'computed') {
-                $newVar = '{{' . $config['value'] . '}}';
-            } else if ($config['type'] === 'fixed') {
+                $newVar = '{{'.$config['value'].'}}';
+            } elseif ($config['type'] === 'fixed') {
                 // Les variables fixes restent en l'état pour l'instant
-                $newVar = '{{' . $varName . '}}';
+                $newVar = '{{'.$varName.'}}';
             }
         } else {
             // Variable mappée à une colonne DB
@@ -71,13 +71,13 @@ foreach ($variables as $varName) {
             // Format: {{table.colonne}}
             if (isset($config['index'])) {
                 // Pour les enfants avec index
-                $newVar = '{{' . $table . '[' . $config['index'] . '].' . $column . '}}';
+                $newVar = '{{'.$table.'['.$config['index'].'].'.$column.'}}';
             } else {
-                $newVar = '{{' . $table . '.' . $column . '}}';
+                $newVar = '{{'.$table.'.'.$column.'}}';
             }
         }
 
-        $oldVar = '{{' . $varName . '}}';
+        $oldVar = '{{'.$varName.'}}';
         $replacements[$oldVar] = $newVar;
 
         echo "   ✓ {$oldVar} → {$newVar}\n";
@@ -86,15 +86,15 @@ foreach ($variables as $varName) {
     }
 }
 
-if (!empty($notMapped)) {
-    echo "   ⚠️  Variables non mappées (" . count($notMapped) . "): " . implode(', ', $notMapped) . "\n";
+if (! empty($notMapped)) {
+    echo '   ⚠️  Variables non mappées ('.count($notMapped).'): '.implode(', ', $notMapped)."\n";
 }
 
 // 5. Remplacer les variables dans le XML
 foreach ($replacements as $oldVar => $newVar) {
     $xml = preg_replace_callback(
         '/<w:p\b[^>]*>(.*?)<\/w:p>/s',
-        function($pMatch) use ($oldVar, $newVar) {
+        function ($pMatch) use ($oldVar, $newVar) {
             $paragraph = $pMatch[0];
 
             // Extraire tout le texte du paragraphe
@@ -105,14 +105,14 @@ foreach ($replacements as $oldVar => $newVar) {
             // Si l'ancienne variable est dans ce paragraphe
             if (strpos($paragraphText, $oldVar) !== false) {
                 // Supprimer toute la fragmentation et remplacer par la nouvelle variable
-                $marker = '___MARKER_' . md5($oldVar . uniqid()) . '___';
+                $marker = '___MARKER_'.md5($oldVar.uniqid()).'___';
 
                 // Chercher et marquer la variable fragmentée
-                $pattern = '/\{\{[^}]*?' . preg_quote(trim($oldVar, '{}'), '/') . '[^}]*?\}\}/sU';
+                $pattern = '/\{\{[^}]*?'.preg_quote(trim($oldVar, '{}'), '/').'[^}]*?\}\}/sU';
                 $paragraph = preg_replace($pattern, $marker, $paragraph, 1);
 
                 // Remplacer le marqueur par la nouvelle variable propre
-                $cleanVar = '<w:r><w:t>' . htmlspecialchars($newVar, ENT_XML1) . '</w:t></w:r>';
+                $cleanVar = '<w:r><w:t>'.htmlspecialchars($newVar, ENT_XML1).'</w:t></w:r>';
                 $paragraph = str_replace($marker, $cleanVar, $paragraph);
             }
 
@@ -143,5 +143,5 @@ $variablesAfterCount = count($variablesAfter);
 
 echo "   ✅ Renommage terminé: {$variablesAfterCount} variables dans le template final\n";
 
-echo "\n" . str_repeat("=", 80) . "\n";
+echo "\n".str_repeat('=', 80)."\n";
 echo "✅ Renommage terminé pour le template RECUEIL ADE !\n";

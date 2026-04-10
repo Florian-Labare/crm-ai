@@ -8,15 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class QuestionnaireRisqueController extends Controller
-{
+class QuestionnaireRisqueController extends Controller {
     public function __construct(
         private ScoringService $scoringService
-    ) {
-    }
+    ) {}
 
-    public function live(Request $request): JsonResponse
-    {
+    public function live(Request $request): JsonResponse {
         $request->validate([
             'client_id' => 'required|exists:clients,id',
             'financier' => 'sometimes|array',
@@ -70,13 +67,12 @@ class QuestionnaireRisqueController extends Controller
         ]);
     }
 
-    public function show(int $clientId): JsonResponse
-    {
+    public function show(int $clientId): JsonResponse {
         $questionnaire = QuestionnaireRisque::with(['financier', 'connaissances', 'quiz'])
             ->where('client_id', $clientId)
             ->first();
 
-        if (!$questionnaire) {
+        if (! $questionnaire) {
             return response()->json([
                 'questionnaire' => null,
                 'score' => 0,
@@ -96,8 +92,7 @@ class QuestionnaireRisqueController extends Controller
     /**
      * Fusionne les réponses existantes avec les nouvelles valeurs saisies côté frontend.
      */
-    private function mergeSectionData(?Model $section, array $incoming): array
-    {
+    private function mergeSectionData(?Model $section, array $incoming): array {
         $existing = $section
             ? collect($section->getAttributes())
                 ->except(['id', 'questionnaire_risque_id', 'created_at', 'updated_at'])
@@ -110,16 +105,19 @@ class QuestionnaireRisqueController extends Controller
 
                 if ($trimmed === '') {
                     $incoming[$key] = null;
+
                     continue;
                 }
 
                 $lower = strtolower($trimmed);
                 if (in_array($lower, ['true', 'false', '0', '1'], true)) {
                     $incoming[$key] = $lower === 'true' || $lower === '1';
+
                     continue;
                 }
 
                 $incoming[$key] = $trimmed;
+
                 continue;
             }
 

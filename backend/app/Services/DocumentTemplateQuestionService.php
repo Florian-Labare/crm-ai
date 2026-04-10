@@ -2,15 +2,13 @@
 
 namespace App\Services;
 
-class DocumentTemplateQuestionService
-{
+class DocumentTemplateQuestionService {
     /**
      * Extrait un mapping variable -> question depuis un template DOCX.
      *
      * @return array<string, string>
      */
-    public function extractQuestions(string $templatePath): array
-    {
+    public function extractQuestions(string $templatePath): array {
         $zip = new \ZipArchive();
         if ($zip->open($templatePath) !== true) {
             throw new \Exception("Cannot open template file: {$templatePath}");
@@ -32,16 +30,15 @@ class DocumentTemplateQuestionService
         return $mapping;
     }
 
-    private function extractFromRows(string $xml, array &$mapping, string &$lastLabel): void
-    {
-        if (!preg_match_all('/<w:tr\\b[^>]*>(.*?)<\\/w:tr>/s', $xml, $rows)) {
+    private function extractFromRows(string $xml, array &$mapping, string &$lastLabel): void {
+        if (! preg_match_all('/<w:tr\\b[^>]*>(.*?)<\\/w:tr>/s', $xml, $rows)) {
             return;
         }
 
         $headerCells = [];
 
         foreach ($rows[1] as $rowXml) {
-            if (!preg_match_all('/<w:tc\\b[^>]*>(.*?)<\\/w:tc>/s', $rowXml, $cells)) {
+            if (! preg_match_all('/<w:tc\\b[^>]*>(.*?)<\\/w:tc>/s', $rowXml, $cells)) {
                 continue;
             }
 
@@ -56,23 +53,24 @@ class DocumentTemplateQuestionService
 
             $rowHasVariables = false;
             foreach ($cellVariables as $vars) {
-                if (!empty($vars)) {
+                if (! empty($vars)) {
                     $rowHasVariables = true;
                     break;
                 }
             }
 
-            if (!$rowHasVariables) {
-                $candidateHeader = array_filter($cellTexts, fn($text) => $this->isUsableLabel($text));
-                if (!empty($candidateHeader)) {
+            if (! $rowHasVariables) {
+                $candidateHeader = array_filter($cellTexts, fn ($text) => $this->isUsableLabel($text));
+                if (! empty($candidateHeader)) {
                     $headerCells = $cellTexts;
                 }
+
                 continue;
             }
 
             $labelCellText = '';
             foreach ($cellTexts as $index => $text) {
-                if (!empty($cellVariables[$index])) {
+                if (! empty($cellVariables[$index])) {
                     continue;
                 }
                 if ($this->isUsableLabel($text)) {
@@ -112,9 +110,8 @@ class DocumentTemplateQuestionService
         }
     }
 
-    private function extractFromParagraphs(string $xml, array &$mapping, string &$lastLabel): void
-    {
-        if (!preg_match_all('/<w:p\\b[^>]*>(.*?)<\\/w:p>/s', $xml, $paragraphs)) {
+    private function extractFromParagraphs(string $xml, array &$mapping, string &$lastLabel): void {
+        if (! preg_match_all('/<w:p\\b[^>]*>(.*?)<\\/w:p>/s', $xml, $paragraphs)) {
             return;
         }
 
@@ -130,6 +127,7 @@ class DocumentTemplateQuestionService
                 if ($this->isUsableLabel($text)) {
                     $lastLabel = $text;
                 }
+
                 continue;
             }
 
@@ -139,7 +137,7 @@ class DocumentTemplateQuestionService
                 }
 
                 $label = $this->sanitizeLabel($this->deriveLabelFromText($text, $variable));
-                if (!$this->isUsableLabel($label) && $this->paragraphIsMostlyVariable($text, $variable)) {
+                if (! $this->isUsableLabel($label) && $this->paragraphIsMostlyVariable($text, $variable)) {
                     $label = $lastLabel;
                 }
                 if ($this->isUsableLabel($label)) {
@@ -150,9 +148,8 @@ class DocumentTemplateQuestionService
         }
     }
 
-    private function deriveLabelFromText(string $text, string $variable): string
-    {
-        $needle = '{{' . $variable . '}}';
+    private function deriveLabelFromText(string $text, string $variable): string {
+        $needle = '{{'.$variable.'}}';
         $pos = strpos($text, $needle);
         if ($pos === false) {
             return '';
@@ -184,9 +181,8 @@ class DocumentTemplateQuestionService
         return $label ?? '';
     }
 
-    private function extractPlainText(string $xmlChunk): string
-    {
-        if (!preg_match_all('/<w:t[^>]*>(.*?)<\\/w:t>/s', $xmlChunk, $textMatches)) {
+    private function extractPlainText(string $xmlChunk): string {
+        if (! preg_match_all('/<w:t[^>]*>(.*?)<\\/w:t>/s', $xmlChunk, $textMatches)) {
             return '';
         }
 
@@ -201,20 +197,18 @@ class DocumentTemplateQuestionService
     /**
      * @return string[]
      */
-    private function extractVariables(string $text): array
-    {
-        if (!preg_match_all('/\\{\\{([^}]+)\\}\\}/', $text, $varMatches)) {
+    private function extractVariables(string $text): array {
+        if (! preg_match_all('/\\{\\{([^}]+)\\}\\}/', $text, $varMatches)) {
             return [];
         }
 
         $variables = array_map('trim', $varMatches[1]);
-        $variables = array_filter($variables, fn($v) => $v !== '');
+        $variables = array_filter($variables, fn ($v) => $v !== '');
 
         return array_values(array_unique($variables));
     }
 
-    private function isUsableLabel(string $label): bool
-    {
+    private function isUsableLabel(string $label): bool {
         if ($label === '') {
             return false;
         }
@@ -230,8 +224,7 @@ class DocumentTemplateQuestionService
         return true;
     }
 
-    private function findNearestLabelInRow(array $cellTexts, array $cellVariables, int $targetIndex): string
-    {
+    private function findNearestLabelInRow(array $cellTexts, array $cellVariables, int $targetIndex): string {
         $bestLabel = '';
         $bestDistance = PHP_INT_MAX;
 
@@ -239,10 +232,10 @@ class DocumentTemplateQuestionService
             if ($index === $targetIndex) {
                 continue;
             }
-            if (!empty($cellVariables[$index])) {
+            if (! empty($cellVariables[$index])) {
                 continue;
             }
-            if (!$this->isUsableLabel($text)) {
+            if (! $this->isUsableLabel($text)) {
                 continue;
             }
 
@@ -257,22 +250,20 @@ class DocumentTemplateQuestionService
             return $bestLabel;
         }
 
-        $rowText = implode(' ', array_filter($cellTexts, fn($text) => $this->isUsableLabel($text)));
+        $rowText = implode(' ', array_filter($cellTexts, fn ($text) => $this->isUsableLabel($text)));
         $rowText = trim(preg_replace('/\\s+/', ' ', $rowText));
 
         return $rowText;
     }
 
-    private function paragraphIsMostlyVariable(string $text, string $variable): bool
-    {
-        $needle = '{{' . $variable . '}}';
+    private function paragraphIsMostlyVariable(string $text, string $variable): bool {
+        $needle = '{{'.$variable.'}}';
         $cleaned = trim(str_replace($needle, '', $text));
 
         return $cleaned === '' || strlen($cleaned) < 3;
     }
 
-    private function sanitizeLabel(string $label): string
-    {
+    private function sanitizeLabel(string $label): string {
         if ($label === '') {
             return '';
         }

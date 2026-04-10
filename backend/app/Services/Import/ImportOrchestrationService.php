@@ -2,25 +2,15 @@
 
 namespace App\Services\Import;
 
-use App\Models\BaeEpargne;
-use App\Models\BaePrevoyance;
-use App\Models\BaeRetraite;
 use App\Models\Client;
-use App\Models\ClientActifFinancier;
-use App\Models\ClientAutreEpargne;
-use App\Models\ClientBienImmobilier;
-use App\Models\ClientPassif;
-use App\Models\ClientRevenu;
 use App\Models\ImportRow;
 use App\Models\ImportSession;
-use App\Models\SanteSouhait;
 use App\Services\EnfantSyncService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ImportOrchestrationService
-{
+class ImportOrchestrationService {
     public function __construct(
         private ImportFileParserService $parser,
         private ImportMappingService $mappingService,
@@ -28,11 +18,9 @@ class ImportOrchestrationService
         private ImportDuplicateDetectionService $duplicateDetector,
         private DatabaseConnectorService $databaseConnector,
         private EnfantSyncService $enfantSyncService
-    ) {
-    }
+    ) {}
 
-    public function analyzeFile(ImportSession $session): void
-    {
+    public function analyzeFile(ImportSession $session): void {
         $session->update(['status' => ImportSession::STATUS_ANALYZING]);
 
         try {
@@ -57,8 +45,7 @@ class ImportOrchestrationService
         }
     }
 
-    private function analyzeFileSource(ImportSession $session): void
-    {
+    private function analyzeFileSource(ImportSession $session): void {
         $filePath = $this->getLocalFilePath($session);
 
         $columns = $this->parser->detectColumns($filePath);
@@ -79,10 +66,9 @@ class ImportOrchestrationService
         ]);
     }
 
-    private function analyzeDatabaseSource(ImportSession $session): void
-    {
+    private function analyzeDatabaseSource(ImportSession $session): void {
         $connection = $session->databaseConnection;
-        if (!$connection) {
+        if (! $connection) {
             throw new \Exception('Connexion base de données non trouvée');
         }
 
@@ -91,12 +77,12 @@ class ImportOrchestrationService
         // Get columns from table or query
         if ($session->source_table) {
             $columns = $this->databaseConnector->getTableColumns($config, $session->source_table);
-            $columnNames = array_map(fn($col) => $col['name'], $columns);
+            $columnNames = array_map(fn ($col) => $col['name'], $columns);
             $rowCount = $this->databaseConnector->getTableRowCount($config, $session->source_table);
         } else {
             // For custom query, execute with limit to get columns
             $sampleData = $this->databaseConnector->executeQuery($config, $session->source_query, 1);
-            $columnNames = !empty($sampleData) ? array_keys($sampleData[0]) : [];
+            $columnNames = ! empty($sampleData) ? array_keys($sampleData[0]) : [];
             $rowCount = 0; // Will be determined during processing
         }
 
@@ -117,8 +103,7 @@ class ImportOrchestrationService
         ]);
     }
 
-    public function processSession(ImportSession $session): void
-    {
+    public function processSession(ImportSession $session): void {
         $session->update([
             'status' => ImportSession::STATUS_PROCESSING,
             'started_at' => now(),
@@ -127,7 +112,7 @@ class ImportOrchestrationService
         try {
             $mapping = $session->mapping;
 
-            if (!$mapping) {
+            if (! $mapping) {
                 throw new \Exception('Aucun mapping configuré pour cette session');
             }
 
@@ -147,8 +132,7 @@ class ImportOrchestrationService
         }
     }
 
-    private function processFromFile(ImportSession $session, array $columnMappings): void
-    {
+    private function processFromFile(ImportSession $session, array $columnMappings): void {
         $filePath = $this->getLocalFilePath($session);
         $parsed = $this->parser->parseFile($filePath);
 
@@ -173,10 +157,9 @@ class ImportOrchestrationService
         ]);
     }
 
-    private function processFromDatabase(ImportSession $session, array $columnMappings): void
-    {
+    private function processFromDatabase(ImportSession $session, array $columnMappings): void {
         $connection = $session->databaseConnection;
-        if (!$connection) {
+        if (! $connection) {
             throw new \Exception('Connexion base de données non trouvée');
         }
 
@@ -231,9 +214,8 @@ class ImportOrchestrationService
      * Télécharge le fichier depuis S3 vers temp local si nécessaire
      * et retourne le chemin local pour traitement
      */
-    private function getLocalFilePath(ImportSession $session): string
-    {
-        $tempPath = Storage::disk('temp')->path('imports/' . basename($session->file_path));
+    private function getLocalFilePath(ImportSession $session): string {
+        $tempPath = Storage::disk('temp')->path('imports/'.basename($session->file_path));
 
         // Si le fichier temp existe déjà, le réutiliser
         if (file_exists($tempPath)) {
@@ -242,7 +224,7 @@ class ImportOrchestrationService
 
         // Créer le dossier temp si nécessaire
         $tempDir = dirname($tempPath);
-        if (!is_dir($tempDir)) {
+        if (! is_dir($tempDir)) {
             mkdir($tempDir, 0755, true);
         }
 
@@ -258,10 +240,9 @@ class ImportOrchestrationService
         return $tempPath;
     }
 
-    public function processBatch(ImportSession $session, int $offset, int $limit = 50): array
-    {
+    public function processBatch(ImportSession $session, int $offset, int $limit = 50): array {
         $mapping = $session->mapping;
-        if (!$mapping) {
+        if (! $mapping) {
             throw new \Exception('Aucun mapping configuré');
         }
 
@@ -292,12 +273,13 @@ class ImportOrchestrationService
 
             $row->normalized_data = $validationResult['data'];
 
-            if (!$validationResult['is_valid']) {
+            if (! $validationResult['is_valid']) {
                 $row->status = ImportRow::STATUS_INVALID;
                 $row->validation_errors = $validationResult['errors'];
                 $row->save();
                 $results['invalid']++;
                 $results['processed']++;
+
                 continue;
             }
 
@@ -338,9 +320,8 @@ class ImportOrchestrationService
         return $results;
     }
 
-    public function importRow(ImportRow $row, string $action = 'create'): ?Client
-    {
-        if (!in_array($row->status, [ImportRow::STATUS_VALID, ImportRow::STATUS_DUPLICATE])) {
+    public function importRow(ImportRow $row, string $action = 'create'): ?Client {
+        if (! in_array($row->status, [ImportRow::STATUS_VALID, ImportRow::STATUS_DUPLICATE])) {
             throw new \Exception('La ligne doit être valide ou doublon pour être importée');
         }
 
@@ -350,7 +331,7 @@ class ImportOrchestrationService
         return DB::transaction(function () use ($row, $data, $session, $action) {
             $client = null;
 
-            if ($action === 'create' || ($action === 'auto' && !$row->matched_client_id)) {
+            if ($action === 'create' || ($action === 'auto' && ! $row->matched_client_id)) {
                 $client = $this->createClient($data, $session->team_id, $session->user_id);
             } elseif ($action === 'merge' && $row->matched_client_id) {
                 $client = $this->mergeWithExisting($row->matched_client_id, $data);
@@ -362,57 +343,57 @@ class ImportOrchestrationService
 
             if ($client) {
                 // Conjoint
-                if (isset($data['conjoint']) && !empty($data['conjoint'])) {
+                if (isset($data['conjoint']) && ! empty($data['conjoint'])) {
                     $this->createOrUpdateConjoint($client, $data['conjoint']);
                 }
 
                 // Enfants
-                if (isset($data['enfants']) && !empty($data['enfants'])) {
+                if (isset($data['enfants']) && ! empty($data['enfants'])) {
                     $this->enfantSyncService->syncEnfants($client, $data['enfants']);
                 }
 
                 // Santé / Mutuelle
-                if (isset($data['_sante_souhaits']) && !empty($data['_sante_souhaits'])) {
+                if (isset($data['_sante_souhaits']) && ! empty($data['_sante_souhaits'])) {
                     $this->createOrUpdateSanteSouhait($client, $data['_sante_souhaits']);
                 }
 
                 // Prévoyance
-                if (isset($data['_bae_prevoyance']) && !empty($data['_bae_prevoyance'])) {
+                if (isset($data['_bae_prevoyance']) && ! empty($data['_bae_prevoyance'])) {
                     $this->createOrUpdateBaePrevoyance($client, $data['_bae_prevoyance']);
                 }
 
                 // Retraite
-                if (isset($data['_bae_retraite']) && !empty($data['_bae_retraite'])) {
+                if (isset($data['_bae_retraite']) && ! empty($data['_bae_retraite'])) {
                     $this->createOrUpdateBaeRetraite($client, $data['_bae_retraite']);
                 }
 
                 // Épargne globale
-                if (isset($data['_bae_epargne']) && !empty($data['_bae_epargne'])) {
+                if (isset($data['_bae_epargne']) && ! empty($data['_bae_epargne'])) {
                     $this->createOrUpdateBaeEpargne($client, $data['_bae_epargne']);
                 }
 
                 // Revenus (multiple)
-                if (isset($data['_client_revenu']) && !empty($data['_client_revenu'])) {
+                if (isset($data['_client_revenu']) && ! empty($data['_client_revenu'])) {
                     $this->createClientRevenu($client, $data['_client_revenu']);
                 }
 
                 // Actifs financiers (multiple)
-                if (isset($data['_client_actif_financier']) && !empty($data['_client_actif_financier'])) {
+                if (isset($data['_client_actif_financier']) && ! empty($data['_client_actif_financier'])) {
                     $this->createClientActifFinancier($client, $data['_client_actif_financier']);
                 }
 
                 // Biens immobiliers (multiple)
-                if (isset($data['_client_bien_immobilier']) && !empty($data['_client_bien_immobilier'])) {
+                if (isset($data['_client_bien_immobilier']) && ! empty($data['_client_bien_immobilier'])) {
                     $this->createClientBienImmobilier($client, $data['_client_bien_immobilier']);
                 }
 
                 // Passifs / Emprunts (multiple)
-                if (isset($data['_client_passif']) && !empty($data['_client_passif'])) {
+                if (isset($data['_client_passif']) && ! empty($data['_client_passif'])) {
                     $this->createClientPassif($client, $data['_client_passif']);
                 }
 
                 // Autres épargnes (multiple)
-                if (isset($data['_client_autre_epargne']) && !empty($data['_client_autre_epargne'])) {
+                if (isset($data['_client_autre_epargne']) && ! empty($data['_client_autre_epargne'])) {
                     $this->createClientAutreEpargne($client, $data['_client_autre_epargne']);
                 }
 
@@ -428,8 +409,7 @@ class ImportOrchestrationService
         });
     }
 
-    public function importValidRows(ImportSession $session): int
-    {
+    public function importValidRows(ImportSession $session): int {
         $validRows = ImportRow::where('import_session_id', $session->id)
             ->where('status', ImportRow::STATUS_VALID)
             ->get();
@@ -451,8 +431,7 @@ class ImportOrchestrationService
         return $imported;
     }
 
-    public function getSessionStats(ImportSession $session): array
-    {
+    public function getSessionStats(ImportSession $session): array {
         $statusCounts = ImportRow::where('import_session_id', $session->id)
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
@@ -474,8 +453,7 @@ class ImportOrchestrationService
         ];
     }
 
-    private function createClient(array $data, int $teamId, int $userId): Client
-    {
+    private function createClient(array $data, int $teamId, int $userId): Client {
         $clientData = array_filter([
             // Required fields
             'team_id' => $teamId,
@@ -518,13 +496,12 @@ class ImportOrchestrationService
             'activites_sportives' => $data['activites_sportives'] ?? null,
             'niveau_activites_sportives' => $data['niveau_activites_sportives'] ?? null,
             'details_activites_sportives' => $data['details_activites_sportives'] ?? null,
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         return Client::create($clientData);
     }
 
-    private function mergeWithExisting(int $clientId, array $data): Client
-    {
+    private function mergeWithExisting(int $clientId, array $data): Client {
         $client = Client::findOrFail($clientId);
 
         $updateData = [];
@@ -544,20 +521,19 @@ class ImportOrchestrationService
         ];
 
         foreach ($fieldsToMerge as $field) {
-            if (!empty($data[$field]) && empty($client->$field)) {
+            if (! empty($data[$field]) && empty($client->$field)) {
                 $updateData[$field] = $data[$field];
             }
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $client->update($updateData);
         }
 
         return $client->fresh();
     }
 
-    private function createOrUpdateConjoint(Client $client, array $conjointData): void
-    {
+    private function createOrUpdateConjoint(Client $client, array $conjointData): void {
         $conjoint = $client->conjoint;
 
         $data = array_filter([
@@ -598,7 +574,7 @@ class ImportOrchestrationService
             'niveau_activite_sportive' => $conjointData['niveau_activite_sportive'] ?? null,
             'details_activites_sportives' => $conjointData['details_activites_sportives'] ?? null,
             'km_parcourus_annuels' => $conjointData['km_parcourus_annuels'] ?? null,
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if ($conjoint) {
             $conjoint->update($data);
@@ -607,8 +583,7 @@ class ImportOrchestrationService
         }
     }
 
-    private function createOrUpdateSanteSouhait(Client $client, array $santeData): void
-    {
+    private function createOrUpdateSanteSouhait(Client $client, array $santeData): void {
         $santeSouhait = $client->santeSouhait;
 
         $data = array_filter([
@@ -624,7 +599,7 @@ class ImportOrchestrationService
             'niveau_dentaire' => $this->normalizeImportValue($santeData['niveau_dentaire'] ?? null),
             'niveau_optique' => $this->normalizeImportValue($santeData['niveau_optique'] ?? null),
             'niveau_protheses_auditives' => $this->normalizeImportValue($santeData['niveau_protheses_auditives'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return; // Seulement client_id, pas de données utiles
@@ -637,18 +612,17 @@ class ImportOrchestrationService
         }
     }
 
-    private function normalizeImportValue(mixed $value): mixed
-    {
+    private function normalizeImportValue(mixed $value): mixed {
         if (is_string($value)) {
             $trimmed = trim($value);
+
             return $trimmed === '' ? null : $trimmed;
         }
 
         return $value;
     }
 
-    private function normalizeNumericImportValue(mixed $value): ?float
-    {
+    private function normalizeNumericImportValue(mixed $value): ?float {
         if ($value === null || $value === '') {
             return null;
         }
@@ -661,7 +635,7 @@ class ImportOrchestrationService
             return (float) $value;
         }
 
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return null;
         }
 
@@ -684,15 +658,14 @@ class ImportOrchestrationService
             return null;
         }
 
-        if (!is_numeric($normalized)) {
+        if (! is_numeric($normalized)) {
             return null;
         }
 
         return (float) $normalized;
     }
 
-    private function normalizeIntegerImportValue(mixed $value): ?int
-    {
+    private function normalizeIntegerImportValue(mixed $value): ?int {
         $numeric = $this->normalizeNumericImportValue($value);
         if ($numeric === null) {
             return null;
@@ -701,13 +674,12 @@ class ImportOrchestrationService
         return (int) round($numeric);
     }
 
-    private function normalizeDateImportValue(mixed $value): ?string
-    {
+    private function normalizeDateImportValue(mixed $value): ?string {
         if ($value instanceof \DateTimeInterface) {
             return $value->format('Y-m-d');
         }
 
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return null;
         }
 
@@ -727,8 +699,7 @@ class ImportOrchestrationService
         return null;
     }
 
-    private function createOrUpdateBaePrevoyance(Client $client, array $prevoyanceData): void
-    {
+    private function createOrUpdateBaePrevoyance(Client $client, array $prevoyanceData): void {
         $baePrevoyance = $client->baePrevoyance;
 
         $data = array_filter([
@@ -748,7 +719,7 @@ class ImportOrchestrationService
             'rente_enfants' => $this->normalizeNumericImportValue($prevoyanceData['rente_enfants'] ?? null),
             'rente_conjoint' => $this->normalizeNumericImportValue($prevoyanceData['rente_conjoint'] ?? null),
             'payeur' => $this->normalizeImportValue($prevoyanceData['payeur'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -761,8 +732,7 @@ class ImportOrchestrationService
         }
     }
 
-    private function createOrUpdateBaeRetraite(Client $client, array $retraiteData): void
-    {
+    private function createOrUpdateBaeRetraite(Client $client, array $retraiteData): void {
         $baeRetraite = $client->baeRetraite;
 
         $data = array_filter([
@@ -782,7 +752,7 @@ class ImportOrchestrationService
             'designation_etablissement' => $this->normalizeImportValue($retraiteData['designation_etablissement'] ?? null),
             'cotisations_annuelles' => $this->normalizeNumericImportValue($retraiteData['cotisations_annuelles'] ?? null),
             'titulaire' => $this->normalizeImportValue($retraiteData['titulaire'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -795,8 +765,7 @@ class ImportOrchestrationService
         }
     }
 
-    private function createOrUpdateBaeEpargne(Client $client, array $epargneData): void
-    {
+    private function createOrUpdateBaeEpargne(Client $client, array $epargneData): void {
         $baeEpargne = $client->baeEpargne;
 
         $data = array_filter([
@@ -823,7 +792,7 @@ class ImportOrchestrationService
             'charges_totales' => $this->normalizeNumericImportValue($epargneData['charges_totales'] ?? null),
             'charges_details' => $this->normalizeImportValue($epargneData['charges_details'] ?? null),
             'situation_financiere_revenus_charges' => $this->normalizeImportValue($epargneData['situation_financiere_revenus_charges'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -836,15 +805,14 @@ class ImportOrchestrationService
         }
     }
 
-    private function createClientRevenu(Client $client, array $revenuData): void
-    {
+    private function createClientRevenu(Client $client, array $revenuData): void {
         $data = array_filter([
             'client_id' => $client->id,
             'nature' => $this->normalizeImportValue($revenuData['nature'] ?? null),
             'details' => $this->normalizeImportValue($revenuData['details'] ?? null),
             'periodicite' => $this->normalizeImportValue($revenuData['periodicite'] ?? null),
             'montant' => $this->normalizeNumericImportValue($revenuData['montant'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -853,8 +821,7 @@ class ImportOrchestrationService
         $client->revenus()->create($data);
     }
 
-    private function createClientActifFinancier(Client $client, array $actifData): void
-    {
+    private function createClientActifFinancier(Client $client, array $actifData): void {
         $data = array_filter([
             'client_id' => $client->id,
             'nature' => $this->normalizeImportValue($actifData['nature'] ?? null),
@@ -862,7 +829,7 @@ class ImportOrchestrationService
             'detenteur' => $this->normalizeImportValue($actifData['detenteur'] ?? null),
             'date_ouverture_souscription' => $this->normalizeDateImportValue($actifData['date_ouverture_souscription'] ?? null),
             'valeur_actuelle' => $this->normalizeNumericImportValue($actifData['valeur_actuelle'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -871,8 +838,7 @@ class ImportOrchestrationService
         $client->actifsFinanciers()->create($data);
     }
 
-    private function createClientBienImmobilier(Client $client, array $bienData): void
-    {
+    private function createClientBienImmobilier(Client $client, array $bienData): void {
         $data = array_filter([
             'client_id' => $client->id,
             'designation' => $this->normalizeImportValue($bienData['designation'] ?? null),
@@ -881,7 +847,7 @@ class ImportOrchestrationService
             'valeur_actuelle_estimee' => $this->normalizeNumericImportValue($bienData['valeur_actuelle_estimee'] ?? null),
             'annee_acquisition' => $this->normalizeIntegerImportValue($bienData['annee_acquisition'] ?? null),
             'valeur_acquisition' => $this->normalizeNumericImportValue($bienData['valeur_acquisition'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -890,8 +856,7 @@ class ImportOrchestrationService
         $client->biensImmobiliers()->create($data);
     }
 
-    private function createClientPassif(Client $client, array $passifData): void
-    {
+    private function createClientPassif(Client $client, array $passifData): void {
         $data = array_filter([
             'client_id' => $client->id,
             'nature' => $this->normalizeImportValue($passifData['nature'] ?? null),
@@ -900,7 +865,7 @@ class ImportOrchestrationService
             'montant_remboursement' => $this->normalizeNumericImportValue($passifData['montant_remboursement'] ?? null),
             'capital_restant_du' => $this->normalizeNumericImportValue($passifData['capital_restant_du'] ?? null),
             'duree_restante' => $this->normalizeIntegerImportValue($passifData['duree_restante'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;
@@ -909,14 +874,13 @@ class ImportOrchestrationService
         $client->passifs()->create($data);
     }
 
-    private function createClientAutreEpargne(Client $client, array $epargneData): void
-    {
+    private function createClientAutreEpargne(Client $client, array $epargneData): void {
         $data = array_filter([
             'client_id' => $client->id,
             'designation' => $this->normalizeImportValue($epargneData['designation'] ?? null),
             'detenteur' => $this->normalizeImportValue($epargneData['detenteur'] ?? null),
             'valeur' => $this->normalizeNumericImportValue($epargneData['valeur'] ?? null),
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (count($data) <= 1) {
             return;

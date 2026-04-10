@@ -11,21 +11,18 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 
-class AppServiceProvider extends ServiceProvider
-{
+class AppServiceProvider extends ServiceProvider {
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
+    public function register(): void {
         //
     }
 
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
+    public function boot(): void {
         $this->configureRateLimiting();
         $this->registerObservers();
 
@@ -38,16 +35,14 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Enregistre les observers des modèles
      */
-    protected function registerObservers(): void
-    {
+    protected function registerObservers(): void {
         Client::observe(ClientObserver::class);
     }
 
     /**
      * Configure rate limiting pour les différents endpoints
      */
-    protected function configureRateLimiting(): void
-    {
+    protected function configureRateLimiting(): void {
         // Rate limiting pour l'upload audio : 10 uploads par minute par utilisateur
         RateLimiter::for('audio-upload', function (Request $request) {
             return Limit::perMinute(10)
@@ -55,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
                 ->response(function () {
                     return response()->json([
                         'message' => 'Trop de requêtes d\'upload. Veuillez patienter avant de réessayer.',
-                        'retry_after' => 60
+                        'retry_after' => 60,
                     ], 429);
                 });
         });
@@ -63,12 +58,13 @@ class AppServiceProvider extends ServiceProvider
         // Rate limiting pour les chunks : 30 chunks par minute par session
         RateLimiter::for('audio-chunk', function (Request $request) {
             $sessionId = $request->input('session_id', 'unknown');
+
             return Limit::perMinute(30)
-                ->by($request->user()?->id . ':' . $sessionId)
+                ->by($request->user()?->id.':'.$sessionId)
                 ->response(function () {
                     return response()->json([
                         'message' => 'Trop de chunks envoyés. Veuillez patienter.',
-                        'retry_after' => 60
+                        'retry_after' => 60,
                     ], 429);
                 });
         });
@@ -80,7 +76,7 @@ class AppServiceProvider extends ServiceProvider
                 ->response(function () {
                     return response()->json([
                         'message' => 'Trop de finalisations. Veuillez patienter.',
-                        'retry_after' => 60
+                        'retry_after' => 60,
                     ], 429);
                 });
         });

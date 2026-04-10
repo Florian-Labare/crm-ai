@@ -6,15 +6,13 @@ use App\Models\Client;
 use App\Models\Enfant;
 use Illuminate\Support\Facades\Log;
 
-class EnfantSyncService
-{
+class EnfantSyncService {
     /**
      * Synchronise les enfants d'un client avec les données extraites
      *
      * @param  array  $enfantsData  Tableau d'objets enfants extraits par GPT
      */
-    public function syncEnfants(Client $client, array $enfantsData): void
-    {
+    public function syncEnfants(Client $client, array $enfantsData): void {
         Log::info("👶 [ENFANTS] Synchronisation des enfants pour le client #{$client->id}", [
             'nombre_enfants_recus' => count($enfantsData),
         ]);
@@ -72,7 +70,7 @@ class EnfantSyncService
         // 3️⃣ Mettre à jour le champ nombre_enfants du client (SUPPRIMÉ car colonne inexistante)
         // $client->update(['nombre_enfants' => count($processedIds)]);
 
-        Log::info('✅ [ENFANTS] Synchronisation terminée - ' . count($processedIds) . ' enfant(s)');
+        Log::info('✅ [ENFANTS] Synchronisation terminée - '.count($processedIds).' enfant(s)');
     }
 
     /**
@@ -83,8 +81,7 @@ class EnfantSyncService
      * 2. Prénom seul (si un seul enfant avec ce prénom existe)
      * 3. Index dans le tableau (en dernier recours)
      */
-    private function findMatchingEnfant($existingEnfants, array $enfantData, int $index): ?Enfant
-    {
+    private function findMatchingEnfant($existingEnfants, array $enfantData, int $index): ?Enfant {
         // 1️⃣ Match par prénom + nom
         if (isset($enfantData['prenom']) && isset($enfantData['nom'])) {
             $match = $existingEnfants->first(function ($enfant) use ($enfantData) {
@@ -127,8 +124,7 @@ class EnfantSyncService
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array
-    {
+    private function filterEmptyValues(array $data): array {
         return array_filter($data, function ($value, $key) {
             // Ne pas filtrer les booléens (même false)
             if (is_bool($value)) {
@@ -143,8 +139,7 @@ class EnfantSyncService
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string
-    {
+    private function normalizeString(?string $value): ?string {
         if (is_null($value)) {
             return null;
         }

@@ -4,18 +4,16 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class() extends Migration {
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        if (Schema::hasTable('questionnaire_risque_quizs') && !Schema::hasTable('questionnaire_risque_quizzes')) {
+    public function up(): void {
+        if (Schema::hasTable('questionnaire_risque_quizs') && ! Schema::hasTable('questionnaire_risque_quizzes')) {
             Schema::rename('questionnaire_risque_quizs', 'questionnaire_risque_quizzes');
         }
 
-        if (!Schema::hasTable('questionnaire_risque_quizzes')) {
+        if (! Schema::hasTable('questionnaire_risque_quizzes')) {
             Schema::create('questionnaire_risque_quizzes', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('questionnaire_risque_id')
@@ -70,8 +68,7 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
+    public function down(): void {
         if (Schema::hasTable('questionnaire_risque_quizs')) {
             Schema::dropIfExists('questionnaire_risque_quizs');
         }

@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClientCharge extends Model
-{
+class ClientCharge extends Model {
     protected $table = 'client_charges';
 
     protected $fillable = [
@@ -20,8 +19,7 @@ class ClientCharge extends Model
         'montant' => 'decimal:2',
     ];
 
-    public function client(): BelongsTo
-    {
+    public function client(): BelongsTo {
         return $this->belongsTo(Client::class);
     }
 }

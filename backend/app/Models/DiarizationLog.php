@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class DiarizationLog extends Model
-{
+class DiarizationLog extends Model {
     protected $fillable = [
         'audio_record_id',
         'recording_session_id',
@@ -43,46 +42,38 @@ class DiarizationLog extends Model
     /**
      * The "booted" method of the model.
      */
-    protected static function booted(): void
-    {
-        static::addGlobalScope(new \App\Scopes\TeamScope);
+    protected static function booted(): void {
+        static::addGlobalScope(new \App\Scopes\TeamScope());
     }
 
-    public function audioRecord(): BelongsTo
-    {
+    public function audioRecord(): BelongsTo {
         return $this->belongsTo(AudioRecord::class);
     }
 
-    public function team(): BelongsTo
-    {
+    public function team(): BelongsTo {
         return $this->belongsTo(Team::class);
     }
 
-    public function user(): BelongsTo
-    {
+    public function user(): BelongsTo {
         return $this->belongsTo(User::class);
     }
 
     /**
      * Scopes pour le monitoring
      */
-    public function scopeSuccessful($query)
-    {
+    public function scopeSuccessful($query) {
         return $query->where('status', 'success');
     }
 
-    public function scopeFailed($query)
-    {
+    public function scopeFailed($query) {
         return $query->whereIn('status', ['failed', 'timeout']);
     }
 
-    public function scopeFallback($query)
-    {
+    public function scopeFallback($query) {
         return $query->where('status', 'fallback');
     }
 
-    public function scopeInPeriod($query, int $days)
-    {
+    public function scopeInPeriod($query, int $days) {
         return $query->where('created_at', '>=', now()->subDays($days));
     }
 }

@@ -4,15 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class() extends Migration {
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+    public function up(): void {
         Schema::table('questionnaire_risque_connaissances', function (Blueprint $table) {
-            if (!Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
+            if (! Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
                 $table->unsignedBigInteger('questionnaire_risque_id')->nullable()->after('id');
                 $table->foreign('questionnaire_risque_id', 'qr_connaissance_qr_id_fk_fix')
                     ->references('id')
@@ -34,12 +32,12 @@ return new class extends Migration
             ];
 
             foreach ($booleanColumns as $column) {
-                if (!Schema::hasColumn('questionnaire_risque_connaissances', $column)) {
+                if (! Schema::hasColumn('questionnaire_risque_connaissances', $column)) {
                     $table->boolean($column)->default(false)->after('questionnaire_risque_id');
                 }
 
                 $montantColumn = str_replace('connaissance_', 'montant_', $column);
-                if (!Schema::hasColumn('questionnaire_risque_connaissances', $montantColumn)) {
+                if (! Schema::hasColumn('questionnaire_risque_connaissances', $montantColumn)) {
                     $table->decimal($montantColumn, 15, 2)->nullable()->after($column);
                 }
             }
@@ -49,8 +47,7 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
+    public function down(): void {
         Schema::table('questionnaire_risque_connaissances', function (Blueprint $table) {
             //
         });

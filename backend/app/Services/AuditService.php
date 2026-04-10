@@ -12,12 +12,10 @@ use Illuminate\Support\Str;
  *
  * Enregistre toutes les actions sensibles pour la conformité et la traçabilité
  */
-class AuditService
-{
+class AuditService {
     private ?string $requestId = null;
 
-    public function __construct()
-    {
+    public function __construct() {
         $this->requestId = (string) Str::uuid();
     }
 
@@ -58,7 +56,7 @@ class AuditService
                 'action' => $action,
                 'description' => $description,
                 'user_id' => $user?->id,
-                'resource' => $resource ? get_class($resource) . '#' . $resource->id : null
+                'resource' => $resource ? get_class($resource).'#'.$resource->id : null,
             ]);
         }
 
@@ -68,55 +66,47 @@ class AuditService
     /**
      * Raccourcis pour les actions courantes
      */
-    public function logCreate(Model $resource, string $description, string $category = 'general'): AuditLog
-    {
+    public function logCreate(Model $resource, string $description, string $category = 'general'): AuditLog {
         return $this->log('create', $description, $resource, $category, 'info', null, $resource->toArray());
     }
 
-    public function logUpdate(Model $resource, string $description, array $oldValues, string $category = 'general'): AuditLog
-    {
+    public function logUpdate(Model $resource, string $description, array $oldValues, string $category = 'general'): AuditLog {
         return $this->log('update', $description, $resource, $category, 'info', $oldValues, $resource->toArray());
     }
 
-    public function logDelete(Model $resource, string $description, string $category = 'general', string $level = 'warning'): AuditLog
-    {
+    public function logDelete(Model $resource, string $description, string $category = 'general', string $level = 'warning'): AuditLog {
         return $this->log('delete', $description, $resource, $category, $level, $resource->toArray(), null);
     }
 
-    public function logAccess(Model $resource, string $description, string $category = 'general'): AuditLog
-    {
+    public function logAccess(Model $resource, string $description, string $category = 'general'): AuditLog {
         return $this->log('access', $description, $resource, $category, 'info');
     }
 
-    public function logDownload(Model $resource, string $description, string $category = 'general'): AuditLog
-    {
+    public function logDownload(Model $resource, string $description, string $category = 'general'): AuditLog {
         return $this->log('download', $description, $resource, $category, 'info');
     }
 
-    public function logExport(string $description, string $category = 'general', ?Model $resource = null): AuditLog
-    {
+    public function logExport(string $description, string $category = 'general', ?Model $resource = null): AuditLog {
         return $this->log('export', $description, $resource, $category, 'info');
     }
 
     /**
      * Actions audio spécifiques
      */
-    public function logAudioUpload(Model $audioRecord): AuditLog
-    {
+    public function logAudioUpload(Model $audioRecord): AuditLog {
         return $this->log(
             'upload',
-            "Audio uploadé pour traitement",
+            'Audio uploadé pour traitement',
             $audioRecord,
             'audio',
             'info'
         );
     }
 
-    public function logAudioDelete(Model $audioRecord): AuditLog
-    {
+    public function logAudioDelete(Model $audioRecord): AuditLog {
         return $this->log(
             'delete',
-            "Enregistrement audio supprimé",
+            'Enregistrement audio supprimé',
             $audioRecord,
             'audio',
             'warning',
@@ -124,11 +114,10 @@ class AuditService
         );
     }
 
-    public function logSpeakerCorrection(Model $audioRecord, array $corrections): AuditLog
-    {
+    public function logSpeakerCorrection(Model $audioRecord, array $corrections): AuditLog {
         return $this->log(
             'update',
-            "Correction des speakers appliquée",
+            'Correction des speakers appliquée',
             $audioRecord,
             'audio',
             'info',
@@ -140,8 +129,7 @@ class AuditService
     /**
      * Actions client spécifiques
      */
-    public function logClientDelete(Model $client): AuditLog
-    {
+    public function logClientDelete(Model $client): AuditLog {
         return $this->log(
             'delete',
             "Client supprimé (RGPD): {$client->prenom} {$client->nom}",
@@ -152,7 +140,7 @@ class AuditService
                 'nom' => $client->nom,
                 'prenom' => $client->prenom,
                 'email' => $client->email,
-                'audio_records_count' => $client->audioRecords()->count()
+                'audio_records_count' => $client->audioRecords()->count(),
             ]
         );
     }
@@ -160,18 +148,15 @@ class AuditService
     /**
      * Actions d'authentification
      */
-    public function logLogin(): AuditLog
-    {
+    public function logLogin(): AuditLog {
         return $this->log('login', 'Connexion réussie', null, 'auth', 'info');
     }
 
-    public function logLogout(): AuditLog
-    {
+    public function logLogout(): AuditLog {
         return $this->log('logout', 'Déconnexion', null, 'auth', 'info');
     }
 
-    public function logFailedLogin(string $email): AuditLog
-    {
+    public function logFailedLogin(string $email): AuditLog {
         $log = AuditLog::create([
             'team_id' => null,
             'user_id' => null,
@@ -194,8 +179,7 @@ class AuditService
     /**
      * Récupère le request ID courant (pour traçabilité)
      */
-    public function getRequestId(): string
-    {
+    public function getRequestId(): string {
         return $this->requestId;
     }
 }

@@ -5,17 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class() extends Migration {
     /**
      * Resize token/refresh_token to TEXT to accommodate encrypted values.
      * Existing plaintext tokens are nullified so they are re-created on next OAuth login.
      */
-    public function up(): void
-    {
+    public function up(): void {
         // Nullify existing plaintext tokens before encrypting
         DB::table('social_accounts')->update([
-            'token'         => null,
+            'token' => null,
             'refresh_token' => null,
         ]);
 
@@ -25,8 +23,7 @@ return new class extends Migration
         });
     }
 
-    public function down(): void
-    {
+    public function down(): void {
         Schema::table('social_accounts', function (Blueprint $table) {
             $table->string('token', 1000)->nullable()->change();
             $table->string('refresh_token', 1000)->nullable()->change();

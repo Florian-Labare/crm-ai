@@ -5,23 +5,21 @@ namespace Tests\Unit;
 use App\Services\TranscriptionService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-class TranscriptionServiceTest extends TestCase
-{
+class TranscriptionServiceTest extends TestCase {
     private string $tempAudioFile;
 
-    protected function setUp(): void
-    {
+    protected function setUp(): void {
         parent::setUp();
 
         // Créer un fichier audio temporaire pour les tests
-        $this->tempAudioFile = sys_get_temp_dir() . '/test_audio_' . uniqid() . '.mp3';
+        $this->tempAudioFile = sys_get_temp_dir().'/test_audio_'.uniqid().'.mp3';
         file_put_contents($this->tempAudioFile, 'fake audio content for testing');
     }
 
-    protected function tearDown(): void
-    {
+    protected function tearDown(): void {
         if (file_exists($this->tempAudioFile)) {
             unlink($this->tempAudioFile);
         }
@@ -29,9 +27,8 @@ class TranscriptionServiceTest extends TestCase
         parent::tearDown();
     }
 
-    /** @test */
-    public function voxtral_transcription_returns_text_on_success()
-    {
+    #[Test]
+    public function voxtral_transcription_returns_text_on_success() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.model' => 'voxtral-mini-latest']);
@@ -49,9 +46,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertEquals("Bonjour, je m'appelle Jean Dupont.", $result);
     }
 
-    /** @test */
-    public function voxtral_fallback_to_whisper_local_on_failure()
-    {
+    #[Test]
+    public function voxtral_fallback_to_whisper_local_on_failure() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -86,9 +82,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertEquals('Fallback transcription from OpenAI.', $result);
     }
 
-    /** @test */
-    public function voxtral_is_skipped_when_disabled()
-    {
+    #[Test]
+    public function voxtral_is_skipped_when_disabled() {
         config(['mistral.features.use_for_transcription' => false]);
         config(['openai.api_key' => 'test_openai_key']);
 
@@ -108,9 +103,8 @@ class TranscriptionServiceTest extends TestCase
         });
     }
 
-    /** @test */
-    public function voxtral_returns_null_when_api_key_missing()
-    {
+    #[Test]
+    public function voxtral_returns_null_when_api_key_missing() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => null]);
         config(['openai.api_key' => 'test_openai_key']);
@@ -128,9 +122,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertEquals('OpenAI fallback.', $result);
     }
 
-    /** @test */
-    public function transcribe_returns_null_for_nonexistent_file()
-    {
+    #[Test]
+    public function transcribe_returns_null_for_nonexistent_file() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
 
@@ -140,9 +133,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertNull($result);
     }
 
-    /** @test */
-    public function openai_transcription_works_directly()
-    {
+    #[Test]
+    public function openai_transcription_works_directly() {
         config(['mistral.features.use_for_transcription' => false]);
         config(['openai.api_key' => 'test_openai_key']);
 
@@ -159,9 +151,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertEquals('OpenAI Whisper transcription.', $result);
     }
 
-    /** @test */
-    public function openai_returns_null_on_api_error()
-    {
+    #[Test]
+    public function openai_returns_null_on_api_error() {
         config(['mistral.features.use_for_transcription' => false]);
         config(['openai.api_key' => 'test_openai_key']);
 
@@ -175,9 +166,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertNull($result);
     }
 
-    /** @test */
-    public function voxtral_sends_correct_model_in_request()
-    {
+    #[Test]
+    public function voxtral_sends_correct_model_in_request() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.model' => 'voxtral-mini-latest']);
@@ -198,9 +188,8 @@ class TranscriptionServiceTest extends TestCase
         });
     }
 
-    /** @test */
-    public function voxtral_handles_empty_response_gracefully()
-    {
+    #[Test]
+    public function voxtral_handles_empty_response_gracefully() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -220,9 +209,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertEquals('OpenAI fallback transcription.', $result);
     }
 
-    /** @test */
-    public function voxtral_handles_timeout()
-    {
+    #[Test]
+    public function voxtral_handles_timeout() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);
@@ -244,9 +232,8 @@ class TranscriptionServiceTest extends TestCase
         $this->assertEquals('OpenAI after timeout.', $result);
     }
 
-    /** @test */
-    public function voxtral_french_transcription_quality()
-    {
+    #[Test]
+    public function voxtral_french_transcription_quality() {
         config(['mistral.features.use_for_transcription' => true]);
         config(['mistral.api_key' => 'test_key']);
         config(['mistral.stt.endpoint' => 'https://api.mistral.ai/v1/audio/transcriptions']);

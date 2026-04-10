@@ -12,12 +12,10 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des emprunts multiples (immobilier, consommation, etc.)
  * - Retourne un array de passifs avec nature, preteur, periodicite, montants, durée
  */
-class ClientPassifsExtractor
-{
+class ClientPassifsExtractor {
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -28,7 +26,7 @@ class ClientPassifsExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientPassifsExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -48,8 +46,7 @@ class ClientPassifsExtractor
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détecte les PRÊTS/EMPRUNTS du client.
 
@@ -70,8 +67,7 @@ PROMPT;
      * 2. Si un passif n'a pas de prêteur, le fusionner avec un passif de même nature qui en a un
      * 3. Si deux passifs de même nature n'ont pas de prêteur, les fusionner
      */
-    private function deduplicatePassifs(array $passifs): array
-    {
+    private function deduplicatePassifs(array $passifs): array {
         if (count($passifs) <= 1) {
             return $passifs;
         }
@@ -84,9 +80,9 @@ PROMPT;
             $nature = strtolower($passif['nature'] ?? 'autre');
             $preteur = trim($passif['preteur'] ?? '');
 
-            if (!empty($preteur)) {
-                $key = $nature . '_' . strtolower($preteur);
-                if (!isset($withPreteur[$key])) {
+            if (! empty($preteur)) {
+                $key = $nature.'_'.strtolower($preteur);
+                if (! isset($withPreteur[$key])) {
                     $withPreteur[$key] = $passif;
                 } else {
                     $withPreteur[$key] = $this->mergePassifData($withPreteur[$key], $passif);
@@ -104,20 +100,20 @@ PROMPT;
 
             // Chercher un passif de même nature avec prêteur
             foreach ($withPreteur as $key => &$existing) {
-                if (str_starts_with($key, $nature . '_')) {
+                if (str_starts_with($key, $nature.'_')) {
                     $withPreteur[$key] = $this->mergePassifData($existing, $passif);
                     $merged = true;
                     Log::info('[ClientPassifsExtractor] 🔀 Fusion sans prêteur → avec prêteur', [
                         'nature' => $nature,
-                        'preteur_existant' => $existing['preteur'] ?? 'inconnu'
+                        'preteur_existant' => $existing['preteur'] ?? 'inconnu',
                     ]);
                     break;
                 }
             }
 
             // Si pas trouvé, ajouter comme entrée séparée par nature
-            if (!$merged) {
-                if (!isset($withPreteur[$nature])) {
+            if (! $merged) {
+                if (! isset($withPreteur[$nature])) {
                     $withPreteur[$nature] = $passif;
                 } else {
                     $withPreteur[$nature] = $this->mergePassifData($withPreteur[$nature], $passif);
@@ -131,7 +127,7 @@ PROMPT;
             Log::info('[ClientPassifsExtractor] 🔀 Déduplication effectuée', [
                 'avant' => count($passifs),
                 'après' => count($result),
-                'passifs_fusionnés' => array_map(fn($p) => ($p['nature'] ?? 'inconnu') . ' (' . ($p['preteur'] ?? 'sans prêteur') . ')', $result)
+                'passifs_fusionnés' => array_map(fn ($p) => ($p['nature'] ?? 'inconnu').' ('.($p['preteur'] ?? 'sans prêteur').')', $result),
             ]);
         }
 
@@ -141,14 +137,13 @@ PROMPT;
     /**
      * Fusionne deux passifs en gardant les informations les plus complètes
      */
-    private function mergePassifData(array $existing, array $new): array
-    {
+    private function mergePassifData(array $existing, array $new): array {
         $fields = ['nature', 'preteur', 'periodicite', 'montant_remboursement', 'capital_restant_du', 'duree_restante'];
 
         foreach ($fields as $field) {
             // Si le champ existe dans new et pas dans existing (ou est vide/null)
-            if (isset($new[$field]) && !empty($new[$field])) {
-                if (!isset($existing[$field]) || empty($existing[$field])) {
+            if (isset($new[$field]) && ! empty($new[$field])) {
+                if (! isset($existing[$field]) || empty($existing[$field])) {
                     $existing[$field] = $new[$field];
                 }
                 // Si les deux ont une valeur, garder celle de existing (première mention)
@@ -159,8 +154,7 @@ PROMPT;
         return $existing;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de PASSIFS clients (prêts, emprunts, dettes).
 

@@ -12,12 +12,10 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des autres formes d'épargne non catégorisées (or, crypto, objets de valeur, etc.)
  * - Retourne un array d'épargnes avec designation, detenteur, valeur
  */
-class ClientAutresEpargnesExtractor
-{
+class ClientAutresEpargnesExtractor {
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -28,7 +26,7 @@ class ClientAutresEpargnesExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientAutresEpargnesExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -43,8 +41,7 @@ class ClientAutresEpargnesExtractor
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détecte les AUTRES FORMES D'ÉPARGNE du client (or, crypto, objets de valeur, etc.).
 
@@ -57,8 +54,7 @@ Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction d'AUTRES ÉPARGNES clients.
 

@@ -1,19 +1,19 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
-$templatePath = __DIR__ . '/storage/app/templates/Template Mandat.docx';
+$templatePath = __DIR__.'/storage/app/templates/Template Mandat.docx';
 
 $zip = new ZipArchive();
-if ($zip->open($templatePath) === TRUE) {
+if ($zip->open($templatePath) === true) {
     $content = $zip->getFromName('word/document.xml');
 
     // Supprimer tous les espaces et retours à la ligne dans les balises w:t
     // pour reconstruire les variables fragmentées
     $content = preg_replace_callback(
         '/<w:t[^>]*>.*?<\/w:t>/s',
-        function($matches) {
-            return str_replace(["\n", "\r", "  "], '', $matches[0]);
+        function ($matches) {
+            return str_replace(["\n", "\r", '  '], '', $matches[0]);
         },
         $content
     );
@@ -29,7 +29,7 @@ if ($zip->open($templatePath) === TRUE) {
     $variables = array_unique($variables);
     sort($variables);
 
-    echo "Variables trouvées dans le template (" . count($variables) . ") :\n";
+    echo 'Variables trouvées dans le template ('.count($variables).") :\n";
     echo "=====================================\n\n";
 
     foreach ($variables as $var) {

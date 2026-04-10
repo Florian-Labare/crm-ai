@@ -50,30 +50,33 @@ return [
     'activitéssportives' => [
         'source' => 'computed',
         'computed' => function ($client) {
-            if (!$client->activites_sportives) {
+            if (! $client->activites_sportives) {
                 return 'Non';
             }
-            $details = $client->details_activites_sportives ? ' (' . $client->details_activites_sportives . ')' : '';
-            return 'Oui' . $details;
+            $details = $client->details_activites_sportives ? ' ('.$client->details_activites_sportives.')' : '';
+
+            return 'Oui'.$details;
         },
     ],
     'risquesparticuliers' => [
         'source' => 'computed',
         'computed' => function ($client) {
-            if (!$client->risques_professionnels) {
+            if (! $client->risques_professionnels) {
                 return 'Non';
             }
-            $details = $client->details_risques_professionnels ? ' (' . $client->details_risques_professionnels . ')' : '';
-            return 'Oui' . $details;
+            $details = $client->details_risques_professionnels ? ' ('.$client->details_risques_professionnels.')' : '';
+
+            return 'Oui'.$details;
         },
     ],
     'enfantacharge' => [
         'source' => 'computed',
         'computed' => function ($client) {
-            if (!$client->enfants || $client->enfants->isEmpty()) {
+            if (! $client->enfants || $client->enfants->isEmpty()) {
                 return '0';
             }
             $aCharge = $client->enfants->where('fiscalement_a_charge', true)->count();
+
             return (string) $aCharge;
         },
     ],
@@ -95,39 +98,39 @@ return [
     // === ENFANTS (3 enfants) ===
     'nomprenomenfant1' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(0)
-            ? $client->enfants->get(0)->prenom . ' ' . $client->enfants->get(0)->nom
-            : ''
+        'computed' => fn ($client) => $client->enfants->get(0)
+            ? $client->enfants->get(0)->prenom.' '.$client->enfants->get(0)->nom
+            : '',
     ],
     'nomprenomenfant2' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(1)
-            ? $client->enfants->get(1)->prenom . ' ' . $client->enfants->get(1)->nom
-            : ''
+        'computed' => fn ($client) => $client->enfants->get(1)
+            ? $client->enfants->get(1)->prenom.' '.$client->enfants->get(1)->nom
+            : '',
     ],
     'nomprenomenfant3' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(2)
-            ? $client->enfants->get(2)->prenom . ' ' . $client->enfants->get(2)->nom
-            : ''
+        'computed' => fn ($client) => $client->enfants->get(2)
+            ? $client->enfants->get(2)->prenom.' '.$client->enfants->get(2)->nom
+            : '',
     ],
     'datenaissanceenfant11' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(0) && $client->enfants->get(0)->date_naissance
+        'computed' => fn ($client) => $client->enfants->get(0) && $client->enfants->get(0)->date_naissance
             ? \Carbon\Carbon::parse($client->enfants->get(0)->date_naissance)->format('d/m/Y')
-            : ''
+            : '',
     ],
     'datenaissanceenfant2' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(1) && $client->enfants->get(1)->date_naissance
+        'computed' => fn ($client) => $client->enfants->get(1) && $client->enfants->get(1)->date_naissance
             ? \Carbon\Carbon::parse($client->enfants->get(1)->date_naissance)->format('d/m/Y')
-            : ''
+            : '',
     ],
     'datenaissanceenfant3' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->enfants->get(2) && $client->enfants->get(2)->date_naissance
+        'computed' => fn ($client) => $client->enfants->get(2) && $client->enfants->get(2)->date_naissance
             ? \Carbon\Carbon::parse($client->enfants->get(2)->date_naissance)->format('d/m/Y')
-            : ''
+            : '',
     ],
     'gardealternecas' => [
         'source' => 'computed',
@@ -146,12 +149,12 @@ return [
                 return '';
             }
 
-            $nomClient = trim(($client->prenom ?? '') . ' ' . ($client->nom ?? ''));
+            $nomClient = trim(($client->prenom ?? '').' '.($client->nom ?? ''));
             $nomConjoint = $client->conjoint
-                ? ' et ' . trim(($client->conjoint->prenom ?? '') . ' ' . ($client->conjoint->nom ?? ''))
+                ? ' et '.trim(($client->conjoint->prenom ?? '').' '.($client->conjoint->nom ?? ''))
                 : '';
 
-            return trim($nomClient . $nomConjoint);
+            return trim($nomClient.$nomConjoint);
         },
     ],
 
@@ -169,18 +172,18 @@ return [
     'ageretraitedepartconjoint' => ['source' => 'bae_retraite', 'field' => 'age_depart_retraite_conjoint'],
     'siretraiteconjoint' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeRetraite && $client->baeRetraite->age_depart_retraite_conjoint ? 'Oui' : 'Non'
+        'computed' => fn ($client) => $client->baeRetraite && $client->baeRetraite->age_depart_retraite_conjoint ? 'Oui' : 'Non',
     ],
     'bilanretraitee' => [
         'source' => 'bae_retraite',
         'field' => 'bilan_retraite_disponible',
-        'format' => 'boolean'
+        'format' => 'boolean',
     ],
     'contratenplacereraite' => ['source' => 'bae_retraite', 'field' => 'contrat_en_place'],
     'complementaireretrairte' => [
         'source' => 'bae_retraite',
         'field' => 'complementaire_retraite_mise_en_place',
-        'format' => 'boolean'
+        'format' => 'boolean',
     ],
     'cotisationannuelle' => ['source' => 'bae_retraite', 'field' => 'cotisations_annuelles', 'format' => 'currency'],
     'contrattitulaireenplace' => ['source' => 'bae_retraite', 'field' => 'titulaire'],
@@ -206,81 +209,81 @@ return [
     // === ACTIFS FINANCIERS (depuis bae_epargne, extraits du JSON) ===
     'nature1financier' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
             ? ($client->baeEpargne->actifs_financiers_details[0] ?? '')
-            : ''
+            : '',
     ],
     'naturefinancier2' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
             ? ($client->baeEpargne->actifs_financiers_details[1] ?? '')
-            : ''
+            : '',
     ],
     'naturefinancier3' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_financiers_details)
             ? ($client->baeEpargne->actifs_financiers_details[2] ?? '')
-            : ''
+            : '',
     ],
 
     // === ACTIFS IMMOBILIERS (depuis bae_epargne, extraits du JSON) ===
     'designation4immo' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
             ? ($client->baeEpargne->actifs_immo_details[0] ?? '')
-            : ''
+            : '',
     ],
     'designationimmo5' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
             ? ($client->baeEpargne->actifs_immo_details[1] ?? '')
-            : ''
+            : '',
     ],
     'designationimmo6' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->actifs_immo_details)
             ? ($client->baeEpargne->actifs_immo_details[2] ?? '')
-            : ''
+            : '',
     ],
 
     // === PASSIFS (depuis bae_epargne, extraits du JSON) ===
     'preteur1passif' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
             ? ($client->baeEpargne->passifs_details[0] ?? '')
-            : ''
+            : '',
     ],
     'preteur2' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
             ? ($client->baeEpargne->passifs_details[1] ?? '')
-            : ''
+            : '',
     ],
     'preteur3' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->passifs_details)
             ? ($client->baeEpargne->passifs_details[2] ?? '')
-            : ''
+            : '',
     ],
 
     // === CHARGES (depuis bae_epargne, extraits du JSON) ===
     'fiscalcharge1' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
             ? ($client->baeEpargne->charges_details[0] ?? '')
-            : ''
+            : '',
     ],
     'fiscalcharge2' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
             ? ($client->baeEpargne->charges_details[1] ?? '')
-            : ''
+            : '',
     ],
     'fiscalcharge3' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
+        'computed' => fn ($client) => $client->baeEpargne && is_array($client->baeEpargne->charges_details)
             ? ($client->baeEpargne->charges_details[2] ?? '')
-            : ''
+            : '',
     ],
 
     // === SANTÉ ===
@@ -290,7 +293,7 @@ return [
     // === QUESTIONNAIRE RISQUE ===
     'profilrisqueclient' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->profil_calcule ?? 'Non défini'
+        'computed' => fn ($client) => $client->questionnaireRisque?->profil_calcule ?? 'Non défini',
     ],
 
     // === BESOINS ===
@@ -298,6 +301,7 @@ return [
         'source' => 'computed',
         'computed' => function ($client) {
             $besoins = is_array($client->besoins) ? $client->besoins : [];
+
             return in_array('prévoyance', $besoins) ? 'Oui' : 'Non';
         },
     ],
@@ -305,15 +309,15 @@ return [
     // === DATES ET METADATA ===
     'Date' => [
         'source' => 'computed',
-        'computed' => fn($client) => now()->format('d/m/Y')
+        'computed' => fn ($client) => now()->format('d/m/Y'),
     ],
     'datedocument' => [
         'source' => 'computed',
-        'computed' => fn($client) => now()->format('d/m/Y')
+        'computed' => fn ($client) => now()->format('d/m/Y'),
     ],
     'dategaranties' => [
         'source' => 'computed',
-        'computed' => fn($client) => now()->addDays(30)->format('d/m/Y')
+        'computed' => fn ($client) => now()->addDays(30)->format('d/m/Y'),
     ],
 
     // === QUESTIONNAIRE - COMPORTEMENT FINANCIER ===
@@ -771,34 +775,34 @@ return [
     // === SANTÉ - Mapping vers champs existants niveau_* ===
     'AnalyseImagerie' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_analyses_imagerie ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_analyses_imagerie ? 'Oui' : 'Non',
     ],
     'AuxiliairesMédicaux' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_auxiliaires_medicaux ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_auxiliaires_medicaux ? 'Oui' : 'Non',
     ],
     'Dentaire' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_dentaire ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_dentaire ? 'Oui' : 'Non',
     ],
     'Hospitalisation' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_hospitalisation ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_hospitalisation ? 'Oui' : 'Non',
     ],
     'MédecinGénéralisteetspécialiste' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_medecin_generaliste ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_medecin_generaliste ? 'Oui' : 'Non',
     ],
     'autresprotheses' => ['source' => 'sante_souhait', 'field' => 'souhaite_autres_protheses', 'format' => 'boolean'],
     'curesthermales' => ['source' => 'sante_souhait', 'field' => 'souhaite_cures_thermales', 'format' => 'boolean'],
     'medecinedouce' => ['source' => 'sante_souhait', 'field' => 'souhaite_medecine_douce', 'format' => 'boolean'],
     'optiquelentilles' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_optique ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_optique ? 'Oui' : 'Non',
     ],
     'protheseauditive' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->santeSouhait && $client->santeSouhait->niveau_protheses_auditives ? 'Oui' : 'Non',
+        'computed' => fn ($client) => $client->santeSouhait && $client->santeSouhait->niveau_protheses_auditives ? 'Oui' : 'Non',
     ],
     'protectionjuridique' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique', 'format' => 'boolean'],
     'protectionjuridiqueconjoint' => ['source' => 'sante_souhait', 'field' => 'souhaite_protection_juridique_conjoint', 'format' => 'boolean'],
@@ -810,9 +814,10 @@ return [
     'Leclientdispose-t-ilduneépargnedisponible(liquide)' => [
         'source' => 'computed',
         'computed' => function ($client) {
-            if (!$client->baeEpargne || !$client->baeEpargne->montant_epargne_disponible) {
+            if (! $client->baeEpargne || ! $client->baeEpargne->montant_epargne_disponible) {
                 return 'Non';
             }
+
             return $client->baeEpargne->montant_epargne_disponible > 0 ? 'Oui' : 'Non';
         },
     ],
@@ -820,11 +825,11 @@ return [
     // === PROFIL DE RISQUE - Mapping vers questionnaire_risque_financiers ===
     'Latoléranceaurisqueduclientest' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->tolerance_risque ?? 'Non défini',
+        'computed' => fn ($client) => $client->questionnaireRisque?->questionnaireFinancier?->tolerance_risque ?? 'Non défini',
     ],
     'Pourcentagemaxperte' => [
         'source' => 'computed',
-        'computed' => fn($client) => $client->questionnaireRisque?->questionnaireFinancier?->pourcentage_perte_max ?? '',
+        'computed' => fn ($client) => $client->questionnaireRisque?->questionnaireFinancier?->pourcentage_perte_max ?? '',
     ],
 
     // === PROFESSIONNELS ===
@@ -872,15 +877,15 @@ return [
     'genre' => ['source' => 'client', 'field' => 'genre', 'format' => 'enum'],
     'SOCOGEAvousindique' => [
         'source' => 'computed',
-        'computed' => fn($client) => 'SOCOGEA vous indique',
+        'computed' => fn ($client) => 'SOCOGEA vous indique',
     ],
     'SOCOGEAvousindiqueque' => [
         'source' => 'computed',
-        'computed' => fn($client) => 'SOCOGEA vous indique que',
+        'computed' => fn ($client) => 'SOCOGEA vous indique que',
     ],
     'Leprésentrapportrépond' => [
         'source' => 'computed',
-        'computed' => fn($client) => 'Le présent rapport répond',
+        'computed' => fn ($client) => 'Le présent rapport répond',
     ],
 
     // === CONJOINT ===
