@@ -1,0 +1,21 @@
+#!/bin/sh
+# Bloque les pushs directs sur main.
+# Toute modification de main doit passer par une Pull Request.
+
+PROTECTED_BRANCH="main"
+CURRENT_BRANCH=$(git symbolic-ref HEAD 2>/dev/null | sed 's|refs/heads/||')
+
+if [ "$CURRENT_BRANCH" = "$PROTECTED_BRANCH" ]; then
+  echo ""
+  echo "  [BLOQUE] Push direct sur '$PROTECTED_BRANCH' interdit."
+  echo ""
+  echo "  La branche '$PROTECTED_BRANCH' est protegee."
+  echo "  Cree une branche de feature et ouvre une Pull Request :"
+  echo ""
+  echo "    git checkout -b feature/ma-feature"
+  echo "    git push origin feature/ma-feature"
+  echo ""
+  exit 1
+fi
+
+exit 0
