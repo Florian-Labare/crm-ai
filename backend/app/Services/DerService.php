@@ -7,7 +7,6 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\TemplateProcessor;
 
 /**
@@ -15,28 +14,26 @@ use PhpOffice\PhpWord\TemplateProcessor;
  *
  * Gère la génération et l'envoi du Document d'Entrée en Relation
  */
-class DerService
-{
+class DerService {
     /**
      * Générer le DER à partir du template et des données du prospect
      */
-    public function generateDer(Client $client, User $chargeClientele): string
-    {
+    public function generateDer(Client $client, User $chargeClientele): string {
         Log::info("📄 Génération du DER pour le client #{$client->id}");
 
         // 1. Copier le template vers un fichier temporaire
         $templatePath = storage_path('app/templates/template-der.docx');
 
-        if (!file_exists($templatePath)) {
+        if (! file_exists($templatePath)) {
             throw new \Exception("Template DER introuvable : {$templatePath}");
         }
 
         // Créer un nom de fichier unique pour le document généré
-        $filename = 'DER_' . $client->nom . '_' . $client->prenom . '_' . time() . '.docx';
-        $tempPath = storage_path('app/temp/' . $filename);
+        $filename = 'DER_'.$client->nom.'_'.$client->prenom.'_'.time().'.docx';
+        $tempPath = storage_path('app/temp/'.$filename);
 
         // Créer le dossier temp s'il n'existe pas
-        if (!file_exists(storage_path('app/temp'))) {
+        if (! file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
@@ -88,45 +85,44 @@ class DerService
             try {
                 $logoTempPath = $this->downloadLogoToTemp($team->logo_path);
                 $templateProcessor->setImageValue('logo_cabinet', [
-                    'path'   => $logoTempPath,
-                    'width'  => 150,
+                    'path' => $logoTempPath,
+                    'width' => 150,
                     'height' => 60,
-                    'ratio'  => true,
+                    'ratio' => true,
                 ]);
                 @unlink($logoTempPath);
             } catch (\Throwable $e) {
-                Log::warning("⚠️ Impossible d'injecter le logo dans le DER : " . $e->getMessage());
+                Log::warning("⚠️ Impossible d'injecter le logo dans le DER : ".$e->getMessage());
                 $templateProcessor->setValue('logo_cabinet', '');
             }
         } else {
             $templateProcessor->setValue('logo_cabinet', '');
         }
 
-        Log::info("🔄 Variables remplacées dans le template DER");
+        Log::info('🔄 Variables remplacées dans le template DER');
     }
 
     /**
      * Télécharge le logo depuis S3 vers un fichier temporaire local
      */
-    private function downloadLogoToTemp(string $s3Path): string
-    {
+    private function downloadLogoToTemp(string $s3Path): string {
         $content = Storage::disk('s3')->get($s3Path);
-        $tempPath = storage_path('app/temp/logo_' . uniqid() . '.png');
+        $tempPath = storage_path('app/temp/logo_'.uniqid().'.png');
 
-        if (!file_exists(storage_path('app/temp'))) {
+        if (! file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
         file_put_contents($tempPath, $content);
+
         return $tempPath;
     }
 
     /**
      * Formater une date pour l'affichage
      */
-    private function formatDate(?string $date): string
-    {
-        if (!$date) {
+    private function formatDate(?string $date): string {
+        if (! $date) {
             return '';
         }
 
@@ -136,9 +132,8 @@ class DerService
     /**
      * Formater une heure pour l'affichage
      */
-    private function formatHeure(?string $heure): string
-    {
-        if (!$heure) {
+    private function formatHeure(?string $heure): string {
+        if (! $heure) {
             return '';
         }
 
@@ -148,8 +143,7 @@ class DerService
     /**
      * Supprimer le fichier temporaire du DER
      */
-    public function cleanupTempFile(string $tempPath): void
-    {
+    public function cleanupTempFile(string $tempPath): void {
         if (file_exists($tempPath)) {
             unlink($tempPath);
             Log::info("🗑️ Fichier temporaire supprimé : {$tempPath}");

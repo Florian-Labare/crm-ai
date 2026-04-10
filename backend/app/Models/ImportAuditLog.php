@@ -6,32 +6,48 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Http\Request;
 
-class ImportAuditLog extends Model
-{
+class ImportAuditLog extends Model {
     // Actions
     public const ACTION_UPLOAD = 'upload';
+
     public const ACTION_CONNECT = 'connect';
+
     public const ACTION_IMPORT = 'import';
+
     public const ACTION_EXPORT = 'export';
+
     public const ACTION_DELETE = 'delete';
+
     public const ACTION_VIEW = 'view';
+
     public const ACTION_CONSENT = 'consent';
+
     public const ACTION_CONNECTION_TEST = 'connection_test';
+
     public const ACTION_CONNECTION_CREATE = 'connection_create';
+
     public const ACTION_CONNECTION_DELETE = 'connection_delete';
 
     // Resource types
     public const RESOURCE_SESSION = 'import_session';
+
     public const RESOURCE_CONNECTION = 'database_connection';
+
     public const RESOURCE_CLIENT = 'client';
+
     public const RESOURCE_MAPPING = 'import_mapping';
 
     // Legal bases (RGPD Article 6)
     public const LEGAL_BASIS_CONSENT = 'consent';
+
     public const LEGAL_BASIS_CONTRACT = 'contract';
+
     public const LEGAL_BASIS_LEGAL_OBLIGATION = 'legal_obligation';
+
     public const LEGAL_BASIS_VITAL_INTERESTS = 'vital_interests';
+
     public const LEGAL_BASIS_PUBLIC_TASK = 'public_task';
+
     public const LEGAL_BASIS_LEGITIMATE_INTEREST = 'legitimate_interest';
 
     protected $fillable = [
@@ -61,23 +77,19 @@ class ImportAuditLog extends Model
         'success' => 'boolean',
     ];
 
-    public function team(): BelongsTo
-    {
+    public function team(): BelongsTo {
         return $this->belongsTo(Team::class);
     }
 
-    public function user(): BelongsTo
-    {
+    public function user(): BelongsTo {
         return $this->belongsTo(User::class);
     }
 
-    public function importSession(): BelongsTo
-    {
+    public function importSession(): BelongsTo {
         return $this->belongsTo(ImportSession::class);
     }
 
-    public function databaseConnection(): BelongsTo
-    {
+    public function databaseConnection(): BelongsTo {
         return $this->belongsTo(DatabaseConnection::class);
     }
 
@@ -119,8 +131,7 @@ class ImportAuditLog extends Model
     /**
      * Get available legal bases with French labels
      */
-    public static function getLegalBasesLabels(): array
-    {
+    public static function getLegalBasesLabels(): array {
         return [
             self::LEGAL_BASIS_CONSENT => 'Consentement de la personne',
             self::LEGAL_BASIS_CONTRACT => 'Exécution d\'un contrat',
@@ -134,16 +145,14 @@ class ImportAuditLog extends Model
     /**
      * Scope to team
      */
-    public function scopeForTeam($query, int $teamId)
-    {
+    public function scopeForTeam($query, int $teamId) {
         return $query->where('team_id', $teamId);
     }
 
     /**
      * Scope to date range
      */
-    public function scopeDateRange($query, $from, $to)
-    {
+    public function scopeDateRange($query, $from, $to) {
         return $query->whereBetween('created_at', [$from, $to]);
     }
 }

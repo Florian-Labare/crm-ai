@@ -12,12 +12,10 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des biens immobiliers multiples (résidence principale, secondaire, locatif, etc.)
  * - Retourne un array de biens avec designation, detenteur, forme, valeurs, année
  */
-class ClientBiensImmobiliersExtractor
-{
+class ClientBiensImmobiliersExtractor {
     use LlmClientTrait;
 
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -28,7 +26,7 @@ class ClientBiensImmobiliersExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientBiensImmobiliersExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -48,8 +46,7 @@ class ClientBiensImmobiliersExtractor
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détecte les BIENS IMMOBILIERS du client.
 
@@ -68,8 +65,7 @@ PROMPT;
      * Logique : Si 2 biens ont une désignation similaire (même type de bien),
      * on les fusionne en gardant toutes les informations disponibles.
      */
-    private function deduplicateBiens(array $biens): array
-    {
+    private function deduplicateBiens(array $biens): array {
         if (count($biens) <= 1) {
             return $biens;
         }
@@ -79,7 +75,7 @@ PROMPT;
         foreach ($biens as $bien) {
             $key = $this->normalizeBienKey($bien['designation'] ?? '');
 
-            if (!isset($merged[$key])) {
+            if (! isset($merged[$key])) {
                 $merged[$key] = $bien;
             } else {
                 $merged[$key] = $this->mergeBienData($merged[$key], $bien);
@@ -92,7 +88,7 @@ PROMPT;
             Log::info('[ClientBiensImmobiliersExtractor] 🔀 Déduplication effectuée', [
                 'avant' => count($biens),
                 'après' => count($result),
-                'biens_fusionnés' => array_map(fn($b) => $b['designation'] ?? 'inconnu', $result)
+                'biens_fusionnés' => array_map(fn ($b) => $b['designation'] ?? 'inconnu', $result),
             ]);
         }
 
@@ -103,8 +99,7 @@ PROMPT;
      * Normalise la clé d'un bien pour la déduplication
      * Ex: "Studio locatif" et "Studio en location" → "studio_locatif"
      */
-    private function normalizeBienKey(string $designation): string
-    {
+    private function normalizeBienKey(string $designation): string {
         $designation = strtolower($designation);
 
         // Types de biens principaux
@@ -123,24 +118,23 @@ PROMPT;
         foreach ($types as $type => $keywords) {
             foreach ($keywords as $keyword) {
                 if (str_contains($designation, $keyword)) {
-                    $key .= $type . '_';
+                    $key .= $type.'_';
                 }
             }
         }
 
-        return $key ?: 'bien_' . substr(md5($designation), 0, 8);
+        return $key ?: 'bien_'.substr(md5($designation), 0, 8);
     }
 
     /**
      * Fusionne deux biens en gardant les informations les plus complètes
      */
-    private function mergeBienData(array $existing, array $new): array
-    {
+    private function mergeBienData(array $existing, array $new): array {
         $fields = ['designation', 'detenteur', 'forme_propriete', 'valeur_actuelle_estimee', 'annee_acquisition', 'valeur_acquisition'];
 
         foreach ($fields as $field) {
-            if (isset($new[$field]) && !empty($new[$field])) {
-                if (!isset($existing[$field]) || empty($existing[$field])) {
+            if (isset($new[$field]) && ! empty($new[$field])) {
+                if (! isset($existing[$field]) || empty($existing[$field])) {
                     $existing[$field] = $new[$field];
                 }
             }
@@ -154,8 +148,7 @@ PROMPT;
         return $existing;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de BIENS IMMOBILIERS clients.
 

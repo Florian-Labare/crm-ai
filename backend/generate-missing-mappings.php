@@ -9,15 +9,15 @@
  * - Le contexte métier (assurance)
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 // Charger le mapping automatique
-$mappingFile = __DIR__ . '/document-variables-mapping.json';
+$mappingFile = __DIR__.'/document-variables-mapping.json';
 $mappingData = json_decode(file_get_contents($mappingFile), true);
 $unmappedVariables = $mappingData['unmapped'];
 
-echo "🔍 Analyse de " . count($unmappedVariables) . " variables non mappées\n";
-echo str_repeat("=", 80) . "\n\n";
+echo '🔍 Analyse de '.count($unmappedVariables)." variables non mappées\n";
+echo str_repeat('=', 80)."\n\n";
 
 /**
  * Définitions des mappings pour les 57 variables
@@ -139,9 +139,10 @@ $intelligentMappings = [
         'needs_migration' => false,
         'comment' => 'Calculé: montant_epargne_disponible > 0',
         'computed' => function ($client) {
-            if (!$client->baeEpargne || !$client->baeEpargne->montant_epargne_disponible) {
+            if (! $client->baeEpargne || ! $client->baeEpargne->montant_epargne_disponible) {
                 return 'Non';
             }
+
             return $client->baeEpargne->montant_epargne_disponible > 0 ? 'Oui' : 'Non';
         },
     ],
@@ -422,7 +423,7 @@ $intelligentMappings = [
         'format' => 'text',
         'needs_migration' => false,
         'comment' => 'Texte statique commercial',
-        'computed' => fn($client) => 'SOCOGEA vous indique',
+        'computed' => fn ($client) => 'SOCOGEA vous indique',
     ],
     'SOCOGEAvousindiqueque' => [
         'source' => 'computed',
@@ -430,7 +431,7 @@ $intelligentMappings = [
         'format' => 'text',
         'needs_migration' => false,
         'comment' => 'Texte statique commercial',
-        'computed' => fn($client) => 'SOCOGEA vous indique que',
+        'computed' => fn ($client) => 'SOCOGEA vous indique que',
     ],
     'Leprésentrapportrépond' => [
         'source' => 'computed',
@@ -438,7 +439,7 @@ $intelligentMappings = [
         'format' => 'text',
         'needs_migration' => false,
         'comment' => 'Texte statique rapport',
-        'computed' => fn($client) => 'Le présent rapport répond',
+        'computed' => fn ($client) => 'Le présent rapport répond',
     ],
 
     // === SITUATION CONJOINT (1 variable) ===
@@ -482,30 +483,30 @@ foreach ($intelligentMappings as $variable => $mapping) {
 }
 
 echo "📊 STATISTIQUES\n";
-echo str_repeat("-", 80) . "\n";
-echo "Variables mappées: " . count($intelligentMappings) . "/" . count($unmappedVariables) . "\n";
-echo "Champs existants (alias): " . count($existingFields) . "\n";
-echo "Nouveaux champs (migration requise): " . count($needsMigration) . "\n";
-echo "Champs calculés: " . count($computedFields) . "\n\n";
+echo str_repeat('-', 80)."\n";
+echo 'Variables mappées: '.count($intelligentMappings).'/'.count($unmappedVariables)."\n";
+echo 'Champs existants (alias): '.count($existingFields)."\n";
+echo 'Nouveaux champs (migration requise): '.count($needsMigration)."\n";
+echo 'Champs calculés: '.count($computedFields)."\n\n";
 
 // Afficher les mappings par catégorie
 echo "📋 MAPPINGS DÉTAILLÉS\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 foreach ($intelligentMappings as $variable => $mapping) {
     $status = $mapping['needs_migration'] ? '🆕' : '✅';
     $sourceDisplay = $mapping['source'];
     if ($mapping['field']) {
-        $sourceDisplay .= '.' . $mapping['field'];
+        $sourceDisplay .= '.'.$mapping['field'];
     }
 
-    echo str_pad($variable, 45) . " {$status} " . str_pad($sourceDisplay, 30) . "\n";
-    echo "    → " . $mapping['comment'] . "\n\n";
+    echo str_pad($variable, 45)." {$status} ".str_pad($sourceDisplay, 30)."\n";
+    echo '    → '.$mapping['comment']."\n\n";
 }
 
-echo "\n" . str_repeat("=", 80) . "\n";
+echo "\n".str_repeat('=', 80)."\n";
 echo "💾 GÉNÉRATION DU CODE PHP\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 // Générer le code PHP pour config/document_mapping.php
 $phpCode = "\n    // === VARIABLES AJOUTÉES AUTOMATIQUEMENT - MIGRATION COMPLÈTE ===\n\n";
@@ -514,7 +515,7 @@ $phpCode = "\n    // === VARIABLES AJOUTÉES AUTOMATIQUEMENT - MIGRATION COMPLÈ
 $groupedMappings = [];
 foreach ($intelligentMappings as $variable => $mapping) {
     $source = $mapping['source'];
-    if (!isset($groupedMappings[$source])) {
+    if (! isset($groupedMappings[$source])) {
         $groupedMappings[$source] = [];
     }
     $groupedMappings[$source][$variable] = $mapping;
@@ -547,7 +548,7 @@ foreach ($groupedMappings as $source => $vars) {
 
             // Générer le code de la fonction
             if (is_string($mapping['computed'])) {
-                $funcCode .= "        'computed' => fn(\$client) => " . var_export($mapping['computed'], true) . ",\n";
+                $funcCode .= "        'computed' => fn(\$client) => ".var_export($mapping['computed'], true).",\n";
             } else {
                 // Cas spéciaux
                 if ($variable === 'Leclientdispose-t-ilduneépargnedisponible(liquide)') {
@@ -565,12 +566,12 @@ foreach ($groupedMappings as $source => $vars) {
                         'Leprésentrapportrépond' => 'Le présent rapport répond',
                     ];
                     if (isset($staticTexts[$variable])) {
-                        $funcCode .= "        'computed' => fn(\$client) => '" . $staticTexts[$variable] . "',\n";
+                        $funcCode .= "        'computed' => fn(\$client) => '".$staticTexts[$variable]."',\n";
                     }
                 }
             }
 
-            $funcCode .= "    ],";
+            $funcCode .= '    ],';
             $phpCode .= $funcCode;
         } else {
             // Champ standard
@@ -582,10 +583,10 @@ foreach ($groupedMappings as $source => $vars) {
                 $config['format'] = $mapping['format'];
             }
 
-            $phpCode .= var_export($config, true) . ',';
+            $phpCode .= var_export($config, true).',';
         }
 
-        $phpCode .= " // " . $mapping['comment'] . "\n";
+        $phpCode .= ' // '.$mapping['comment']."\n";
     }
 
     $phpCode .= "\n";
@@ -594,15 +595,15 @@ foreach ($groupedMappings as $source => $vars) {
 echo $phpCode;
 
 // Sauvegarder dans un fichier
-$outputFile = __DIR__ . '/mapping-code-to-add.php';
-file_put_contents($outputFile, "<?php\n\n/**\n * Code à ajouter dans config/document_mapping.php\n */\n\nreturn [\n" . $phpCode . "];\n");
+$outputFile = __DIR__.'/mapping-code-to-add.php';
+file_put_contents($outputFile, "<?php\n\n/**\n * Code à ajouter dans config/document_mapping.php\n */\n\nreturn [\n".$phpCode."];\n");
 
 echo "✅ Code PHP sauvegardé dans: mapping-code-to-add.php\n\n";
 
 // Générer les migrations nécessaires
-echo str_repeat("=", 80) . "\n";
+echo str_repeat('=', 80)."\n";
 echo "🗄️  MIGRATIONS À CRÉER\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 $migrationsByTable = [
     'clients' => [],
@@ -615,11 +616,11 @@ $migrationsByTable = [
 ];
 
 foreach ($intelligentMappings as $variable => $mapping) {
-    if (!$mapping['needs_migration'] || !$mapping['field']) {
+    if (! $mapping['needs_migration'] || ! $mapping['field']) {
         continue;
     }
 
-    $table = match($mapping['source']) {
+    $table = match ($mapping['source']) {
         'client' => 'clients',
         'conjoint' => 'conjoints',
         'bae_prevoyance' => 'bae_prevoyances',
@@ -630,10 +631,10 @@ foreach ($intelligentMappings as $variable => $mapping) {
         default => null,
     };
 
-    if ($table && !in_array($mapping['field'], $migrationsByTable[$table])) {
+    if ($table && ! in_array($mapping['field'], $migrationsByTable[$table])) {
         $migrationsByTable[$table][] = [
             'field' => $mapping['field'],
-            'type' => match($mapping['format']) {
+            'type' => match ($mapping['format']) {
                 'boolean' => 'boolean',
                 'currency' => 'decimal',
                 'number' => 'integer',
@@ -651,15 +652,15 @@ foreach ($migrationsByTable as $table => $fields) {
         continue;
     }
 
-    echo "📦 Table: {$table} (" . count($fields) . " nouveaux champs)\n";
-    echo str_repeat("-", 80) . "\n";
+    echo "📦 Table: {$table} (".count($fields)." nouveaux champs)\n";
+    echo str_repeat('-', 80)."\n";
 
     foreach ($fields as $fieldData) {
         $field = $fieldData['field'];
         $type = $fieldData['type'];
         $comment = $fieldData['comment'];
 
-        $migration = match($type) {
+        $migration = match ($type) {
             'boolean' => "\$table->boolean('{$field}')->nullable();",
             'decimal' => "\$table->decimal('{$field}', 12, 2)->nullable();",
             'integer' => "\$table->integer('{$field}')->nullable();",

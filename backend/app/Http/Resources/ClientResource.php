@@ -13,15 +13,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @property-read \App\Models\Client $resource
  */
-class ClientResource extends JsonResource
-{
+class ClientResource extends JsonResource {
     /**
      * Transform the resource into an array.
      *
      * @return array<string, mixed>
      */
-    public function toArray(Request $request): array
-    {
+    public function toArray(Request $request): array {
         return [
             'id' => $this->id,
 
@@ -35,7 +33,7 @@ class ClientResource extends JsonResource
             'nom' => $this->nom,
             'nom_jeune_fille' => $this->nom_jeune_fille,
             'prenom' => $this->prenom,
-            'nom_complet' => $this->prenom . ' ' . strtoupper($this->nom ?? ''),
+            'nom_complet' => $this->prenom.' '.strtoupper($this->nom ?? ''),
 
             // Dates et lieux
             'date_naissance' => $this->date_naissance,
@@ -95,7 +93,7 @@ class ClientResource extends JsonResource
             'actifs_financiers' => ClientActifFinancierResource::collection($this->whenLoaded('actifsFinanciers')),
             'biens_immobiliers' => ClientBienImmobilierResource::collection($this->whenLoaded('biensImmobiliers')),
             'autres_epargnes' => ClientAutreEpargneResource::collection($this->whenLoaded('autresEpargnes')),
-            'contrats' => $this->whenLoaded('contrats', fn() => $this->contrats->map(fn($c) => [
+            'contrats' => $this->whenLoaded('contrats', fn () => $this->contrats->map(fn ($c) => [
                 'id' => $c->id,
                 'type' => $c->type,
                 'assureur_id' => $c->assureur_id,
@@ -121,8 +119,7 @@ class ClientResource extends JsonResource
      * Nombre de besoins distincts : slugs déclarés + inférés des sections BAE existantes.
      * Délègue à BesoinService (source unique de vérité).
      */
-    private function computeBesoinsCount(): int
-    {
+    private function computeBesoinsCount(): int {
         return count(app(BesoinService::class)->getEffectiveBesoins($this->resource));
     }
 }

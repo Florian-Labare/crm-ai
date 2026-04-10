@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\AudioRecord;
 
 /**
  * Recording Session Model
@@ -12,8 +11,7 @@ use App\Models\AudioRecord;
  * Gère les sessions d'enregistrement long (jusqu'à 2h)
  * avec découpage automatique en chunks de 10min max
  */
-class RecordingSession extends Model
-{
+class RecordingSession extends Model {
     protected $fillable = [
         'session_id',
         'team_id',
@@ -35,32 +33,28 @@ class RecordingSession extends Model
     /**
      * Relation avec l'équipe
      */
-    public function team(): BelongsTo
-    {
+    public function team(): BelongsTo {
         return $this->belongsTo(Team::class);
     }
 
     /**
      * Relation avec l'utilisateur
      */
-    public function user(): BelongsTo
-    {
+    public function user(): BelongsTo {
         return $this->belongsTo(User::class);
     }
 
     /**
      * Relation avec le client (optionnel)
      */
-    public function client(): BelongsTo
-    {
+    public function client(): BelongsTo {
         return $this->belongsTo(Client::class);
     }
 
     /**
      * Relation avec l'AudioRecord
      */
-    public function audioRecord(): BelongsTo
-    {
+    public function audioRecord(): BelongsTo {
         return $this->belongsTo(AudioRecord::class);
     }
 }

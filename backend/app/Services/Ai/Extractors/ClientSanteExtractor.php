@@ -13,19 +13,17 @@ use Illuminate\Support\Facades\Log;
  * - Extraction des données sante_souhait
  * - TOUJOURS utiliser "add" pour besoins_action (sauf négation explicite)
  */
-class ClientSanteExtractor
-{
+class ClientSanteExtractor {
     use LlmClientTrait;
 
     /**
      * Extrait les données de santé depuis la transcription.
      *
-     * @param string $transcription Transcription vocale
-     * @param array $currentData Données existantes (optionnel)
+     * @param  string  $transcription  Transcription vocale
+     * @param  array  $currentData  Données existantes (optionnel)
      * @return array Données extraites
      */
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -36,7 +34,7 @@ class ClientSanteExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientSanteExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -51,8 +49,7 @@ class ClientSanteExtractor
         }
     }
 
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et détecte si le client parle de SANTÉ / MUTUELLE / COMPLÉMENTAIRE SANTÉ.
 
@@ -65,8 +62,7 @@ Réponds STRICTEMENT avec un JSON valide, sans aucun texte avant ou après.
 PROMPT;
     }
 
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de besoins SANTÉ (complémentaire santé / mutuelle).
 

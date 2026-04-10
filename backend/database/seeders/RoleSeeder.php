@@ -10,13 +10,11 @@ use Spatie\Permission\Models\Role;
  *
  * Crée les rôles pour l'application
  */
-class RoleSeeder extends Seeder
-{
+class RoleSeeder extends Seeder {
     /**
      * Run the database seeds.
      */
-    public function run(): void
-    {
+    public function run(): void {
         // Créer le rôle MIA (Mandataire d'Intermédiaire en Assurance)
         Role::firstOrCreate(['name' => 'MIA'], [
             'guard_name' => 'web',

@@ -17,19 +17,17 @@ use Illuminate\Support\Facades\Log;
  *
  * N'extrait PAS les BAE (gérés par d'autres extractors).
  */
-class ClientExtractor
-{
+class ClientExtractor {
     use LlmClientTrait;
 
     /**
      * Extrait les données client depuis la transcription.
      *
-     * @param string $transcription Transcription vocale
-     * @param array $currentData Données client existantes (optionnel)
+     * @param  string  $transcription  Transcription vocale
+     * @param  array  $currentData  Données client existantes (optionnel)
      * @return array Données extraites
      */
-    public function extract(string $transcription, array $currentData = []): array
-    {
+    public function extract(string $transcription, array $currentData = []): array {
         $prompt = $this->buildPrompt($transcription);
 
         try {
@@ -40,7 +38,7 @@ class ClientExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -58,8 +56,7 @@ class ClientExtractor
     /**
      * Construit le prompt utilisateur.
      */
-    private function buildPrompt(string $transcription): string
-    {
+    private function buildPrompt(string $transcription): string {
         return <<<PROMPT
 Analyse cette transcription et extrais UNIQUEMENT les informations personnelles du CLIENT PRINCIPAL (celui qui parle, qui dit "je").
 
@@ -77,8 +74,7 @@ PROMPT;
     /**
      * Retourne le prompt système pour l'extraction client.
      */
-    private function getSystemPrompt(): string
-    {
+    private function getSystemPrompt(): string {
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de données client pour un CRM d'assurance.
 

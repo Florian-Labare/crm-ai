@@ -6,8 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClientPendingChange extends Model
-{
+class ClientPendingChange extends Model {
     use HasFactory;
 
     protected $fillable = [
@@ -38,42 +37,43 @@ class ClientPendingChange extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_REVIEWING = 'reviewing';
+
     const STATUS_APPLIED = 'applied';
+
     const STATUS_PARTIALLY_APPLIED = 'partially_applied';
+
     const STATUS_REJECTED = 'rejected';
 
     // Source constants
     const SOURCE_AUDIO = 'audio';
+
     const SOURCE_MANUAL = 'manual';
+
     const SOURCE_IMPORT = 'import';
 
     // ============================================
     // RELATIONS
     // ============================================
 
-    public function client(): BelongsTo
-    {
+    public function client(): BelongsTo {
         return $this->belongsTo(Client::class);
     }
 
-    public function user(): BelongsTo
-    {
+    public function user(): BelongsTo {
         return $this->belongsTo(User::class);
     }
 
-    public function audioRecord(): BelongsTo
-    {
+    public function audioRecord(): BelongsTo {
         return $this->belongsTo(AudioRecord::class);
     }
 
-    public function reviewer(): BelongsTo
-    {
+    public function reviewer(): BelongsTo {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
-    public function team(): BelongsTo
-    {
+    public function team(): BelongsTo {
         return $this->belongsTo(Team::class);
     }
 
@@ -84,24 +84,21 @@ class ClientPendingChange extends Model
     /**
      * Scope pour filtrer par utilisateur
      */
-    public function scopeForUser($query, int $userId)
-    {
+    public function scopeForUser($query, int $userId) {
         return $query->where('user_id', $userId);
     }
 
     /**
      * Scope pour filtrer par client
      */
-    public function scopeForClient($query, int $clientId)
-    {
+    public function scopeForClient($query, int $clientId) {
         return $query->where('client_id', $clientId);
     }
 
     /**
      * Scope pour filtrer par statut pending
      */
-    public function scopePending($query)
-    {
+    public function scopePending($query) {
         return $query->where('status', self::STATUS_PENDING);
     }
 
@@ -112,27 +109,27 @@ class ClientPendingChange extends Model
     /**
      * Nombre total de changements
      */
-    public function getChangesCountAttribute(): int
-    {
+    public function getChangesCountAttribute(): int {
         $diff = $this->changes_diff ?? [];
-        return collect($diff)->filter(fn($change) => $change['has_change'] ?? false)->count();
+
+        return collect($diff)->filter(fn ($change) => $change['has_change'] ?? false)->count();
     }
 
     /**
      * Nombre de conflits
      */
-    public function getConflictsCountAttribute(): int
-    {
+    public function getConflictsCountAttribute(): int {
         $diff = $this->changes_diff ?? [];
-        return collect($diff)->filter(fn($change) => $change['is_conflict'] ?? false)->count();
+
+        return collect($diff)->filter(fn ($change) => $change['is_conflict'] ?? false)->count();
     }
 
     /**
      * Nombre de champs critiques
      */
-    public function getCriticalCountAttribute(): int
-    {
+    public function getCriticalCountAttribute(): int {
         $diff = $this->changes_diff ?? [];
-        return collect($diff)->filter(fn($change) => $change['is_critical'] ?? false)->count();
+
+        return collect($diff)->filter(fn ($change) => $change['is_critical'] ?? false)->count();
     }
 }

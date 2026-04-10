@@ -3,10 +3,8 @@
 namespace App\Services\Import;
 
 use App\Models\ImportMapping;
-use Illuminate\Support\Str;
 
-class ImportMappingService
-{
+class ImportMappingService {
     /**
      * Complete database schema definition covering ALL client-related tables
      */
@@ -866,8 +864,7 @@ class ImportMappingService
 
     private const MIN_CONFIDENCE = 0.55;
 
-    public function suggestMappings(array $sourceColumns): array
-    {
+    public function suggestMappings(array $sourceColumns): array {
         $suggestions = [];
         $allFields = $this->getAllTargetFields();
 
@@ -903,8 +900,7 @@ class ImportMappingService
         return $suggestions;
     }
 
-    private function calculateMatchScore(string $sourceColumn, string $targetField): float
-    {
+    private function calculateMatchScore(string $sourceColumn, string $targetField): float {
         $normalizedSource = $this->normalizeForMatching($sourceColumn);
         $normalizedTarget = $this->normalizeForMatching($targetField);
 
@@ -920,6 +916,7 @@ class ImportMappingService
 
             if ($normalizedSource === $normalizedAlias) {
                 $positionBonus = max(0, 0.04 - ($index * 0.003));
+
                 return self::SCORING_WEIGHTS['alias_exact'] + $positionBonus;
             }
 
@@ -959,11 +956,10 @@ class ImportMappingService
             $scores[] = self::SCORING_WEIGHTS['semantic'] * $semanticScore;
         }
 
-        return !empty($scores) ? max($scores) : 0;
+        return ! empty($scores) ? max($scores) : 0;
     }
 
-    private function calculateWordOverlap(string $str1, string $str2): float
-    {
+    private function calculateWordOverlap(string $str1, string $str2): float {
         $words1 = array_filter(preg_split('/[\s_]+/', $str1));
         $words2 = array_filter(preg_split('/[\s_]+/', $str2));
 
@@ -977,8 +973,7 @@ class ImportMappingService
         return count($intersection) / count($union);
     }
 
-    private function calculateSemanticScore(string $normalizedSource, string $targetField): float
-    {
+    private function calculateSemanticScore(string $normalizedSource, string $targetField): float {
         $targetGroup = null;
         foreach (self::SEMANTIC_GROUPS as $group => $keywords) {
             foreach ($keywords as $keyword) {
@@ -989,7 +984,7 @@ class ImportMappingService
             }
         }
 
-        if (!$targetGroup) {
+        if (! $targetGroup) {
             return 0;
         }
 
@@ -1005,8 +1000,7 @@ class ImportMappingService
         return $matchCount > 0 ? min(1, $matchCount / 2) : 0;
     }
 
-    private function normalizeForMatching(string $value): string
-    {
+    private function normalizeForMatching(string $value): string {
         $normalized = mb_strtolower($value, 'UTF-8');
         $normalized = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $normalized) ?: $normalized;
         $normalized = preg_replace('/[^a-z0-9\s_]/', '', $normalized);
@@ -1015,8 +1009,7 @@ class ImportMappingService
         return trim($normalized);
     }
 
-    private function getAllTargetFields(): array
-    {
+    private function getAllTargetFields(): array {
         $fields = [];
 
         foreach (self::DATABASE_SCHEMA as $table => $tableFields) {
@@ -1028,17 +1021,15 @@ class ImportMappingService
         return $fields;
     }
 
-    public function getDatabaseSchema(): array
-    {
+    public function getDatabaseSchema(): array {
         return self::DATABASE_SCHEMA;
     }
 
-    public function applyMapping(array $rawData, array $columnMappings): array
-    {
+    public function applyMapping(array $rawData, array $columnMappings): array {
         $mappedData = [];
 
         foreach ($columnMappings as $sourceColumn => $targetField) {
-            if (empty($targetField) || !isset($rawData[$sourceColumn])) {
+            if (empty($targetField) || ! isset($rawData[$sourceColumn])) {
                 continue;
             }
 
@@ -1047,7 +1038,7 @@ class ImportMappingService
 
             switch ($tableInfo['table']) {
                 case 'conjoint':
-                    if (!isset($mappedData['conjoint'])) {
+                    if (! isset($mappedData['conjoint'])) {
                         $mappedData['conjoint'] = [];
                     }
                     $dbField = $tableInfo['db_field'] ?? str_replace('conjoint_', '', $targetField);
@@ -1057,10 +1048,10 @@ class ImportMappingService
                 case 'enfant':
                     $index = $tableInfo['index'] ?? 1;
                     $enfantIndex = $index - 1;
-                    if (!isset($mappedData['enfants'])) {
+                    if (! isset($mappedData['enfants'])) {
                         $mappedData['enfants'] = [];
                     }
-                    if (!isset($mappedData['enfants'][$enfantIndex])) {
+                    if (! isset($mappedData['enfants'][$enfantIndex])) {
                         $mappedData['enfants'][$enfantIndex] = [];
                     }
                     $dbField = $tableInfo['db_field'] ?? preg_replace('/^enfant\d+_/', '', $targetField);
@@ -1078,7 +1069,7 @@ class ImportMappingService
                 case 'client_autre_epargne':
                 case 'client_charge':
                     $tableName = $tableInfo['table'];
-                    if (!isset($mappedData["_{$tableName}"])) {
+                    if (! isset($mappedData["_{$tableName}"])) {
                         $mappedData["_{$tableName}"] = [];
                     }
                     $dbField = $tableInfo['db_field'] ?? $targetField;
@@ -1097,11 +1088,11 @@ class ImportMappingService
         return $mappedData;
     }
 
-    private function getFieldTableInfo(string $targetField): array
-    {
+    private function getFieldTableInfo(string $targetField): array {
         foreach (self::DATABASE_SCHEMA as $table => $fields) {
             if (isset($fields[$targetField])) {
                 $fieldConfig = $fields[$targetField];
+
                 return [
                     'table' => $table,
                     'db_field' => $fieldConfig['db_field'] ?? $targetField,
@@ -1114,8 +1105,7 @@ class ImportMappingService
         return ['table' => 'client', 'db_field' => $targetField, 'type' => 'string'];
     }
 
-    public function createMapping(int $teamId, string $name, string $sourceType, array $columnMappings, ?array $defaultValues = null): ImportMapping
-    {
+    public function createMapping(int $teamId, string $name, string $sourceType, array $columnMappings, ?array $defaultValues = null): ImportMapping {
         return ImportMapping::create([
             'team_id' => $teamId,
             'name' => $name,
@@ -1125,21 +1115,19 @@ class ImportMappingService
         ]);
     }
 
-    public function updateMapping(ImportMapping $mapping, array $data): ImportMapping
-    {
+    public function updateMapping(ImportMapping $mapping, array $data): ImportMapping {
         $mapping->update($data);
+
         return $mapping->fresh();
     }
 
-    public function getTeamMappings(int $teamId): \Illuminate\Database\Eloquent\Collection
-    {
+    public function getTeamMappings(int $teamId): \Illuminate\Database\Eloquent\Collection {
         return ImportMapping::where('team_id', $teamId)
             ->orderBy('name')
             ->get();
     }
 
-    public function getAvailableTargetFields(): array
-    {
+    public function getAvailableTargetFields(): array {
         $result = [];
 
         foreach (self::DATABASE_SCHEMA as $table => $fields) {
@@ -1153,8 +1141,7 @@ class ImportMappingService
      * Retourne les champs avec labels français pour le frontend
      * Utilise le cache pour éviter les problèmes de mémoire
      */
-    public function getEnhancedFieldsList(): array
-    {
+    public function getEnhancedFieldsList(): array {
         return \Illuminate\Support\Facades\Cache::remember('import_enhanced_fields', 3600, function () {
             return $this->buildEnhancedFieldsList();
         });
@@ -1163,8 +1150,7 @@ class ImportMappingService
     /**
      * Construit la liste des champs enrichis
      */
-    private function buildEnhancedFieldsList(): array
-    {
+    private function buildEnhancedFieldsList(): array {
         $tableLabels = [
             'client' => 'Client',
             'conjoint' => 'Conjoint',
@@ -1214,8 +1200,7 @@ class ImportMappingService
     /**
      * Génère un label français lisible pour un champ
      */
-    private function generateFieldLabel(string $fieldKey, ?int $index = null): string
-    {
+    private function generateFieldLabel(string $fieldKey, ?int $index = null): string {
         // Labels manuels pour les champs courants
         static $labels = [
             'civilite' => 'Civilité', 'nom' => 'Nom', 'prenom' => 'Prénom',
@@ -1249,7 +1234,7 @@ class ImportMappingService
         // Chercher un label
         $label = $labels[$fieldKey] ?? $labels[$cleanKey] ?? $labels[$shortKey] ?? null;
 
-        if (!$label) {
+        if (! $label) {
             // Générer automatiquement: snake_case -> Title Case
             $label = ucfirst(str_replace('_', ' ', $shortKey));
         }
@@ -1267,13 +1252,12 @@ class ImportMappingService
         return $label;
     }
 
-    public function validateMapping(array $columnMappings): array
-    {
+    public function validateMapping(array $columnMappings): array {
         $errors = [];
         $allFields = $this->getAllTargetFields();
 
         foreach ($columnMappings as $source => $target) {
-            if (!empty($target) && !in_array($target, $allFields)) {
+            if (! empty($target) && ! in_array($target, $allFields)) {
                 $errors[] = "Champ cible invalide: {$target} pour la colonne {$source}";
             }
         }
@@ -1281,8 +1265,7 @@ class ImportMappingService
         return $errors;
     }
 
-    public function getFieldAliases(string $field): array
-    {
+    public function getFieldAliases(string $field): array {
         return self::FIELD_ALIASES[$field] ?? [$field];
     }
 }

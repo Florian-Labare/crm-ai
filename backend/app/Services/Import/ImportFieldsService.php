@@ -17,8 +17,7 @@ use App\Models\Entreprise;
 use App\Models\QuestionnaireRisque;
 use App\Models\SanteSouhait;
 
-class ImportFieldsService
-{
+class ImportFieldsService {
     /**
      * Configuration des tables liées au client avec leurs métadonnées
      */
@@ -320,8 +319,7 @@ class ImportFieldsService
     /**
      * Récupère tous les champs mappables groupés par table
      */
-    public function getAllMappableFields(): array
-    {
+    public function getAllMappableFields(): array {
         $result = [];
 
         foreach (self::TABLE_CONFIG as $tableName => $config) {
@@ -330,7 +328,7 @@ class ImportFieldsService
             $fillable = $model->getFillable();
 
             // Filtrer les champs exclus
-            $fields = array_filter($fillable, fn($field) => !in_array($field, self::EXCLUDED_FIELDS));
+            $fields = array_filter($fillable, fn ($field) => ! in_array($field, self::EXCLUDED_FIELDS));
 
             $tableFields = [];
             foreach ($fields as $field) {
@@ -349,8 +347,8 @@ class ImportFieldsService
                         $prefix = str_replace('{n}', $i, $config['prefix']);
                         $indexedFields[] = [
                             'field' => $fieldInfo['field'],
-                            'label' => $fieldInfo['label'] . " (#{$i})",
-                            'full_key' => $prefix . $fieldInfo['field'],
+                            'label' => $fieldInfo['label']." (#{$i})",
+                            'full_key' => $prefix.$fieldInfo['field'],
                             'index' => $i,
                         ];
                     }
@@ -372,8 +370,7 @@ class ImportFieldsService
     /**
      * Récupère une liste plate de tous les champs pour un select
      */
-    public function getFlatFieldsList(): array
-    {
+    public function getFlatFieldsList(): array {
         $allFields = $this->getAllMappableFields();
         $flatList = [];
 
@@ -398,8 +395,7 @@ class ImportFieldsService
     /**
      * Récupère les champs groupés pour un select avec optgroup
      */
-    public function getGroupedFieldsForSelect(): array
-    {
+    public function getGroupedFieldsForSelect(): array {
         $allFields = $this->getAllMappableFields();
         $grouped = [];
 
@@ -425,8 +421,7 @@ class ImportFieldsService
     /**
      * Récupère le label français d'un champ
      */
-    private function getFieldLabel(string $field): string
-    {
+    private function getFieldLabel(string $field): string {
         if (isset(self::FIELD_LABELS[$field])) {
             return self::FIELD_LABELS[$field];
         }
@@ -438,27 +433,25 @@ class ImportFieldsService
     /**
      * Génère la clé complète pour un champ
      */
-    private function getFullKey(string $tableName, string $field, array $config): string
-    {
+    private function getFullKey(string $tableName, string $field, array $config): string {
         if ($tableName === 'client') {
             return $field;
         }
 
-        $prefix = $config['prefix'] ?? ($tableName . '_');
+        $prefix = $config['prefix'] ?? ($tableName.'_');
 
         // Pour les tables non-multiples, on enlève le placeholder {n}
-        if (!$config['multiple']) {
-            return $prefix . $field;
+        if (! $config['multiple']) {
+            return $prefix.$field;
         }
 
-        return $prefix . $field;
+        return $prefix.$field;
     }
 
     /**
      * Parse une clé de mapping pour retrouver table, champ et index
      */
-    public function parseFieldKey(string $fullKey): ?array
-    {
+    public function parseFieldKey(string $fullKey): ?array {
         // Client direct (pas de préfixe)
         $clientModel = new Client();
         if (in_array($fullKey, $clientModel->getFillable())) {
@@ -471,18 +464,20 @@ class ImportFieldsService
 
         // Tables avec préfixe
         foreach (self::TABLE_CONFIG as $tableName => $config) {
-            if ($tableName === 'client') continue;
+            if ($tableName === 'client') {
+                continue;
+            }
 
             $prefix = $config['prefix'] ?? '';
 
             if ($config['multiple']) {
                 // Pattern pour tables multiples: prefix{n}_field
                 $basePrefix = str_replace('{n}', '', $prefix);
-                if (preg_match('/^' . preg_quote($basePrefix, '/') . '(\d+)_(.+)$/', $fullKey, $matches)) {
+                if (preg_match('/^'.preg_quote($basePrefix, '/').'(\d+)_(.+)$/', $fullKey, $matches)) {
                     return [
                         'table' => $tableName,
                         'field' => $matches[2],
-                        'index' => (int)$matches[1],
+                        'index' => (int) $matches[1],
                     ];
                 }
             } else {
@@ -503,16 +498,14 @@ class ImportFieldsService
     /**
      * Récupère la configuration d'une table
      */
-    public function getTableConfig(string $tableName): ?array
-    {
+    public function getTableConfig(string $tableName): ?array {
         return self::TABLE_CONFIG[$tableName] ?? null;
     }
 
     /**
      * Récupère toutes les configurations de tables
      */
-    public function getAllTableConfigs(): array
-    {
+    public function getAllTableConfigs(): array {
         return self::TABLE_CONFIG;
     }
 }

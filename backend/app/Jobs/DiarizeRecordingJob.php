@@ -12,12 +12,13 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class DiarizeRecordingJob implements ShouldQueue
-{
+class DiarizeRecordingJob implements ShouldQueue {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 600;
+
     public $tries = 2;
+
     public $backoff = [60];
 
     public function __construct(
@@ -36,26 +37,28 @@ class DiarizeRecordingJob implements ShouldQueue
 
         try {
             // 1. Verifier que le fichier concatene existe encore
-            if (!file_exists($this->concatenatedAudioPath)) {
-                Log::warning("[DIARIZE] Fichier concatene introuvable, abandon", [
+            if (! file_exists($this->concatenatedAudioPath)) {
+                Log::warning('[DIARIZE] Fichier concatene introuvable, abandon', [
                     'path' => $this->concatenatedAudioPath,
                 ]);
                 $this->audioRecord->update(['diarization_success' => false]);
+
                 return;
             }
 
             // 2. Diariser avec Pyannote
-            Log::info("[DIARIZE] Lancement Pyannote...");
+            Log::info('[DIARIZE] Lancement Pyannote...');
             $diarizationResult = $diarizationService->diarize($this->concatenatedAudioPath);
 
             // Stocker les resultats de diarisation (meme en cas d'echec)
             $diarizationService->updateAudioRecordWithDiarization($this->audioRecord, $diarizationResult);
 
-            if (!$diarizationResult['success'] || empty($diarizationResult['client_segments'])) {
-                Log::warning("[DIARIZE] Diarisation echouee ou pas de segments client", [
+            if (! $diarizationResult['success'] || empty($diarizationResult['client_segments'])) {
+                Log::warning('[DIARIZE] Diarisation echouee ou pas de segments client', [
                     'success' => $diarizationResult['success'],
                     'error' => $diarizationResult['error'] ?? null,
                 ]);
+
                 return;
             }
 
@@ -67,19 +70,20 @@ class DiarizeRecordingJob implements ShouldQueue
                 $diarizationResult['client_segments']
             );
 
-            if (!$clientAudioPath) {
+            if (! $clientAudioPath) {
                 Log::warning("[DIARIZE] Impossible d'extraire l'audio client");
+
                 return;
             }
 
             // 4. Transcrire les segments client
-            Log::info("[DIARIZE] Transcription des segments client...");
+            Log::info('[DIARIZE] Transcription des segments client...');
             $clientTranscription = $this->transcribeClientAudio($clientAudioPath, $transcriptionService);
             $diarizationService->cleanup($clientAudioPath);
 
-            if (!empty($clientTranscription)) {
+            if (! empty($clientTranscription)) {
                 $this->audioRecord->update(['client_transcription' => $clientTranscription]);
-                Log::info("[DIARIZE] Transcription client stockee : " . strlen($clientTranscription) . " caracteres");
+                Log::info('[DIARIZE] Transcription client stockee : '.strlen($clientTranscription).' caracteres');
             }
 
             Log::info("[DIARIZE] Diarisation terminee avec succes pour session {$this->sessionId}");
@@ -94,20 +98,20 @@ class DiarizeRecordingJob implements ShouldQueue
             // Toujours cleanup le fichier concatene
             if (file_exists($this->concatenatedAudioPath) && str_contains($this->concatenatedAudioPath, '/temp/')) {
                 @unlink($this->concatenatedAudioPath);
-                Log::info("[DIARIZE] Fichier concatene supprime", ['path' => $this->concatenatedAudioPath]);
+                Log::info('[DIARIZE] Fichier concatene supprime', ['path' => $this->concatenatedAudioPath]);
             }
         }
     }
 
-    private function transcribeClientAudio(string $filePath, TranscriptionService $transcriptionService): ?string
-    {
-        if (!file_exists($filePath)) {
+    private function transcribeClientAudio(string $filePath, TranscriptionService $transcriptionService): ?string {
+        if (! file_exists($filePath)) {
             return null;
         }
 
         $fileSize = filesize($filePath);
         if ($fileSize < 1024) {
             Log::warning("[DIARIZE] Fichier audio client trop petit ({$fileSize} bytes)");
+
             return null;
         }
 
@@ -115,12 +119,12 @@ class DiarizeRecordingJob implements ShouldQueue
             return $transcriptionService->transcribe($filePath);
         } catch (\Throwable $e) {
             Log::warning("[DIARIZE] Echec transcription client: {$e->getMessage()}");
+
             return null;
         }
     }
 
-    public function failed(\Throwable $exception): void
-    {
+    public function failed(\Throwable $exception): void {
         Log::error("[DIARIZE] Job echoue definitivement pour session {$this->sessionId}: {$exception->getMessage()}");
         $this->audioRecord->update(['diarization_success' => false]);
     }

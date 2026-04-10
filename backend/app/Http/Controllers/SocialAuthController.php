@@ -10,28 +10,26 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
-class SocialAuthController extends Controller
-{
+class SocialAuthController extends Controller {
     private const ALLOWED_PROVIDERS = ['google', 'azure'];
 
     /**
      * Initie le flux OAuth pour lier un compte social à un user déjà authentifié.
      * Retourne l'URL de redirection OAuth (le frontend navigue vers cette URL).
      */
-    public function initiateLink(string $provider): JsonResponse
-    {
-        if (!in_array($provider, self::ALLOWED_PROVIDERS)) {
+    public function initiateLink(string $provider): JsonResponse {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
         }
 
-        $userId  = auth()->id();
+        $userId = auth()->id();
         $expires = now()->addMinutes(10)->timestamp;
-        $sig     = hash_hmac('sha256', "{$userId}.{$expires}", config('app.key'));
-        $state   = base64_encode(json_encode([
+        $sig = hash_hmac('sha256', "{$userId}.{$expires}", config('app.key'));
+        $state = base64_encode(json_encode([
             'mode' => 'link',
-            'uid'  => $userId,
-            'exp'  => $expires,
-            'sig'  => $sig,
+            'uid' => $userId,
+            'exp' => $expires,
+            'sig' => $sig,
         ]));
 
         if ($provider === 'google') {
@@ -41,6 +39,7 @@ class SocialAuthController extends Controller
                 ->stateless()
                 ->redirect()
                 ->getTargetUrl();
+
             return response()->json(['redirect_url' => $url]);
         }
 
@@ -51,15 +50,15 @@ class SocialAuthController extends Controller
                 ->stateless()
                 ->redirect()
                 ->getTargetUrl();
+
             return response()->json(['redirect_url' => $url]);
         }
 
         abort(404);
     }
 
-    public function redirect(string $provider)
-    {
-        if (!in_array($provider, self::ALLOWED_PROVIDERS)) {
+    public function redirect(string $provider) {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
         }
 
@@ -79,9 +78,8 @@ class SocialAuthController extends Controller
         return Socialite::driver($provider)->stateless()->redirect();
     }
 
-    public function callback(string $provider)
-    {
-        if (!in_array($provider, self::ALLOWED_PROVIDERS)) {
+    public function callback(string $provider) {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
         }
 
@@ -90,7 +88,7 @@ class SocialAuthController extends Controller
         try {
             $socialUser = Socialite::driver($provider)->stateless()->user();
         } catch (\Exception $e) {
-            return redirect($frontendUrl . '/login?error=oauth_failed');
+            return redirect($frontendUrl.'/login?error=oauth_failed');
         }
 
         // Mode "link" : lier un compte OAuth à un user déjà authentifié
@@ -133,24 +131,24 @@ class SocialAuthController extends Controller
                 ->first();
 
             // 4. firstOrCreate évite la race condition OAuth (deux callbacks simultanés)
-            $name  = $socialUser->getName() ?? $email;
+            $name = $socialUser->getName() ?? $email;
             $parts = explode(' ', $name, 2);
-            $user  = User::firstOrCreate(
+            $user = User::firstOrCreate(
                 ['email' => $email],
                 [
-                    'name'      => $parts[1] ?? $parts[0],
+                    'name' => $parts[1] ?? $parts[0],
                     'firstname' => $parts[0],
-                    'password'  => Hash::make(Str::random(32)),
+                    'password' => Hash::make(Str::random(32)),
                 ]
             );
 
             // 5. Attacher SocialAccount si pas encore lié pour ce provider
-            if (!$user->socialAccounts()->where('provider', $provider)->exists()) {
+            if (! $user->socialAccounts()->where('provider', $provider)->exists()) {
                 $user->socialAccounts()->create([
-                    'provider'      => $provider,
-                    'provider_id'   => $socialUser->getId(),
-                    'avatar'        => $socialUser->getAvatar(),
-                    'token'         => $socialUser->token,
+                    'provider' => $provider,
+                    'provider_id' => $socialUser->getId(),
+                    'avatar' => $socialUser->getAvatar(),
+                    'token' => $socialUser->token,
                     'refresh_token' => $socialUser->refreshToken,
                 ]);
             }
@@ -170,32 +168,30 @@ class SocialAuthController extends Controller
 
         // Use URL fragment (#) instead of query string so the token is never sent
         // to the server in the Referer header and never appears in server access logs.
-        return redirect($frontendUrl . '/auth/callback#token=' . $token);
+        return redirect($frontendUrl.'/auth/callback#token='.$token);
     }
 
     /**
      * Gère le callback en mode "link" : attache ou met à jour le SocialAccount
      * du user identifié par l'état signé, sans créer de nouvelle session.
      */
-    private function handleLinkCallback(string $provider, $socialUser, int $userId, string $frontendUrl): \Illuminate\Http\RedirectResponse
-    {
+    private function handleLinkCallback(string $provider, $socialUser, int $userId, string $frontendUrl): \Illuminate\Http\RedirectResponse {
         $user = User::find($userId);
 
-        if (!$user) {
-            return redirect($frontendUrl . '/settings/cabinet?oauth=error&reason=user_not_found');
+        if (! $user) {
+            return redirect($frontendUrl.'/settings/cabinet?oauth=error&reason=user_not_found');
         }
 
         $user->socialAccounts()->updateOrCreate(
             ['provider' => $provider],
             [
-                'provider_id'   => $socialUser->getId(),
-                'avatar'        => $socialUser->getAvatar(),
-                'token'         => $socialUser->token,
+                'provider_id' => $socialUser->getId(),
+                'avatar' => $socialUser->getAvatar(),
+                'token' => $socialUser->token,
                 'refresh_token' => $socialUser->refreshToken,
             ]
         );
 
-        return redirect($frontendUrl . '/settings/cabinet?oauth=linked&provider=' . $provider);
+        return redirect($frontendUrl.'/settings/cabinet?oauth=linked&provider='.$provider);
     }
-
 }

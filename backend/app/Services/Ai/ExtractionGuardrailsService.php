@@ -12,8 +12,7 @@ use Illuminate\Support\Facades\Log;
  * 2. Valider et normaliser les valeurs extraites
  * 3. Logger les écarts pour amélioration continue
  */
-class ExtractionGuardrailsService
-{
+class ExtractionGuardrailsService {
     /**
      * Patterns de détection pour les champs critiques
      * Structure : champ => [positive => [...], negative => [...]]
@@ -126,12 +125,11 @@ class ExtractionGuardrailsService
     /**
      * Applique les guardrails sur les données extraites
      *
-     * @param array $extractedData Données extraites par GPT
-     * @param string $transcription Transcription originale
+     * @param  array  $extractedData  Données extraites par GPT
+     * @param  string  $transcription  Transcription originale
      * @return array Données enrichies et validées
      */
-    public function apply(array $extractedData, string $transcription): array
-    {
+    public function apply(array $extractedData, string $transcription): array {
         $originalData = $extractedData;
         $transcriptionLower = mb_strtolower($transcription);
 
@@ -150,8 +148,7 @@ class ExtractionGuardrailsService
     /**
      * Détecte les champs critiques que GPT a potentiellement oubliés
      */
-    private function detectMissedCriticalFields(array $data, string $transcription): array
-    {
+    private function detectMissedCriticalFields(array $data, string $transcription): array {
         foreach ($this->criticalFieldPatterns as $field => $patterns) {
             // Si le champ est déjà extrait, on ne le remplace pas
             if (array_key_exists($field, $data) && $data[$field] !== null) {
@@ -167,7 +164,7 @@ class ExtractionGuardrailsService
                 }
             }
 
-            if (!$contextFound) {
+            if (! $contextFound) {
                 continue;
             }
 
@@ -197,11 +194,11 @@ class ExtractionGuardrailsService
         }
 
         // Cas spécial pour consentement_audio : détecter la réponse après la question
-        if (!array_key_exists('consentement_audio', $data) || $data['consentement_audio'] === null) {
+        if (! array_key_exists('consentement_audio', $data) || $data['consentement_audio'] === null) {
             $consentValue = $this->detectConsentementFromContext($transcription);
             if ($consentValue !== null) {
                 $data['consentement_audio'] = $consentValue;
-                Log::info("🛡️ [GUARDRAILS] consentement_audio détecté par analyse contextuelle", [
+                Log::info('🛡️ [GUARDRAILS] consentement_audio détecté par analyse contextuelle', [
                     'value' => $consentValue,
                 ]);
             }
@@ -214,8 +211,7 @@ class ExtractionGuardrailsService
      * Analyse contextuelle avancée pour le consentement audio
      * Cherche la question puis la réponse qui suit
      */
-    private function detectConsentementFromContext(string $transcription): ?bool
-    {
+    private function detectConsentementFromContext(string $transcription): ?bool {
         // Patterns de questions sur l'enregistrement
         $questionPatterns = [
             'est-ce que vous êtes d\'accord',
@@ -239,7 +235,7 @@ class ExtractionGuardrailsService
             }
         }
 
-        if (!$hasQuestion) {
+        if (! $hasQuestion) {
             return null;
         }
 
@@ -300,8 +296,7 @@ class ExtractionGuardrailsService
     /**
      * Valide et normalise les valeurs extraites
      */
-    private function validateAndNormalize(array $data): array
-    {
+    private function validateAndNormalize(array $data): array {
         // Normaliser le téléphone (supprimer espaces, tirets)
         if (isset($data['telephone'])) {
             $data['telephone'] = preg_replace('/[\s.-]/', '', $data['telephone']);
@@ -314,8 +309,8 @@ class ExtractionGuardrailsService
 
         // Valider le code postal (5 chiffres)
         if (isset($data['code_postal'])) {
-            if (!preg_match('/^\d{5}$/', $data['code_postal'])) {
-                Log::warning("🛡️ [GUARDRAILS] Code postal invalide ignoré", [
+            if (! preg_match('/^\d{5}$/', $data['code_postal'])) {
+                Log::warning('🛡️ [GUARDRAILS] Code postal invalide ignoré', [
                     'value' => $data['code_postal'],
                 ]);
                 unset($data['code_postal']);
@@ -357,12 +352,11 @@ class ExtractionGuardrailsService
     /**
      * Log les corrections effectuées par les guardrails
      */
-    private function logCorrections(array $original, array $corrected, string $transcription): void
-    {
+    private function logCorrections(array $original, array $corrected, string $transcription): void {
         $corrections = [];
 
         foreach ($corrected as $field => $value) {
-            if (!array_key_exists($field, $original)) {
+            if (! array_key_exists($field, $original)) {
                 $corrections[$field] = [
                     'type' => 'added',
                     'value' => $value,
@@ -376,8 +370,8 @@ class ExtractionGuardrailsService
             }
         }
 
-        if (!empty($corrections)) {
-            Log::info("🛡️ [GUARDRAILS] Corrections appliquées", [
+        if (! empty($corrections)) {
+            Log::info('🛡️ [GUARDRAILS] Corrections appliquées', [
                 'corrections' => $corrections,
                 'transcription_excerpt' => mb_substr($transcription, 0, 200),
             ]);
@@ -388,12 +382,11 @@ class ExtractionGuardrailsService
      * Extrait des valeurs manquantes par patterns regex
      * Utilisé en dernier recours si GPT n'a pas extrait certaines valeurs évidentes
      */
-    public function extractMissingValues(array $data, string $transcription): array
-    {
+    public function extractMissingValues(array $data, string $transcription): array {
         foreach ($this->valueExtractionPatterns as $field => $pattern) {
-            if (!isset($data[$field]) && preg_match($pattern, $transcription, $matches)) {
+            if (! isset($data[$field]) && preg_match($pattern, $transcription, $matches)) {
                 $data[$field] = $matches[0];
-                Log::info("🛡️ [GUARDRAILS] Valeur extraite par regex", [
+                Log::info('🛡️ [GUARDRAILS] Valeur extraite par regex', [
                     'field' => $field,
                     'value' => $matches[0],
                 ]);
@@ -406,8 +399,7 @@ class ExtractionGuardrailsService
     /**
      * Vérifie la cohérence des données extraites
      */
-    public function checkCoherence(array $data): array
-    {
+    public function checkCoherence(array $data): array {
         $warnings = [];
 
         // Si chef_entreprise mais pas de profession
@@ -425,8 +417,8 @@ class ExtractionGuardrailsService
             }
         }
 
-        if (!empty($warnings)) {
-            Log::warning("🛡️ [GUARDRAILS] Alertes de cohérence", [
+        if (! empty($warnings)) {
+            Log::warning('🛡️ [GUARDRAILS] Alertes de cohérence', [
                 'warnings' => $warnings,
             ]);
         }

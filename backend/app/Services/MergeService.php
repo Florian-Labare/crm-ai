@@ -8,21 +8,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 // Services de synchronisation des relations
-use App\Services\ClientPassifsSyncService;
-use App\Services\ClientActifsFinanciersSyncService;
-use App\Services\ClientBiensImmobiliersSyncService;
-use App\Services\ClientAutresEpargnesSyncService;
-use App\Services\ClientRevenusSyncService;
-use App\Services\ConjointSyncService;
-use App\Services\EnfantSyncService;
-use App\Services\BaeService;
 
-class MergeService
-{
+class MergeService {
     private AuditService $auditService;
 
-    public function __construct(AuditService $auditService)
-    {
+    public function __construct(AuditService $auditService) {
         $this->auditService = $auditService;
     }
 
@@ -88,7 +78,7 @@ class MergeService
         $diff = $this->calculateDiff($client, $extractedData);
 
         // Ajouter les données relationnelles au diff si présentes
-        if (!empty($relationalData)) {
+        if (! empty($relationalData)) {
             $this->addRelationalDataToDiff($client, $relationalData, $diff);
         }
 
@@ -105,7 +95,7 @@ class MergeService
             'source' => $source,
         ]);
 
-        Log::info("📋 [MERGE] Pending change créé", [
+        Log::info('📋 [MERGE] Pending change créé', [
             'pending_change_id' => $pendingChange->id,
             'client_id' => $client->id,
             'changes_count' => $pendingChange->changes_count,
@@ -119,8 +109,7 @@ class MergeService
     /**
      * Ajoute les données relationnelles au diff pour affichage
      */
-    private function addRelationalDataToDiff(Client $client, array $relationalData, array &$diff): void
-    {
+    private function addRelationalDataToDiff(Client $client, array $relationalData, array &$diff): void {
         // Labels pour les champs relationnels
         $relationalLabels = [
             'client_passifs' => 'Crédits / Passifs',
@@ -136,7 +125,9 @@ class MergeService
         ];
 
         foreach ($relationalData as $field => $newValue) {
-            if (empty($newValue)) continue;
+            if (empty($newValue)) {
+                continue;
+            }
 
             // Récupérer les données actuelles depuis les relations
             $currentValue = $this->getCurrentRelationalValue($client, $field);
@@ -147,7 +138,7 @@ class MergeService
                 'current_value' => $currentValue,
                 'new_value' => $newValue,
                 'has_change' => true,
-                'is_conflict' => !empty($currentValue),
+                'is_conflict' => ! empty($currentValue),
                 'is_critical' => false,
                 'is_relational' => true, // Marqueur spécial
                 'requires_review' => true,
@@ -161,27 +152,26 @@ class MergeService
     /**
      * Récupère la valeur actuelle d'un champ relationnel
      */
-    private function getCurrentRelationalValue(Client $client, string $field): mixed
-    {
+    private function getCurrentRelationalValue(Client $client, string $field): mixed {
         return match ($field) {
-            'client_passifs' => $client->passifs?->map(fn($p) => [
+            'client_passifs' => $client->passifs?->map(fn ($p) => [
                 'type' => $p->type,
                 'montant' => $p->montant,
                 'mensualite' => $p->mensualite,
             ])->toArray() ?? [],
-            'client_actifs_financiers' => $client->actifsFinanciers?->map(fn($a) => [
+            'client_actifs_financiers' => $client->actifsFinanciers?->map(fn ($a) => [
                 'type' => $a->type,
                 'montant' => $a->montant,
             ])->toArray() ?? [],
-            'client_biens_immobiliers' => $client->biensImmobiliers?->map(fn($b) => [
+            'client_biens_immobiliers' => $client->biensImmobiliers?->map(fn ($b) => [
                 'type' => $b->type,
                 'valeur' => $b->valeur,
             ])->toArray() ?? [],
-            'client_autres_epargnes' => $client->autresEpargnes?->map(fn($e) => [
+            'client_autres_epargnes' => $client->autresEpargnes?->map(fn ($e) => [
                 'type' => $e->type,
                 'montant' => $e->montant,
             ])->toArray() ?? [],
-            'client_revenus' => $client->revenus?->map(fn($r) => [
+            'client_revenus' => $client->revenus?->map(fn ($r) => [
                 'type' => $r->type,
                 'montant' => $r->montant,
             ])->toArray() ?? [],
@@ -190,7 +180,7 @@ class MergeService
                 'prenom' => $client->conjoint->prenom,
                 'profession' => $client->conjoint->profession,
             ] : null,
-            'enfants' => $client->enfants?->map(fn($e) => [
+            'enfants' => $client->enfants?->map(fn ($e) => [
                 'prenom' => $e->prenom,
                 'date_naissance' => $e->date_naissance,
             ])->toArray() ?? [],
@@ -204,19 +194,20 @@ class MergeService
     /**
      * Formate les données relationnelles pour l'affichage
      */
-    private function formatRelationalForDisplay(mixed $value): string
-    {
+    private function formatRelationalForDisplay(mixed $value): string {
         if (empty($value)) {
             return '(vide)';
         }
 
         if (is_array($value)) {
             $count = count($value);
-            if ($count === 0) return '(vide)';
+            if ($count === 0) {
+                return '(vide)';
+            }
 
             // Si c'est un tableau associatif simple (conjoint, BAE)
             if (isset($value['nom']) || isset($value['prenom'])) {
-                return ($value['prenom'] ?? '') . ' ' . ($value['nom'] ?? '');
+                return ($value['prenom'] ?? '').' '.($value['nom'] ?? '');
             }
 
             // Si c'est un tableau d'objets
@@ -224,7 +215,7 @@ class MergeService
             foreach ($value as $item) {
                 if (isset($item['type'])) {
                     $montant = $item['montant'] ?? $item['valeur'] ?? '';
-                    $items[] = $item['type'] . ($montant ? ': ' . number_format((float)$montant, 0, ',', ' ') . ' €' : '');
+                    $items[] = $item['type'].($montant ? ': '.number_format((float) $montant, 0, ',', ' ').' €' : '');
                 } elseif (isset($item['prenom'])) {
                     $items[] = $item['prenom'];
                 }
@@ -239,20 +230,19 @@ class MergeService
     /**
      * Extrait les noms de champs d'une donnée relationnelle pour l'affichage.
      */
-    private function extractRelationalFields(mixed $value): array
-    {
-        if (!is_array($value)) {
+    private function extractRelationalFields(mixed $value): array {
+        if (! is_array($value)) {
             return [];
         }
 
         if (array_is_list($value)) {
             $fields = [];
             foreach ($value as $item) {
-                if (!is_array($item)) {
+                if (! is_array($item)) {
                     continue;
                 }
                 foreach (array_keys($item) as $key) {
-                    if (!in_array($key, $fields, true)) {
+                    if (! in_array($key, $fields, true)) {
                         $fields[] = $key;
                     }
                 }
@@ -267,8 +257,7 @@ class MergeService
     /**
      * Calcule le diff entre les données du client et les données extraites
      */
-    public function calculateDiff(Client $client, array $extractedData): array
-    {
+    public function calculateDiff(Client $client, array $extractedData): array {
         $diff = [];
 
         // Ne traiter que les champs scalaires du client (pas les relations)
@@ -282,7 +271,7 @@ class MergeService
             }
 
             // Ignorer les champs non-fillable ou exclus
-            if (!in_array($field, $clientFields) || in_array($field, $excludedFields)) {
+            if (! in_array($field, $clientFields) || in_array($field, $excludedFields)) {
                 continue;
             }
 
@@ -290,7 +279,7 @@ class MergeService
             $hasChange = $this->valuesAreDifferent($currentValue, $newValue);
 
             // Détermine s'il y a un conflit (valeur existante non vide sera écrasée)
-            $isConflict = $hasChange && !$this->isEmpty($currentValue);
+            $isConflict = $hasChange && ! $this->isEmpty($currentValue);
 
             $diff[$field] = [
                 'field' => $field,
@@ -331,7 +320,7 @@ class MergeService
             foreach ($decisions as $field => $decision) {
                 $changeInfo = $pendingChange->changes_diff[$field] ?? null;
 
-                if (!$changeInfo || !$changeInfo['has_change']) {
+                if (! $changeInfo || ! $changeInfo['has_change']) {
                     continue;
                 }
 
@@ -385,7 +374,7 @@ class MergeService
             // Audit log
             $this->auditService->log(
                 'pending_change_applied',
-                "Modifications appliquées: " . count($applied) . " acceptées, " . count($rejected) . " rejetées",
+                'Modifications appliquées: '.count($applied).' acceptées, '.count($rejected).' rejetées',
                 $pendingChange,
                 'merge',
                 'info',
@@ -395,7 +384,7 @@ class MergeService
 
             DB::commit();
 
-            Log::info("✅ [MERGE] Changements appliqués", [
+            Log::info('✅ [MERGE] Changements appliqués', [
                 'pending_change_id' => $pendingChange->id,
                 'applied' => array_keys($applied),
                 'rejected' => array_keys($rejected),
@@ -420,8 +409,7 @@ class MergeService
     /**
      * Applique un changement relationnel via le service approprié
      */
-    private function applyRelationalChange(Client $client, string $field, array $data): void
-    {
+    private function applyRelationalChange(Client $client, string $field, array $data): void {
         Log::info("🔄 [MERGE] Application du champ relationnel: $field", [
             'client_id' => $client->id,
             'data_count' => count($data),
@@ -478,8 +466,7 @@ class MergeService
     /**
      * Normalise une valeur modifiée par l'utilisateur selon le type attendu.
      */
-    private function normalizeOverrideValue(mixed $override, mixed $baseline): mixed
-    {
+    private function normalizeOverrideValue(mixed $override, mixed $baseline): mixed {
         if (is_string($override)) {
             $trimmed = trim($override);
             if ((is_array($baseline) || is_object($baseline)) && $trimmed !== '') {
@@ -519,7 +506,7 @@ class MergeService
         // Audit log
         $this->auditService->log(
             'pending_change_rejected',
-            "Toutes les modifications rejetées" . ($reason ? ": $reason" : ""),
+            'Toutes les modifications rejetées'.($reason ? ": $reason" : ''),
             $pendingChange,
             'merge',
             'info',
@@ -527,7 +514,7 @@ class MergeService
             ['reason' => $reason]
         );
 
-        Log::info("❌ [MERGE] Tous les changements rejetés", [
+        Log::info('❌ [MERGE] Tous les changements rejetés', [
             'pending_change_id' => $pendingChange->id,
             'reason' => $reason,
         ]);
@@ -543,12 +530,12 @@ class MergeService
         $decisions = [];
 
         foreach ($pendingChange->changes_diff as $field => $change) {
-            if (!$change['has_change']) {
+            if (! $change['has_change']) {
                 continue;
             }
 
             // Accepter automatiquement si pas de conflit et pas critique
-            if (!$change['is_conflict'] && !$change['is_critical']) {
+            if (! $change['is_conflict'] && ! $change['is_critical']) {
                 $decisions[$field] = 'accept';
             } else {
                 // Laisser en skip pour révision manuelle
@@ -562,15 +549,14 @@ class MergeService
     /**
      * Vérifie si deux valeurs sont différentes
      */
-    private function valuesAreDifferent($current, $new): bool
-    {
+    private function valuesAreDifferent($current, $new): bool {
         // Si la nouvelle valeur est vide, pas de changement à faire
         if ($this->isEmpty($new)) {
             return false;
         }
 
         // Si la valeur actuelle est vide et la nouvelle ne l'est pas
-        if ($this->isEmpty($current) && !$this->isEmpty($new)) {
+        if ($this->isEmpty($current) && ! $this->isEmpty($new)) {
             return true;
         }
 
@@ -581,19 +567,24 @@ class MergeService
     /**
      * Vérifie si une valeur est vide
      */
-    private function isEmpty($value): bool
-    {
-        if ($value === null) return true;
-        if ($value === '') return true;
-        if (is_array($value) && empty($value)) return true;
+    private function isEmpty($value): bool {
+        if ($value === null) {
+            return true;
+        }
+        if ($value === '') {
+            return true;
+        }
+        if (is_array($value) && empty($value)) {
+            return true;
+        }
+
         return false;
     }
 
     /**
      * Normalise une valeur pour la comparaison
      */
-    private function normalizeValue($value)
-    {
+    private function normalizeValue($value) {
         if (is_string($value)) {
             return strtolower(trim($value));
         }
@@ -602,16 +593,17 @@ class MergeService
         }
         if (is_array($value)) {
             sort($value);
+
             return json_encode($value);
         }
+
         return (string) $value;
     }
 
     /**
      * Formate une valeur pour l'affichage
      */
-    private function formatForDisplay($value): string
-    {
+    private function formatForDisplay($value): string {
         if ($this->isEmpty($value)) {
             return '(vide)';
         }
@@ -624,6 +616,7 @@ class MergeService
         if (is_numeric($value) && $value > 1000) {
             return number_format($value, 0, ',', ' ');
         }
+
         return (string) $value;
     }
 }

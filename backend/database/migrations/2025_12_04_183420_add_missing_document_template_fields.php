@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class() extends Migration {
     /**
      * Run the migrations.
      *
@@ -16,8 +15,7 @@ return new class extends Migration
      * - bae_retraite: 1 champ
      * - sante_souhaits: 5 champs
      */
-    public function up(): void
-    {
+    public function up(): void {
         // Table: clients
         Schema::table('clients', function (Blueprint $table) {
             $table->text('situation_professionnelle')->nullable()->after('profession');
@@ -65,8 +63,7 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
+    public function down(): void {
         Schema::table('clients', function (Blueprint $table) {
             $table->dropColumn(['situation_professionnelle', 'km_parcourus_annuels', 'genre']);
         });

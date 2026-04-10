@@ -8,20 +8,17 @@ use App\Services\ScoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ScoringServiceTest extends TestCase
-{
+class ScoringServiceTest extends TestCase {
     use RefreshDatabase;
 
     private ScoringService $service;
 
-    protected function setUp(): void
-    {
+    protected function setUp(): void {
         parent::setUp();
         $this->service = $this->app->make(ScoringService::class);
     }
 
-    public function test_score_is_based_on_comportement_only(): void
-    {
+    public function test_score_is_based_on_comportement_only(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Unit',

@@ -5,8 +5,7 @@ namespace App\Console\Commands;
 use App\Services\Import\RgpdComplianceService;
 use Illuminate\Console\Command;
 
-class PurgeExpiredImportSessions extends Command
-{
+class PurgeExpiredImportSessions extends Command {
     /**
      * The name and signature of the console command.
      *
@@ -24,8 +23,7 @@ class PurgeExpiredImportSessions extends Command
     /**
      * Execute the console command.
      */
-    public function handle(RgpdComplianceService $rgpdService): int
-    {
+    public function handle(RgpdComplianceService $rgpdService): int {
         $this->info('Starting purge of expired import sessions...');
 
         $count = $rgpdService->purgeExpiredSessions();

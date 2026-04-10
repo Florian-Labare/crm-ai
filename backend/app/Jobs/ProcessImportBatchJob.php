@@ -11,8 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ProcessImportBatchJob implements ShouldQueue
-{
+class ProcessImportBatchJob implements ShouldQueue {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
@@ -29,15 +28,13 @@ class ProcessImportBatchJob implements ShouldQueue
 
     protected int $limit;
 
-    public function __construct(ImportSession $session, int $offset, int $limit = 50)
-    {
+    public function __construct(ImportSession $session, int $offset, int $limit = 50) {
         $this->session = $session;
         $this->offset = $offset;
         $this->limit = $limit;
     }
 
-    public function handle(ImportOrchestrationService $orchestrator): void
-    {
+    public function handle(ImportOrchestrationService $orchestrator): void {
         Log::info('ProcessImportBatchJob started', [
             'session_id' => $this->session->id,
             'offset' => $this->offset,
@@ -63,8 +60,7 @@ class ProcessImportBatchJob implements ShouldQueue
         }
     }
 
-    public function failed(\Throwable $exception): void
-    {
+    public function failed(\Throwable $exception): void {
         Log::error('ProcessImportBatchJob permanently failed', [
             'session_id' => $this->session->id,
             'offset' => $this->offset,

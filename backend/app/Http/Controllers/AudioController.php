@@ -15,21 +15,18 @@ use Illuminate\Http\JsonResponse;
  *
  * Gère les enregistrements audio selon les conventions Laravel Boost
  */
-class AudioController extends Controller
-{
+class AudioController extends Controller {
     /**
      * Injecter le service Audio
      */
     public function __construct(
         private readonly AudioService $audioService
-    ) {
-    }
+    ) {}
 
     /**
      * Upload d'un fichier audio et traitement asynchrone
      */
-    public function upload(StoreAudioRequest $request): JsonResponse
-    {
+    public function upload(StoreAudioRequest $request): JsonResponse {
         // Déléguer la logique au service
         $audioRecord = $this->audioService->uploadAndProcess(
             $request->file('audio'),
@@ -50,8 +47,7 @@ class AudioController extends Controller
     /**
      * Vérifier le statut d'un enregistrement audio
      */
-    public function status(int $id): JsonResponse
-    {
+    public function status(int $id): JsonResponse {
         // Récupérer l'enregistrement audio (sans eager load le client pour éviter les erreurs de scope)
         $audioRecord = AudioRecord::where('user_id', auth()->id())
             ->findOrFail($id);

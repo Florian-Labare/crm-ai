@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\Storage;
  * Note : Les transcriptions textuelles sont conservées (données métier)
  * Seuls les fichiers audio bruts sont supprimés
  */
-class PurgeOldAudioRecords extends Command
-{
+class PurgeOldAudioRecords extends Command {
     protected $signature = 'audio:purge-old
                             {--days=30 : Nombre de jours de rétention}
                             {--dry-run : Affiche ce qui serait supprimé sans supprimer}
@@ -28,11 +27,12 @@ class PurgeOldAudioRecords extends Command
     protected $description = 'Supprime les fichiers audio de plus de X jours (conformité RGPD)';
 
     private int $deletedFiles = 0;
+
     private int $deletedRecords = 0;
+
     private int $freedBytes = 0;
 
-    public function handle(): int
-    {
+    public function handle(): int {
         $days = (int) $this->option('days');
         $dryRun = $this->option('dry-run');
         $includeTranscriptions = $this->option('include-transcriptions');
@@ -58,6 +58,7 @@ class PurgeOldAudioRecords extends Command
 
         if ($records->isEmpty()) {
             $this->info('✅ Aucun enregistrement à purger.');
+
             return Command::SUCCESS;
         }
 
@@ -85,14 +86,14 @@ class PurgeOldAudioRecords extends Command
             ]
         );
 
-        if (!$dryRun && $this->deletedFiles > 0) {
+        if (! $dryRun && $this->deletedFiles > 0) {
             Log::info('[RGPD PURGE] Purge des anciens enregistrements effectuée', [
                 'retention_days' => $days,
                 'deleted_files' => $this->deletedFiles,
                 'deleted_records' => $this->deletedRecords,
                 'freed_bytes' => $this->freedBytes,
                 'team_id' => $teamId,
-                'include_transcriptions' => $includeTranscriptions
+                'include_transcriptions' => $includeTranscriptions,
             ]);
         }
 
@@ -102,13 +103,12 @@ class PurgeOldAudioRecords extends Command
     /**
      * Traite un enregistrement pour suppression
      */
-    private function processRecord(AudioRecord $record, bool $dryRun, bool $includeTranscriptions): void
-    {
+    private function processRecord(AudioRecord $record, bool $dryRun, bool $includeTranscriptions): void {
         // 1. Supprimer le fichier audio (depuis S3)
         if ($record->path && Storage::exists($record->path)) {
             $size = Storage::size($record->path);
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 Storage::delete($record->path);
 
                 // Mettre à jour le record pour indiquer que le fichier a été supprimé
@@ -122,13 +122,13 @@ class PurgeOldAudioRecords extends Command
         }
 
         // 2. Supprimer les logs de diarisation si demandé
-        if ($includeTranscriptions && !$dryRun) {
+        if ($includeTranscriptions && ! $dryRun) {
             DiarizationLog::where('audio_record_id', $record->id)->delete();
         }
 
         // 3. Supprimer complètement l'enregistrement si demandé
         if ($includeTranscriptions) {
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $record->delete();
             }
             $this->deletedRecords++;
@@ -138,14 +138,14 @@ class PurgeOldAudioRecords extends Command
     /**
      * Formate une taille en bytes
      */
-    private function formatBytes(int $bytes): string
-    {
+    private function formatBytes(int $bytes): string {
         $units = ['B', 'KB', 'MB', 'GB'];
         $i = 0;
         while ($bytes >= 1024 && $i < count($units) - 1) {
             $bytes /= 1024;
             $i++;
         }
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 }

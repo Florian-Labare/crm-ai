@@ -5,8 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Client;
 use Illuminate\Console\Command;
 
-class CleanBesoinEncoding extends Command
-{
+class CleanBesoinEncoding extends Command {
     /**
      * The name and signature of the console command.
      *
@@ -24,8 +23,7 @@ class CleanBesoinEncoding extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
-    {
+    public function handle() {
         $this->info('🧹 Nettoyage des besoins mal encodés...');
 
         $clients = Client::whereNotNull('besoins')->get();
@@ -34,7 +32,7 @@ class CleanBesoinEncoding extends Command
         foreach ($clients as $client) {
             $besoins = $client->besoins;
 
-            if (!is_array($besoins)) {
+            if (! is_array($besoins)) {
                 continue;
             }
 
@@ -58,11 +56,11 @@ class CleanBesoinEncoding extends Command
                 }
             }
 
-            if ($needsUpdate && !empty($cleaned)) {
+            if ($needsUpdate && ! empty($cleaned)) {
                 $client->besoins = $cleaned;
                 $client->save();
                 $fixed++;
-                $this->line("✅ Client #{$client->id} ({$client->prenom} {$client->nom}): " . implode(', ', $cleaned));
+                $this->line("✅ Client #{$client->id} ({$client->prenom} {$client->nom}): ".implode(', ', $cleaned));
             }
         }
 

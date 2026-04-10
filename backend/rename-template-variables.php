@@ -7,40 +7,42 @@
  * Format cible: {{table.colonne}}
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
-$mapping = require __DIR__ . '/variable-mapping-complete.php';
+$mapping = require __DIR__.'/variable-mapping-complete.php';
 
 $templates = [
     'recueil-global-pp-2025.docx' => 'Recueil Global PP 2025',
     'Template Mandat.docx' => 'Template Mandat',
 ];
 
-$templatesDir = __DIR__ . '/storage/app/templates/';
+$templatesDir = __DIR__.'/storage/app/templates/';
 
 echo "🔄 RENOMMAGE DES VARIABLES DANS LES TEMPLATES\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 foreach ($templates as $filename => $displayName) {
-    $templatePath = $templatesDir . $filename;
+    $templatePath = $templatesDir.$filename;
 
-    if (!file_exists($templatePath)) {
+    if (! file_exists($templatePath)) {
         echo "❌ {$displayName} - Fichier non trouvé: {$filename}\n\n";
+
         continue;
     }
 
     echo "📄 Traitement: {$displayName}\n";
-    echo str_repeat("-", 80) . "\n";
+    echo str_repeat('-', 80)."\n";
 
     // 1. Créer une backup avant modification
-    $backupPath = $templatePath . '.backup_renaming_' . time();
+    $backupPath = $templatePath.'.backup_renaming_'.time();
     copy($templatePath, $backupPath);
-    echo "   Backup créée: " . basename($backupPath) . "\n";
+    echo '   Backup créée: '.basename($backupPath)."\n";
 
     // 2. Ouvrir le template
     $zip = new ZipArchive();
-    if ($zip->open($templatePath) !== TRUE) {
+    if ($zip->open($templatePath) !== true) {
         echo "   ❌ Impossible d'ouvrir le fichier\n\n";
+
         continue;
     }
 
@@ -54,9 +56,9 @@ foreach ($templates as $filename => $displayName) {
     preg_match_all('/\{\{([^}]+)\}\}/', $fullText, $varMatches);
     $variables = array_unique($varMatches[1]);
     $variables = array_map('trim', $variables);
-    $variables = array_filter($variables, fn($v) => !empty($v));
+    $variables = array_filter($variables, fn ($v) => ! empty($v));
 
-    echo "   Variables trouvées: " . count($variables) . "\n";
+    echo '   Variables trouvées: '.count($variables)."\n";
 
     $replacements = [];
     $notMapped = [];
@@ -69,10 +71,10 @@ foreach ($templates as $filename => $displayName) {
             if (isset($config['type'])) {
                 // Variable computed ou fixed
                 if ($config['type'] === 'computed') {
-                    $newVar = '{{' . $config['value'] . '}}';
-                } else if ($config['type'] === 'fixed') {
+                    $newVar = '{{'.$config['value'].'}}';
+                } elseif ($config['type'] === 'fixed') {
                     // Les variables fixes restent en l'état pour l'instant
-                    $newVar = '{{' . $varName . '}}';
+                    $newVar = '{{'.$varName.'}}';
                 }
             } else {
                 // Variable mappée à une colonne DB
@@ -82,13 +84,13 @@ foreach ($templates as $filename => $displayName) {
                 // Format: {{table.colonne}}
                 if (isset($config['index'])) {
                     // Pour les enfants avec index
-                    $newVar = '{{' . $table . '[' . $config['index'] . '].' . $column . '}}';
+                    $newVar = '{{'.$table.'['.$config['index'].'].'.$column.'}}';
                 } else {
-                    $newVar = '{{' . $table . '.' . $column . '}}';
+                    $newVar = '{{'.$table.'.'.$column.'}}';
                 }
             }
 
-            $oldVar = '{{' . $varName . '}}';
+            $oldVar = '{{'.$varName.'}}';
             $replacements[$oldVar] = $newVar;
 
             echo "   ✓ {$oldVar} → {$newVar}\n";
@@ -97,8 +99,8 @@ foreach ($templates as $filename => $displayName) {
         }
     }
 
-    if (!empty($notMapped)) {
-        echo "   ⚠️  Variables non mappées (" . count($notMapped) . "): " . implode(', ', $notMapped) . "\n";
+    if (! empty($notMapped)) {
+        echo '   ⚠️  Variables non mappées ('.count($notMapped).'): '.implode(', ', $notMapped)."\n";
     }
 
     // 5. Remplacer les variables dans le XML
@@ -107,7 +109,7 @@ foreach ($templates as $filename => $displayName) {
         // Approche: remplacer dans chaque paragraphe
         $xml = preg_replace_callback(
             '/<w:p\b[^>]*>(.*?)<\/w:p>/s',
-            function($pMatch) use ($oldVar, $newVar) {
+            function ($pMatch) use ($oldVar, $newVar) {
                 $paragraph = $pMatch[0];
 
                 // Extraire tout le texte du paragraphe
@@ -118,14 +120,14 @@ foreach ($templates as $filename => $displayName) {
                 // Si l'ancienne variable est dans ce paragraphe
                 if (strpos($paragraphText, $oldVar) !== false) {
                     // Supprimer toute la fragmentation et remplacer par la nouvelle variable
-                    $marker = '___MARKER_' . md5($oldVar . uniqid()) . '___';
+                    $marker = '___MARKER_'.md5($oldVar.uniqid()).'___';
 
                     // Chercher et marquer la variable fragmentée
-                    $pattern = '/\{\{[^}]*?' . preg_quote(trim($oldVar, '{}'), '/') . '[^}]*?\}\}/sU';
+                    $pattern = '/\{\{[^}]*?'.preg_quote(trim($oldVar, '{}'), '/').'[^}]*?\}\}/sU';
                     $paragraph = preg_replace($pattern, $marker, $paragraph, 1);
 
                     // Remplacer le marqueur par la nouvelle variable propre
-                    $cleanVar = '<w:r><w:t>' . htmlspecialchars($newVar, ENT_XML1) . '</w:t></w:r>';
+                    $cleanVar = '<w:r><w:t>'.htmlspecialchars($newVar, ENT_XML1).'</w:t></w:r>';
                     $paragraph = str_replace($marker, $cleanVar, $paragraph);
                 }
 
@@ -158,7 +160,7 @@ foreach ($templates as $filename => $displayName) {
     echo "\n";
 }
 
-echo str_repeat("=", 80) . "\n";
+echo str_repeat('=', 80)."\n";
 echo "✅ Renommage terminé pour tous les templates !\n";
 echo "\nVous pouvez maintenant utiliser les templates avec les noms de colonnes DB.\n";
 echo "Format: {{table.colonne}}\n";

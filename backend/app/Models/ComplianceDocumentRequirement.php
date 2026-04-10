@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class ComplianceDocumentRequirement extends Pivot
-{
+class ComplianceDocumentRequirement extends Pivot {
     protected $table = 'compliance_document_requirements';
 
     public $incrementing = true;
@@ -23,18 +22,15 @@ class ComplianceDocumentRequirement extends Pivot
         'validated_at' => 'datetime',
     ];
 
-    public function document(): BelongsTo
-    {
+    public function document(): BelongsTo {
         return $this->belongsTo(ClientComplianceDocument::class, 'document_id');
     }
 
-    public function requirement(): BelongsTo
-    {
+    public function requirement(): BelongsTo {
         return $this->belongsTo(ComplianceRequirement::class, 'requirement_id');
     }
 
-    public function validator(): BelongsTo
-    {
+    public function validator(): BelongsTo {
         return $this->belongsTo(User::class, 'validated_by');
     }
 }

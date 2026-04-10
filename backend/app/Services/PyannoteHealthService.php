@@ -11,21 +11,20 @@ use Illuminate\Support\Facades\Log;
  * Permet de vérifier la disponibilité du système de diarisation
  * et de mettre en cache le résultat pour éviter des vérifications répétées
  */
-class PyannoteHealthService
-{
+class PyannoteHealthService {
     private const CACHE_KEY = 'pyannote_health_status';
+
     private const CACHE_TTL = 3600; // 1 heure
 
     /**
      * Vérifie si pyannote est disponible et fonctionnel
      *
-     * @param bool $forceRefresh Forcer une nouvelle vérification
+     * @param  bool  $forceRefresh  Forcer une nouvelle vérification
      * @return array{available: bool, checks: array, errors: array, warnings: array}
      */
-    public function check(bool $forceRefresh = false): array
-    {
+    public function check(bool $forceRefresh = false): array {
         // Retourner le cache si disponible et non forcé
-        if (!$forceRefresh && Cache::has(self::CACHE_KEY)) {
+        if (! $forceRefresh && Cache::has(self::CACHE_KEY)) {
             return Cache::get(self::CACHE_KEY);
         }
 
@@ -39,12 +38,12 @@ class PyannoteHealthService
         // Logger le résultat
         if ($result['available']) {
             Log::info('[PYANNOTE HEALTH] ✅ Pyannote disponible et fonctionnel', [
-                'checks' => array_map(fn($c) => $c['status'], $result['checks'])
+                'checks' => array_map(fn ($c) => $c['status'], $result['checks']),
             ]);
         } else {
             Log::warning('[PYANNOTE HEALTH] ⚠️ Pyannote non disponible', [
                 'errors' => $result['errors'],
-                'warnings' => $result['warnings']
+                'warnings' => $result['warnings'],
             ]);
         }
 
@@ -54,35 +53,34 @@ class PyannoteHealthService
     /**
      * Vérifie rapidement si pyannote est disponible (depuis le cache ou check rapide)
      */
-    public function isAvailable(): bool
-    {
+    public function isAvailable(): bool {
         $status = $this->check();
+
         return $status['available'];
     }
 
     /**
      * Efface le cache et force une nouvelle vérification
      */
-    public function refresh(): array
-    {
+    public function refresh(): array {
         Cache::forget(self::CACHE_KEY);
+
         return $this->check(true);
     }
 
     /**
      * Exécute le script Python de health check
      */
-    private function runHealthCheck(): array
-    {
+    private function runHealthCheck(): array {
         $scriptPath = base_path('scripts/check_pyannote.py');
 
-        if (!file_exists($scriptPath)) {
+        if (! file_exists($scriptPath)) {
             return [
                 'available' => false,
                 'checks' => [],
                 'errors' => ['Health check script not found'],
                 'warnings' => [],
-                'checked_at' => now()->toISOString()
+                'checked_at' => now()->toISOString(),
             ];
         }
 
@@ -100,25 +98,25 @@ class PyannoteHealthService
             'PATH' => $_SERVER['PATH'] ?? '/usr/local/bin:/usr/bin:/bin',
         ]);
         // Nettoyer les variables qui ne sont pas des strings
-        $processEnv = array_filter($processEnv, fn($v) => is_string($v));
+        $processEnv = array_filter($processEnv, fn ($v) => is_string($v));
 
         // Exécuter avec timeout de 30 secondes
         $descriptors = [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
-            2 => ['pipe', 'w']
+            2 => ['pipe', 'w'],
         ];
 
         // SECURITE: Passer l'environnement via le 5ème paramètre de proc_open
         $process = proc_open($command, $descriptors, $pipes, null, $processEnv);
 
-        if (!is_resource($process)) {
+        if (! is_resource($process)) {
             return [
                 'available' => false,
                 'checks' => [],
                 'errors' => ['Failed to start health check process'],
                 'warnings' => [],
-                'checked_at' => now()->toISOString()
+                'checked_at' => now()->toISOString(),
             ];
         }
 
@@ -135,7 +133,7 @@ class PyannoteHealthService
         while (true) {
             $status = proc_get_status($process);
 
-            if (!$status['running']) {
+            if (! $status['running']) {
                 break;
             }
 
@@ -150,7 +148,7 @@ class PyannoteHealthService
                     'checks' => [],
                     'errors' => ['Health check timeout (30s)'],
                     'warnings' => [],
-                    'checked_at' => now()->toISOString()
+                    'checked_at' => now()->toISOString(),
                 ];
             }
 
@@ -167,13 +165,13 @@ class PyannoteHealthService
         // Parser le JSON de sortie
         $result = json_decode($output, true);
 
-        if (!$result) {
+        if (! $result) {
             return [
                 'available' => false,
                 'checks' => [],
-                'errors' => ['Invalid health check response: ' . substr($output . $stderr, 0, 200)],
+                'errors' => ['Invalid health check response: '.substr($output.$stderr, 0, 200)],
                 'warnings' => [],
-                'checked_at' => now()->toISOString()
+                'checked_at' => now()->toISOString(),
             ];
         }
 

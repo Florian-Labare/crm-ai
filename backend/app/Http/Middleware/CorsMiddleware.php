@@ -6,13 +6,11 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class CorsMiddleware
-{
+class CorsMiddleware {
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next): Response
-    {
+    public function handle(Request $request, Closure $next): Response {
         $allowedOrigins = config('cors.allowed_origins', ['http://localhost:5173']);
 
         $origin = $request->headers->get('Origin');
@@ -31,8 +29,7 @@ class CorsMiddleware
     /**
      * Ajoute les en-têtes CORS à la réponse.
      */
-    private function addCorsHeaders(Response $response, string $origin): void
-    {
+    private function addCorsHeaders(Response $response, string $origin): void {
         $response->headers->set('Access-Control-Allow-Origin', $origin);
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');

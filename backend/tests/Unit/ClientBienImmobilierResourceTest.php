@@ -8,12 +8,10 @@ use App\Models\ClientBienImmobilier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ClientBienImmobilierResourceTest extends TestCase
-{
+class ClientBienImmobilierResourceTest extends TestCase {
     use RefreshDatabase;
 
-    public function test_resource_returns_correct_structure(): void
-    {
+    public function test_resource_returns_correct_structure(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -52,8 +50,7 @@ class ClientBienImmobilierResourceTest extends TestCase
         $this->assertEquals(280000.00, $array['valeur_acquisition']);
     }
 
-    public function test_resource_handles_null_values(): void
-    {
+    public function test_resource_handles_null_values(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',
@@ -75,8 +72,7 @@ class ClientBienImmobilierResourceTest extends TestCase
         $this->assertNull($array['valeur_acquisition']);
     }
 
-    public function test_annee_acquisition_is_integer(): void
-    {
+    public function test_annee_acquisition_is_integer(): void {
         $client = Client::create([
             'nom' => 'Test',
             'prenom' => 'Client',

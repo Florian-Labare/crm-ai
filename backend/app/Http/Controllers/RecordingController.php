@@ -12,18 +12,15 @@ use Illuminate\Http\JsonResponse;
  *
  * Gère les enregistrements longs (jusqu'à 2h) avec découpage en chunks
  */
-class RecordingController extends Controller
-{
+class RecordingController extends Controller {
     public function __construct(
         private readonly RecordingService $recordingService
-    ) {
-    }
+    ) {}
 
     /**
      * Stocke un chunk audio
      */
-    public function storeChunk(StoreChunkRequest $request): JsonResponse
-    {
+    public function storeChunk(StoreChunkRequest $request): JsonResponse {
         try {
             $session = $this->recordingService->storeChunk(
                 sessionId: $request->input('session_id'),
@@ -55,8 +52,7 @@ class RecordingController extends Controller
     /**
      * Finalise l'enregistrement et retourne la transcription complète
      */
-    public function finalize(string $sessionId, FinalizeRecordingRequest $request): JsonResponse
-    {
+    public function finalize(string $sessionId, FinalizeRecordingRequest $request): JsonResponse {
         try {
             $session = $this->recordingService->finalizeRecording(
                 sessionId: $sessionId,

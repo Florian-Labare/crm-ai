@@ -4,13 +4,11 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class() extends Migration {
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+    public function up(): void {
         Schema::create('client_pending_changes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('client_id')->constrained()->onDelete('cascade');
@@ -28,7 +26,7 @@ return new class extends Migration
                 'approved',     // Validé, prêt à appliquer
                 'applied',      // Appliqué au client
                 'rejected',     // Rejeté par l'utilisateur
-                'partial'       // Partiellement appliqué
+                'partial',       // Partiellement appliqué
             ])->default('pending');
 
             // Décisions de l'utilisateur (champ par champ)
@@ -55,8 +53,7 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
+    public function down(): void {
         Schema::dropIfExists('client_pending_changes');
     }
 };

@@ -1,6 +1,6 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 // Variables du template (32 variables)
 $templateVars = [
@@ -10,11 +10,11 @@ $templateVars = [
     'casdecesproche', 'chargesprocouvert', 'chargesprofessionnelles', 'contratsanteindiv',
     'datedocument', 'dategaranties', 'enfantacharge', 'fumeur', 'horizonibjectif',
     'invaliditecouvert', 'nom', 'objectifrapport', 'prenom', 'profilrisqueclient',
-    'prévoyanceindividuelle', 'risquesparticuliers', 'tel'
+    'prévoyanceindividuelle', 'risquesparticuliers', 'tel',
 ];
 
 // Charger le fichier de mapping
-$mapping = include __DIR__ . '/config/document_mapping.php';
+$mapping = include __DIR__.'/config/document_mapping.php';
 
 echo "Vérification du mapping des variables\n";
 echo "======================================\n\n";
@@ -47,10 +47,10 @@ foreach ($templateVars as $var) {
 echo "\n";
 echo "Résumé:\n";
 echo "-------\n";
-echo "Variables mappées: " . count($present) . "/" . count($templateVars) . "\n";
-echo "Variables manquantes: " . count($missing) . "\n";
+echo 'Variables mappées: '.count($present).'/'.count($templateVars)."\n";
+echo 'Variables manquantes: '.count($missing)."\n";
 
-if (!empty($missing)) {
+if (! empty($missing)) {
     echo "\nVariables à ajouter:\n";
     foreach ($missing as $var) {
         echo "  - {$var}\n";

@@ -6,22 +6,19 @@ use App\Models\AudioRecord;
 use App\Models\DiarizationLog;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class AudioRecordController extends Controller
-{
+class AudioRecordController extends Controller {
     public function __construct(
         private readonly AuditService $auditService
-    ) {
-    }
+    ) {}
+
     /**
      * Lister tous les enregistrements audio de la team (avec client associé)
      */
-    public function index(): JsonResponse
-    {
+    public function index(): JsonResponse {
         // La team scope filtre automatiquement par team_id
         $records = AudioRecord::with('client:id,nom,prenom')
             ->orderByDesc('created_at')
@@ -33,8 +30,7 @@ class AudioRecordController extends Controller
     /**
      * Voir le détail d'un enregistrement audio
      */
-    public function show(int $id): JsonResponse
-    {
+    public function show(int $id): JsonResponse {
         $record = AudioRecord::with('client')->findOrFail($id);
 
         // Vérifier l'autorisation via la policy
@@ -47,8 +43,7 @@ class AudioRecordController extends Controller
      * Supprimer un enregistrement audio (et le fichier associé)
      * Inclut la suppression en cascade des logs de diarisation
      */
-    public function destroy(int $id): JsonResponse
-    {
+    public function destroy(int $id): JsonResponse {
         $record = AudioRecord::findOrFail($id);
 
         // Vérifier l'autorisation via la policy
@@ -57,7 +52,7 @@ class AudioRecordController extends Controller
         Log::info('[AUDIO RECORD] Suppression demandée', [
             'audio_record_id' => $record->id,
             'user_id' => auth()->id(),
-            'team_id' => $record->team_id
+            'team_id' => $record->team_id,
         ]);
 
         // Supprimer les logs de diarisation associés
@@ -75,7 +70,7 @@ class AudioRecordController extends Controller
 
         Log::info('[AUDIO RECORD] Suppression effectuée', [
             'audio_record_id' => $id,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
         ]);
 
         // Audit de la suppression
@@ -87,8 +82,7 @@ class AudioRecordController extends Controller
     /**
      * Nettoie les fichiers temporaires associés à un enregistrement
      */
-    private function cleanupTempFiles(AudioRecord $record): void
-    {
+    private function cleanupTempFiles(AudioRecord $record): void {
         $tempDir = storage_path('app/temp');
 
         // Supprimer les fichiers de diarisation temporaires

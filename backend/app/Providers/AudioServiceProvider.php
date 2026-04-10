@@ -8,13 +8,11 @@ use App\Services\PyannoteHealthService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
-class AudioServiceProvider extends ServiceProvider
-{
+class AudioServiceProvider extends ServiceProvider {
     /**
      * Register any application services.
      */
-    public function register(): void
-    {
+    public function register(): void {
         // Enregistrer les services comme singletons
         $this->app->singleton(PyannoteHealthService::class);
         $this->app->singleton(DiarizationMonitoringService::class);
@@ -30,8 +28,7 @@ class AudioServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
+    public function boot(): void {
         // Vérifier la santé de pyannote au démarrage (seulement en production ou si configuré)
         if ($this->shouldCheckHealthOnBoot()) {
             $this->checkPyannoteHealth();
@@ -41,8 +38,7 @@ class AudioServiceProvider extends ServiceProvider
     /**
      * Détermine si le health check doit être exécuté au démarrage
      */
-    private function shouldCheckHealthOnBoot(): bool
-    {
+    private function shouldCheckHealthOnBoot(): bool {
         // Désactiver pour les commandes artisan qui ne nécessitent pas le check
         if ($this->app->runningInConsole()) {
             $command = $_SERVER['argv'][1] ?? '';
@@ -72,8 +68,7 @@ class AudioServiceProvider extends ServiceProvider
     /**
      * Vérifie la santé de pyannote et log le résultat
      */
-    private function checkPyannoteHealth(): void
-    {
+    private function checkPyannoteHealth(): void {
         try {
             $healthService = $this->app->make(PyannoteHealthService::class);
             $status = $healthService->check();
@@ -83,12 +78,12 @@ class AudioServiceProvider extends ServiceProvider
             } else {
                 Log::warning('[AUDIO PROVIDER] Pyannote non disponible - diarisation désactivée', [
                     'errors' => $status['errors'],
-                    'warnings' => $status['warnings']
+                    'warnings' => $status['warnings'],
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('[AUDIO PROVIDER] Erreur lors de la vérification de pyannote', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

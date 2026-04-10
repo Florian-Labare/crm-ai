@@ -16,25 +16,22 @@ use Illuminate\Support\Facades\Storage;
  * Gère notamment la suppression en cascade des données audio
  * pour la conformité RGPD (droit à l'effacement)
  */
-class ClientObserver
-{
+class ClientObserver {
     public function __construct(
         private readonly AuditService $auditService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the Client "deleting" event.
      * Appelé AVANT la suppression effective du client
      */
-    public function deleting(Client $client): void
-    {
+    public function deleting(Client $client): void {
         // Audit RGPD : enregistrer la suppression du client
         $this->auditService->logClientDelete($client);
         Log::info('[CLIENT OBSERVER] Suppression en cascade initiée', [
             'client_id' => $client->id,
             'client_name' => "{$client->prenom} {$client->nom}",
-            'team_id' => $client->team_id
+            'team_id' => $client->team_id,
         ]);
 
         // 1. Supprimer les enregistrements audio et leurs fichiers
@@ -44,15 +41,14 @@ class ClientObserver
         $this->deleteRecordingSessions($client);
 
         Log::info('[CLIENT OBSERVER] Suppression en cascade terminée', [
-            'client_id' => $client->id
+            'client_id' => $client->id,
         ]);
     }
 
     /**
      * Supprime tous les enregistrements audio d'un client
      */
-    private function deleteAudioRecords(Client $client): void
-    {
+    private function deleteAudioRecords(Client $client): void {
         $audioRecords = AudioRecord::withoutGlobalScopes()
             ->where('client_id', $client->id)
             ->get();
@@ -83,7 +79,7 @@ class ClientObserver
             Log::info('[CLIENT OBSERVER] AudioRecords supprimés', [
                 'client_id' => $client->id,
                 'deleted_count' => $deletedCount,
-                'freed_bytes' => $freedBytes
+                'freed_bytes' => $freedBytes,
             ]);
         }
     }
@@ -91,8 +87,7 @@ class ClientObserver
     /**
      * Supprime toutes les sessions d'enregistrement d'un client
      */
-    private function deleteRecordingSessions(Client $client): void
-    {
+    private function deleteRecordingSessions(Client $client): void {
         $sessions = RecordingSession::withoutGlobalScopes()
             ->where('client_id', $client->id)
             ->get();
@@ -114,7 +109,7 @@ class ClientObserver
         if ($deletedCount > 0) {
             Log::info('[CLIENT OBSERVER] RecordingSessions supprimées', [
                 'client_id' => $client->id,
-                'deleted_count' => $deletedCount
+                'deleted_count' => $deletedCount,
             ]);
         }
     }
@@ -122,8 +117,7 @@ class ClientObserver
     /**
      * Nettoie les fichiers temporaires associés à un enregistrement audio
      */
-    private function cleanupTempFiles(int $audioRecordId): void
-    {
+    private function cleanupTempFiles(int $audioRecordId): void {
         $tempDir = storage_path('app/temp');
 
         $patterns = [
@@ -142,9 +136,8 @@ class ClientObserver
     /**
      * Supprime récursivement un dossier
      */
-    private function recursiveDelete(string $path): void
-    {
-        if (!is_dir($path)) {
+    private function recursiveDelete(string $path): void {
+        if (! is_dir($path)) {
             return;
         }
 

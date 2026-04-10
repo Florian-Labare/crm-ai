@@ -9,21 +9,19 @@ use App\Models\DocumentTemplate;
 use App\Models\GeneratedDocument;
 use App\Services\DocumentGeneratorService;
 use App\Services\DocumentTemplateFormService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-class DocumentController extends Controller
-{
+class DocumentController extends Controller {
     private DocumentGeneratorService $documentGeneratorService;
+
     private DocumentTemplateFormService $formService;
 
     public function __construct(
         DocumentGeneratorService $documentGeneratorService,
         DocumentTemplateFormService $formService
-    )
-    {
+    ) {
         $this->documentGeneratorService = $documentGeneratorService;
         $this->formService = $formService;
     }
@@ -31,8 +29,7 @@ class DocumentController extends Controller
     /**
      * Liste tous les templates de documents actifs
      */
-    public function listTemplates(): JsonResponse
-    {
+    public function listTemplates(): JsonResponse {
         $templates = DocumentTemplate::active()->get();
 
         return response()->json([
@@ -44,8 +41,7 @@ class DocumentController extends Controller
     /**
      * Liste tous les documents générés pour un client
      */
-    public function listClientDocuments(int $clientId): JsonResponse
-    {
+    public function listClientDocuments(int $clientId): JsonResponse {
         $client = Client::findOrFail($clientId);
 
         $documents = GeneratedDocument::where('client_id', $clientId)
@@ -54,6 +50,7 @@ class DocumentController extends Controller
             ->get()
             ->map(function ($doc) {
                 $doc->sent_to_compliance = $doc->complianceDocument !== null;
+
                 return $doc;
             });
 
@@ -66,8 +63,7 @@ class DocumentController extends Controller
     /**
      * Génère un nouveau document pour un client
      */
-    public function generateDocument(Request $request, int $clientId): JsonResponse
-    {
+    public function generateDocument(Request $request, int $clientId): JsonResponse {
         $request->validate([
             'template_id' => 'required|exists:document_templates,id',
             'format' => 'sometimes|in:pdf,docx',
@@ -109,8 +105,7 @@ class DocumentController extends Controller
     /**
      * Retourne le formulaire associé à un template pour un client.
      */
-    public function showForm(int $clientId, int $templateId): JsonResponse
-    {
+    public function showForm(int $clientId, int $templateId): JsonResponse {
         $client = Client::findOrFail($clientId);
         $template = DocumentTemplate::findOrFail($templateId);
 
@@ -140,8 +135,7 @@ class DocumentController extends Controller
     /**
      * Sauvegarde les valeurs du formulaire associé à un template.
      */
-    public function saveForm(Request $request, int $clientId, int $templateId): JsonResponse
-    {
+    public function saveForm(Request $request, int $clientId, int $templateId): JsonResponse {
         $request->validate([
             'values' => 'required|array',
         ]);
@@ -168,11 +162,10 @@ class DocumentController extends Controller
     /**
      * Télécharge un document généré (depuis S3)
      */
-    public function downloadDocument(int $documentId)
-    {
+    public function downloadDocument(int $documentId) {
         $document = GeneratedDocument::findOrFail($documentId);
 
-        if (!Storage::exists($document->file_path)) {
+        if (! Storage::exists($document->file_path)) {
             abort(404, 'Fichier non trouvé');
         }
 
@@ -182,13 +175,12 @@ class DocumentController extends Controller
     /**
      * Envoie un document par email au client
      */
-    public function sendDocumentByEmail(int $documentId): JsonResponse
-    {
+    public function sendDocumentByEmail(int $documentId): JsonResponse {
         try {
             $document = GeneratedDocument::with('client')->findOrFail($documentId);
             $client = $document->client;
 
-            if (!$client->email) {
+            if (! $client->email) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Le client n\'a pas d\'adresse email',
@@ -233,19 +225,18 @@ class DocumentController extends Controller
      * Envoie un document généré vers la section compliance du client.
      * Copie le fichier S3, crée un ClientComplianceDocument et l'auto-lie à l'exigence.
      */
-    public function sendToCompliance(int $clientId, int $documentId): JsonResponse
-    {
-        $client   = Client::findOrFail($clientId);
+    public function sendToCompliance(int $clientId, int $documentId): JsonResponse {
+        $client = Client::findOrFail($clientId);
         $document = GeneratedDocument::with('documentTemplate')->findOrFail($documentId);
 
         if ($document->client_id !== $client->id) {
             return response()->json(['success' => false, 'message' => 'Document non trouvé'], 404);
         }
 
-        $templateId   = $document->document_template_id;
+        $templateId = $document->document_template_id;
         $documentType = self::TEMPLATE_COMPLIANCE_MAP[$templateId] ?? null;
 
-        if (!$documentType) {
+        if (! $documentType) {
             return response()->json([
                 'success' => false,
                 'message' => 'Ce type de document ne correspond à aucune exigence réglementaire.',
@@ -261,38 +252,38 @@ class DocumentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Ce document a déjà été envoyé en conformité.',
-                'data'    => $existing,
+                'data' => $existing,
             ], 409);
         }
 
-        if (!Storage::exists($document->file_path)) {
+        if (! Storage::exists($document->file_path)) {
             return response()->json(['success' => false, 'message' => 'Fichier source introuvable.'], 404);
         }
 
         // Copier le fichier dans le dossier compliance du client
-        $ext     = pathinfo($document->file_path, PATHINFO_EXTENSION);
-        $newPath = "compliance/{$client->id}/{$documentType}_" . now()->format('Ymd_His') . ".{$ext}";
+        $ext = pathinfo($document->file_path, PATHINFO_EXTENSION);
+        $newPath = "compliance/{$client->id}/{$documentType}_".now()->format('Ymd_His').".{$ext}";
         Storage::copy($document->file_path, $newPath);
 
         // Créer l'entrée compliance
         $complianceDoc = ClientComplianceDocument::create([
-            'client_id'             => $client->id,
+            'client_id' => $client->id,
             'generated_document_id' => $document->id,
-            'uploaded_by'           => auth()->id(),
-            'document_type'         => $documentType,
-            'category'              => 'regulatory',
-            'file_path'             => $newPath,
-            'file_name'             => $document->document_template->name . '.' . $ext,
-            'mime_type'             => $ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'file_size'             => Storage::size($newPath),
-            'status'                => 'pending',
+            'uploaded_by' => auth()->id(),
+            'document_type' => $documentType,
+            'category' => 'regulatory',
+            'file_path' => $newPath,
+            'file_name' => $document->document_template->name.'.'.$ext,
+            'mime_type' => $ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'file_size' => Storage::size($newPath),
+            'status' => 'pending',
         ]);
 
         // Auto-lier à l'exigence compliance correspondante
         $requirement = ComplianceRequirement::where('document_type', $documentType)->first();
         if ($requirement) {
             $complianceDoc->linkedRequirements()->attach($requirement->id, [
-                'status'     => 'pending',
+                'status' => 'pending',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -301,15 +292,14 @@ class DocumentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Document envoyé en conformité avec succès.',
-            'data'    => $complianceDoc,
+            'data' => $complianceDoc,
         ], 201);
     }
 
     /**
      * Supprime un document généré
      */
-    public function deleteDocument(int $documentId): JsonResponse
-    {
+    public function deleteDocument(int $documentId): JsonResponse {
         try {
             $document = GeneratedDocument::findOrFail($documentId);
 

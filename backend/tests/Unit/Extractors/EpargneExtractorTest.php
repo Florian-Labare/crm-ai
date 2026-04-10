@@ -6,12 +6,10 @@ use App\Services\Ai\Extractors\EpargneExtractor;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class EpargneExtractorTest extends TestCase
-{
+class EpargneExtractorTest extends TestCase {
     private EpargneExtractor $extractor;
 
-    protected function setUp(): void
-    {
+    protected function setUp(): void {
         parent::setUp();
         $this->extractor = new EpargneExtractor();
 
@@ -21,8 +19,7 @@ class EpargneExtractorTest extends TestCase
         config(['mistral.fallback_to_openai' => false]);
     }
 
-    public function test_detects_epargne_need(): void
-    {
+    public function test_detects_epargne_need(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -33,14 +30,13 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux optimiser mon patrimoine");
+        $data = $this->extractor->extract('Je veux optimiser mon patrimoine');
 
         $this->assertContains('épargne', $data['besoins'] ?? []);
         $this->assertEquals('add', $data['besoins_action'] ?? null);
     }
 
-    public function test_extracts_montant_epargne(): void
-    {
+    public function test_extracts_montant_epargne(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -57,8 +53,7 @@ class EpargneExtractorTest extends TestCase
         $this->assertEquals(50000, $data['bae_epargne']['montant_epargne_disponible'] ?? null);
     }
 
-    public function test_extracts_capacite_epargne(): void
-    {
+    public function test_extracts_capacite_epargne(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -69,13 +64,12 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je peux épargner 500€ par mois");
+        $data = $this->extractor->extract('Je peux épargner 500€ par mois');
 
         $this->assertEquals(500, $data['bae_epargne']['capacite_epargne_estimee'] ?? null);
     }
 
-    public function test_extracts_actifs_immobiliers(): void
-    {
+    public function test_extracts_actifs_immobiliers(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -86,14 +80,13 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Ma résidence principale vaut 300000€");
+        $data = $this->extractor->extract('Ma résidence principale vaut 300000€');
 
         $this->assertEquals(300000, $data['bae_epargne']['actifs_immo_total'] ?? null);
         $this->assertIsArray($data['bae_epargne']['actifs_immo_details'] ?? null);
     }
 
-    public function test_extracts_passifs(): void
-    {
+    public function test_extracts_passifs(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -109,8 +102,7 @@ class EpargneExtractorTest extends TestCase
         $this->assertEquals(150000, $data['bae_epargne']['passifs_total_emprunts'] ?? null);
     }
 
-    public function test_extracts_donation(): void
-    {
+    public function test_extracts_donation(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -127,8 +119,7 @@ class EpargneExtractorTest extends TestCase
         $this->assertEquals(100000, $data['bae_epargne']['donation_montant'] ?? null);
     }
 
-    public function test_extracts_actifs_financiers(): void
-    {
+    public function test_extracts_actifs_financiers(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -145,8 +136,7 @@ class EpargneExtractorTest extends TestCase
         $this->assertIsArray($data['bae_epargne']['actifs_financiers_details'] ?? null);
     }
 
-    public function test_action_remove_when_negation(): void
-    {
+    public function test_action_remove_when_negation(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -162,8 +152,7 @@ class EpargneExtractorTest extends TestCase
         $this->assertEquals('remove', $data['besoins_action'] ?? null);
     }
 
-    public function test_returns_empty_when_no_epargne(): void
-    {
+    public function test_returns_empty_when_no_epargne(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response([
                 'choices' => [[
@@ -174,18 +163,17 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux partir à la retraite à 62 ans");
+        $data = $this->extractor->extract('Je veux partir à la retraite à 62 ans');
 
         $this->assertEquals([], $data);
     }
 
-    public function test_returns_empty_on_api_error(): void
-    {
+    public function test_returns_empty_on_api_error(): void {
         Http::fake([
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
 
-        $data = $this->extractor->extract("Je veux optimiser mon patrimoine");
+        $data = $this->extractor->extract('Je veux optimiser mon patrimoine');
 
         $this->assertEquals([], $data);
     }

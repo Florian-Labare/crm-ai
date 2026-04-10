@@ -6,16 +6,13 @@ use App\Models\Client;
 use App\Models\ClientBienImmobilier;
 use Illuminate\Support\Facades\Log;
 
-class ClientBiensImmobiliersSyncService
-{
+class ClientBiensImmobiliersSyncService {
     /**
      * Synchronise les biens immobiliers d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $biensData  Tableau de biens immobiliers extraits par GPT
      */
-    public function syncBiensImmobiliers(Client $client, array $biensData): void
-    {
+    public function syncBiensImmobiliers(Client $client, array $biensData): void {
         Log::info("🏠 [BIENS IMMOBILIERS] Synchronisation des biens immobiliers pour le client #{$client->id}", [
             'nombre_biens_recus' => count($biensData),
         ]);
@@ -34,6 +31,7 @@ class ClientBiensImmobiliersSyncService
 
             if (empty($bienData)) {
                 Log::info("🏠 [BIENS IMMOBILIERS] Bien #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -61,14 +59,13 @@ class ClientBiensImmobiliersSyncService
             Log::info("🏠 [BIENS IMMOBILIERS] Conservation de {$keptBiens} bien(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [BIENS IMMOBILIERS] Synchronisation terminée - ' . count($processedIds) . ' bien(s) traité(s), total: ' . $client->biensImmobiliers()->count());
+        Log::info('✅ [BIENS IMMOBILIERS] Synchronisation terminée - '.count($processedIds).' bien(s) traité(s), total: '.$client->biensImmobiliers()->count());
     }
 
     /**
      * Trouve un bien existant correspondant aux données
      */
-    private function findMatchingBien($existingBiens, array $bienData): ?ClientBienImmobilier
-    {
+    private function findMatchingBien($existingBiens, array $bienData): ?ClientBienImmobilier {
         // Match par designation
         if (isset($bienData['designation'])) {
             $match = $existingBiens->first(function ($bien) use ($bienData) {
@@ -87,6 +84,7 @@ class ClientBiensImmobiliersSyncService
                     $this->normalizeString($bienData['designation']) ?? ''
                 );
                 $valeurMatch = abs($bien->valeur_actuelle_estimee - $bienData['valeur_actuelle_estimee']) < 0.01;
+
                 return $designationMatch && $valeurMatch;
             });
             if ($match) {
@@ -100,12 +98,12 @@ class ClientBiensImmobiliersSyncService
     /**
      * Filtre les valeurs null et vides
      */
-    private function filterEmptyValues(array $data): array
-    {
+    private function filterEmptyValues(array $data): array {
         return array_filter($data, function ($value, $key) {
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }
@@ -113,8 +111,7 @@ class ClientBiensImmobiliersSyncService
     /**
      * Normalise une chaîne pour la comparaison
      */
-    private function normalizeString(?string $value): ?string
-    {
+    private function normalizeString(?string $value): ?string {
         if (is_null($value)) {
             return null;
         }

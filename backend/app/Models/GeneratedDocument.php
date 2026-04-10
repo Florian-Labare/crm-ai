@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class GeneratedDocument extends Model
-{
+class GeneratedDocument extends Model {
     use HasFactory;
 
     protected $fillable = [
@@ -29,40 +28,35 @@ class GeneratedDocument extends Model
     /**
      * Un document généré appartient à un client
      */
-    public function client(): BelongsTo
-    {
+    public function client(): BelongsTo {
         return $this->belongsTo(Client::class);
     }
 
     /**
      * Un document généré appartient à un utilisateur (qui l'a généré)
      */
-    public function user(): BelongsTo
-    {
+    public function user(): BelongsTo {
         return $this->belongsTo(User::class);
     }
 
     /**
      * Un document généré appartient à un template
      */
-    public function documentTemplate(): BelongsTo
-    {
+    public function documentTemplate(): BelongsTo {
         return $this->belongsTo(DocumentTemplate::class);
     }
 
     /**
      * Un document généré peut avoir été envoyé en conformité
      */
-    public function complianceDocument(): HasOne
-    {
+    public function complianceDocument(): HasOne {
         return $this->hasOne(ClientComplianceDocument::class, 'generated_document_id');
     }
 
     /**
      * Marquer le document comme envoyé
      */
-    public function markAsSent(): void
-    {
+    public function markAsSent(): void {
         $this->update([
             'sent_by_email' => true,
             'sent_at' => now(),
@@ -72,16 +66,14 @@ class GeneratedDocument extends Model
     /**
      * Scope pour récupérer uniquement les documents envoyés
      */
-    public function scopeSent($query)
-    {
+    public function scopeSent($query) {
         return $query->where('sent_by_email', true);
     }
 
     /**
      * Scope pour récupérer uniquement les documents non envoyés
      */
-    public function scopeNotSent($query)
-    {
+    public function scopeNotSent($query) {
         return $query->where('sent_by_email', false);
     }
 }
