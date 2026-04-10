@@ -13,7 +13,7 @@ class RetraiteExtractorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->extractor = new RetraiteExtractor();
+        $this->extractor = new RetraiteExtractor;
 
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
@@ -33,7 +33,7 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux préparer ma retraite");
+        $data = $this->extractor->extract('Je veux préparer ma retraite');
 
         $this->assertContains('retraite', $data['besoins'] ?? []);
         $this->assertEquals('add', $data['besoins_action'] ?? null);
@@ -51,7 +51,7 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux partir à la retraite à 62 ans");
+        $data = $this->extractor->extract('Je veux partir à la retraite à 62 ans');
 
         $this->assertEquals(62, $data['bae_retraite']['age_depart_retraite'] ?? null);
     }
@@ -68,7 +68,7 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux maintenir 70% de mes revenus à la retraite");
+        $data = $this->extractor->extract('Je veux maintenir 70% de mes revenus à la retraite');
 
         $this->assertEquals(70, $data['bae_retraite']['pourcentage_revenu_a_maintenir'] ?? null);
     }
@@ -85,7 +85,7 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon TMI est de 30%");
+        $data = $this->extractor->extract('Mon TMI est de 30%');
 
         $this->assertEquals('30%', $data['bae_retraite']['tmi'] ?? null);
     }
@@ -102,7 +102,7 @@ class RetraiteExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Le revenu foyer est de 80000 euros");
+        $data = $this->extractor->extract('Le revenu foyer est de 80000 euros');
 
         $this->assertEquals(80000, $data['bae_retraite']['revenus_annuels_foyer'] ?? null);
     }
@@ -165,7 +165,7 @@ class RetraiteExtractorTest extends TestCase
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
 
-        $data = $this->extractor->extract("Je veux préparer ma retraite");
+        $data = $this->extractor->extract('Je veux préparer ma retraite');
 
         $this->assertEquals([], $data);
     }

@@ -41,9 +41,9 @@ class ClientComplianceDocument extends Model
      */
     public const AVAILABLE_TAGS = [
         'prevoyance' => 'Prévoyance',
-        'retraite'   => 'Retraite',
-        'epargne'    => 'Épargne',
-        'sante'      => 'Santé',
+        'retraite' => 'Retraite',
+        'epargne' => 'Épargne',
+        'sante' => 'Santé',
         'emprunteur' => 'Emprunteur',
     ];
 
@@ -88,12 +88,12 @@ class ClientComplianceDocument extends Model
         'der_fiscalite' => 'DER - Fiscalité',
 
         // Documents any_besoin
-        'mandat_recherche'            => 'Mandat de recherche',
-        'recueil_global'              => 'Recueil Global PP',
+        'mandat_recherche' => 'Mandat de recherche',
+        'recueil_global' => 'Recueil Global PP',
 
         // Documents emprunteur
-        'lettre_mission_emprunteur'   => "Rapport d'adéquation - Emprunteur",
-        'recueil_ade'                 => 'Recueil ADE',
+        'lettre_mission_emprunteur' => "Rapport d'adéquation - Emprunteur",
+        'recueil_ade' => 'Recueil ADE',
 
         // Documents généraux
         'rgpd_consentement' => 'Consentement RGPD',
@@ -151,9 +151,10 @@ class ClientComplianceDocument extends Model
      */
     public function isExpired(): bool
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return false;
         }
+
         return $this->expires_at->isPast();
     }
 
@@ -162,9 +163,10 @@ class ClientComplianceDocument extends Model
      */
     public function isExpiringSoon(int $days = 90): bool
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return false;
         }
+
         return $this->expires_at->isFuture() && $this->expires_at->diffInDays(now()) <= $days;
     }
 
@@ -173,12 +175,13 @@ class ClientComplianceDocument extends Model
      */
     public function getDaysUntilExpirationAttribute(): ?int
     {
-        if (!$this->expires_at) {
+        if (! $this->expires_at) {
             return null;
         }
         if ($this->isExpired()) {
             return -$this->expires_at->diffInDays(now());
         }
+
         return $this->expires_at->diffInDays(now());
     }
 
@@ -187,7 +190,7 @@ class ClientComplianceDocument extends Model
      */
     public function isValid(): bool
     {
-        return $this->status === 'validated' && !$this->isExpired();
+        return $this->status === 'validated' && ! $this->isExpired();
     }
 
     /**
@@ -217,7 +220,7 @@ class ClientComplianceDocument extends Model
             'document_id',
             'requirement_id'
         )->withPivot('status', 'validated_at', 'validated_by')
-         ->withTimestamps();
+            ->withTimestamps();
     }
 
     /**

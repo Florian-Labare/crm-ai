@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ImportRow extends Model
 {
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_VALID = 'valid';
+
     public const STATUS_INVALID = 'invalid';
+
     public const STATUS_DUPLICATE = 'duplicate';
+
     public const STATUS_IMPORTED = 'imported';
 
     protected $fillable = [
@@ -70,6 +74,6 @@ class ImportRow extends Model
 
     public function hasPotentialDuplicates(): bool
     {
-        return !empty($this->duplicate_matches);
+        return ! empty($this->duplicate_matches);
     }
 }

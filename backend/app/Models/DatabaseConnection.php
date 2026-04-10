@@ -13,8 +13,11 @@ class DatabaseConnection extends Model
     use HasFactory;
 
     public const DRIVER_MYSQL = 'mysql';
+
     public const DRIVER_PGSQL = 'pgsql';
+
     public const DRIVER_SQLITE = 'sqlite';
+
     public const DRIVER_SQLSRV = 'sqlsrv';
 
     protected $fillable = [
@@ -177,9 +180,10 @@ class DatabaseConnection extends Model
      */
     public function scopeForTeam($query, ?int $teamId)
     {
-        if (!$teamId) {
+        if (! $teamId) {
             return $query->whereRaw('1 = 0');
         }
+
         return $query->where('team_id', $teamId);
     }
 }

@@ -1,14 +1,14 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
-$app = require_once __DIR__ . '/bootstrap/app.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use Illuminate\Support\Facades\Schema;
 
 echo "🔍 GÉNÉRATION DE LA MIGRATION BASÉE SUR LES CHAMPS EXISTANTS\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 // Définir les champs à créer par table
 $fieldsToCreate = [
@@ -55,7 +55,7 @@ foreach ($fieldsToCreate as $table => $fields) {
     $existingColumns = Schema::getColumnListing($table);
 
     echo "📦 Table: {$table}\n";
-    echo str_repeat("-", 80) . "\n";
+    echo str_repeat('-', 80)."\n";
 
     foreach ($fields as $field => $config) {
         if (in_array($field, $existingColumns)) {
@@ -70,14 +70,14 @@ foreach ($fieldsToCreate as $table => $fields) {
     echo "\n";
 }
 
-echo str_repeat("=", 80) . "\n";
+echo str_repeat('=', 80)."\n";
 echo "📊 TOTAL:\n";
 echo "   - Champs à créer: {$totalToCreate}\n";
 echo "   - Champs existants: {$totalExist}\n\n";
 
 // Générer le code de migration
 echo "📝 CODE DE MIGRATION GÉNÉRÉ:\n";
-echo str_repeat("=", 80) . "\n\n";
+echo str_repeat('=', 80)."\n\n";
 
 foreach ($fieldsToCreate as $table => $fields) {
     $existingColumns = Schema::getColumnListing($table);
@@ -85,13 +85,13 @@ foreach ($fieldsToCreate as $table => $fields) {
 
     // Vérifier si on a au moins un champ à créer
     foreach ($fields as $field => $config) {
-        if (!in_array($field, $existingColumns)) {
+        if (! in_array($field, $existingColumns)) {
             $hasFieldsToCreate = true;
             break;
         }
     }
 
-    if (!$hasFieldsToCreate) {
+    if (! $hasFieldsToCreate) {
         continue;
     }
 
@@ -112,13 +112,13 @@ foreach ($fieldsToCreate as $table => $fields) {
             if ($typeBase === 'string') {
                 $line = "            \$table->string('{$field}', {$typeParams})->nullable()->after('{$after}');";
             } elseif ($typeBase === 'decimal') {
-                $line = "            \$table->decimal('{$field}', " . str_replace(',', ', ', $typeParams) . ")->nullable()->after('{$after}');";
+                $line = "            \$table->decimal('{$field}', ".str_replace(',', ', ', $typeParams).")->nullable()->after('{$after}');";
             }
         } else {
             $line = "            \$table->{$type}('{$field}')->nullable()->after('{$after}');";
         }
 
-        echo $line . "\n";
+        echo $line."\n";
     }
 
     echo "        });\n\n";

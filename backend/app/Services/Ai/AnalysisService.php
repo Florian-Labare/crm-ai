@@ -2,31 +2,28 @@
 
 namespace App\Services\Ai;
 
-use App\Services\Ai\RouterService;
-use App\Services\Ai\AiDataNormalizer;
-use App\Services\Ai\ExtractionGuardrailsService;
+use App\Services\Ai\Extractors\ClientActifsFinanciersExtractor;
+use App\Services\Ai\Extractors\ClientAutresEpargnesExtractor;
+use App\Services\Ai\Extractors\ClientBiensImmobiliersExtractor;
 use App\Services\Ai\Extractors\ClientExtractor;
+use App\Services\Ai\Extractors\ClientPassifsExtractor;
+use App\Services\Ai\Extractors\ClientRevenusExtractor;
+use App\Services\Ai\Extractors\ClientSanteExtractor;
 use App\Services\Ai\Extractors\ConjointExtractor;
+use App\Services\Ai\Extractors\EpargneExtractor;
 use App\Services\Ai\Extractors\PrevoyanceExtractor;
 use App\Services\Ai\Extractors\RetraiteExtractor;
-use App\Services\Ai\Extractors\EpargneExtractor;
-use App\Services\Ai\Extractors\ClientRevenusExtractor;
-use App\Services\Ai\Extractors\ClientPassifsExtractor;
-use App\Services\Ai\Extractors\ClientActifsFinanciersExtractor;
-use App\Services\Ai\Extractors\ClientBiensImmobiliersExtractor;
-use App\Services\Ai\Extractors\ClientAutresEpargnesExtractor;
-use App\Services\Ai\Extractors\ClientSanteExtractor;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Service d'analyse IA refactorisé - Architecture modulaire.
- * 
+ *
  * Orchestrateur principal qui :
  * 1. Détecte les sections concernées (RouterService)
  * 2. Appelle les extracteurs spécialisés
  * 3. Fusionne les résultats
  * 4. Normalise les données (AiDataNormalizer)
- * 
+ *
  * 🔧 Améliorations :
  * - Température 0.1 (au lieu de 1) pour extraction déterministe
  * - besoins_action = "add" par défaut (au lieu de "replace")
@@ -50,15 +47,14 @@ class AnalysisService
         private ClientBiensImmobiliersExtractor $clientBiensImmobiliersExtractor,
         private ClientAutresEpargnesExtractor $clientAutresEpargnesExtractor,
         private ClientSanteExtractor $santeExtractor
-    ) {
-    }
+    ) {}
 
     /**
      * Extrait les données client depuis une transcription vocale.
-     * 
+     *
      * Signature identique à l'ancien service pour compatibilité avec ProcessAudioRecording.
      *
-     * @param string $transcription Transcription vocale
+     * @param  string  $transcription  Transcription vocale
      * @return array Données extraites et normalisées
      */
     /**
@@ -112,6 +108,7 @@ class AnalysisService
                     'transcription' => $transcription,
                     'length' => strlen($transcription),
                 ]);
+
                 return [];
             }
 
@@ -125,7 +122,7 @@ class AnalysisService
             foreach ($sections as $section) {
                 $extractorData = $this->extractSection($section, $transcription);
 
-                if (!empty($extractorData)) {
+                if (! empty($extractorData)) {
                     Log::info("📦 [AnalysisService] Données extraites pour section '$section'", [
                         'keys' => array_keys($extractorData),
                     ]);
@@ -200,12 +197,12 @@ class AnalysisService
     private function cleanClientDataIfConjointDetected(array $data, array $sections): array
     {
         // Si la section conjoint n'a pas été détectée, pas besoin de nettoyer
-        if (!in_array('conjoint', $sections)) {
+        if (! in_array('conjoint', $sections)) {
             return $data;
         }
 
         // Si pas de données conjoint extraites, pas besoin de nettoyer
-        if (!isset($data['conjoint']) || empty($data['conjoint'])) {
+        if (! isset($data['conjoint']) || empty($data['conjoint'])) {
             return $data;
         }
 
@@ -223,8 +220,8 @@ class AnalysisService
 
         foreach ($fieldsToCheck as $field) {
             // Si les deux ont le champ et qu'il est rempli
-            if (isset($data[$field]) && !empty($data[$field]) &&
-                isset($conjointData[$field]) && !empty($conjointData[$field])) {
+            if (isset($data[$field]) && ! empty($data[$field]) &&
+                isset($conjointData[$field]) && ! empty($conjointData[$field])) {
 
                 $checkedFields++;
 
@@ -256,7 +253,7 @@ class AnalysisService
 
             // Supprimer aussi les champs connexes qui pourraient être du conjoint
             $relatedFields = ['civilite', 'lieu_naissance', 'nationalite', 'situation_actuelle_statut',
-                             'telephone', 'email', 'adresse'];
+                'telephone', 'email', 'adresse'];
 
             foreach ($relatedFields as $field) {
                 if (isset($data[$field]) && isset($conjointData[$field])) {
@@ -282,7 +279,7 @@ class AnalysisService
     private function mergeData(array $existing, array $new): array
     {
         foreach ($new as $key => $value) {
-            if (!isset($existing[$key])) {
+            if (! isset($existing[$key])) {
                 // Clé n'existe pas → ajouter
                 $existing[$key] = $value;
             } elseif (is_array($existing[$key]) && is_array($value)) {
@@ -317,18 +314,19 @@ class AnalysisService
 
     /**
      * Sauvegarde les données du questionnaire de risque (conservé pour compatibilité).
-     * 
+     *
      * NOTE : Cette méthode est gardée pour compatibilité avec ProcessAudioRecording.
      * Elle pourrait être déplacée dans un service dédié QuestionnaireRisqueService.
      *
-     * @param int $clientId ID du client
-     * @param array $data Données extraites contenant potentiellement questionnaire_risque
+     * @param  int  $clientId  ID du client
+     * @param  array  $data  Données extraites contenant potentiellement questionnaire_risque
      */
     public function saveQuestionnaireRisque(int $clientId, array $data): void
     {
         try {
-            if (!isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {
+            if (! isset($data['questionnaire_risque']) || empty($data['questionnaire_risque'])) {
                 Log::info('Aucune donnée de questionnaire de risque à sauvegarder', ['client_id' => $clientId]);
+
                 return;
             }
 
@@ -336,13 +334,14 @@ class AnalysisService
 
             if (empty($questionnaireData['financier']) && empty($questionnaireData['connaissances'])) {
                 Log::info('Données de questionnaire vides, abandon', ['client_id' => $clientId]);
+
                 return;
             }
 
             Log::info('💾 Sauvegarde du questionnaire de risque', [
                 'client_id' => $clientId,
-                'has_financier' => !empty($questionnaireData['financier']),
-                'has_connaissances' => !empty($questionnaireData['connaissances']),
+                'has_financier' => ! empty($questionnaireData['financier']),
+                'has_connaissances' => ! empty($questionnaireData['connaissances']),
             ]);
 
             // Créer ou récupérer le questionnaire principal
@@ -356,12 +355,12 @@ class AnalysisService
             );
 
             // Sauvegarder les données financières si présentes
-            if (!empty($questionnaireData['financier']) && is_array($questionnaireData['financier'])) {
+            if (! empty($questionnaireData['financier']) && is_array($questionnaireData['financier'])) {
                 $financierData = array_filter($questionnaireData['financier'], function ($value) {
-                    return !is_null($value) && $value !== '';
+                    return ! is_null($value) && $value !== '';
                 });
 
-                if (!empty($financierData)) {
+                if (! empty($financierData)) {
                     $questionnaire->financier()->updateOrCreate(
                         ['questionnaire_risque_id' => $questionnaire->id],
                         $financierData
@@ -371,12 +370,12 @@ class AnalysisService
             }
 
             // Sauvegarder les connaissances si présentes
-            if (!empty($questionnaireData['connaissances']) && is_array($questionnaireData['connaissances'])) {
+            if (! empty($questionnaireData['connaissances']) && is_array($questionnaireData['connaissances'])) {
                 $connaissancesData = array_filter($questionnaireData['connaissances'], function ($value) {
-                    return !is_null($value) && $value !== '';
+                    return ! is_null($value) && $value !== '';
                 });
 
-                if (!empty($connaissancesData)) {
+                if (! empty($connaissancesData)) {
                     $questionnaire->connaissances()->updateOrCreate(
                         ['questionnaire_risque_id' => $questionnaire->id],
                         $connaissancesData

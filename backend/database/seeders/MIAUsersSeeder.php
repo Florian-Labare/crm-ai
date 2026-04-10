@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Team;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -67,15 +67,15 @@ class MIAUsersSeeder extends Seeder
             );
 
             // Assigner le rôle MIA
-            if (!$user->hasRole('MIA')) {
+            if (! $user->hasRole('MIA')) {
                 $user->assignRole($miaRole);
             }
 
             // Créer une team personnelle pour l'utilisateur si elle n'existe pas
-            if (!Team::where('user_id', $user->id)->where('personal_team', true)->exists()) {
+            if (! Team::where('user_id', $user->id)->where('personal_team', true)->exists()) {
                 $team = Team::create([
                     'user_id' => $user->id,
-                    'name' => $user->name . "'s Team",
+                    'name' => $user->name."'s Team",
                     'personal_team' => true,
                 ]);
 
@@ -86,6 +86,6 @@ class MIAUsersSeeder extends Seeder
             $this->command->info("✓ Utilisateur MIA créé: {$user->name} ({$user->email})");
         }
 
-        $this->command->info("\n✅ " . count($chargesClientele) . " chargés de clientèle (MIA) créés avec succès!");
+        $this->command->info("\n✅ ".count($chargesClientele).' chargés de clientèle (MIA) créés avec succès!');
     }
 }

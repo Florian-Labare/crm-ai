@@ -13,7 +13,7 @@ class EpargneExtractorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->extractor = new EpargneExtractor();
+        $this->extractor = new EpargneExtractor;
 
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
@@ -33,7 +33,7 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux optimiser mon patrimoine");
+        $data = $this->extractor->extract('Je veux optimiser mon patrimoine');
 
         $this->assertContains('épargne', $data['besoins'] ?? []);
         $this->assertEquals('add', $data['besoins_action'] ?? null);
@@ -69,7 +69,7 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je peux épargner 500€ par mois");
+        $data = $this->extractor->extract('Je peux épargner 500€ par mois');
 
         $this->assertEquals(500, $data['bae_epargne']['capacite_epargne_estimee'] ?? null);
     }
@@ -86,7 +86,7 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Ma résidence principale vaut 300000€");
+        $data = $this->extractor->extract('Ma résidence principale vaut 300000€');
 
         $this->assertEquals(300000, $data['bae_epargne']['actifs_immo_total'] ?? null);
         $this->assertIsArray($data['bae_epargne']['actifs_immo_details'] ?? null);
@@ -174,7 +174,7 @@ class EpargneExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux partir à la retraite à 62 ans");
+        $data = $this->extractor->extract('Je veux partir à la retraite à 62 ans');
 
         $this->assertEquals([], $data);
     }
@@ -185,7 +185,7 @@ class EpargneExtractorTest extends TestCase
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
 
-        $data = $this->extractor->extract("Je veux optimiser mon patrimoine");
+        $data = $this->extractor->extract('Je veux optimiser mon patrimoine');
 
         $this->assertEquals([], $data);
     }

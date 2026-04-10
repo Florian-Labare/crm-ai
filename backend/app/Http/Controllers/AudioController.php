@@ -22,8 +22,7 @@ class AudioController extends Controller
      */
     public function __construct(
         private readonly AudioService $audioService
-    ) {
-    }
+    ) {}
 
     /**
      * Upload d'un fichier audio et traitement asynchrone

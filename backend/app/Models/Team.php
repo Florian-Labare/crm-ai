@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User; // Added this line
+// Added this line
 use Illuminate\Support\Facades\Storage;
 
 class Team extends Model
@@ -14,7 +14,10 @@ class Team extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        if (!$this->logo_path) return null;
+        if (! $this->logo_path) {
+            return null;
+        }
+
         return Storage::disk('s3')->url($this->logo_path);
     }
 

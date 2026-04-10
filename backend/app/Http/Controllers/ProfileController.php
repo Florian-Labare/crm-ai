@@ -18,15 +18,15 @@ class ProfileController extends Controller
 
         $request->validate([
             'firstname' => 'required|string|max:255',
-            'name'      => 'required|string|max:255',
+            'name' => 'required|string|max:255',
         ]);
 
         $user->update($request->only('firstname', 'name'));
 
         return response()->json([
-            'message'   => 'Profil mis à jour.',
+            'message' => 'Profil mis à jour.',
             'firstname' => $user->firstname,
-            'name'      => $user->name,
+            'name' => $user->name,
         ]);
     }
 
@@ -80,13 +80,13 @@ class ProfileController extends Controller
 
         $request->validate([
             'current_password' => 'required',
-            'password'         => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'message' => 'Le mot de passe actuel est incorrect.',
-                'errors'  => ['current_password' => ['Le mot de passe actuel est incorrect.']],
+                'errors' => ['current_password' => ['Le mot de passe actuel est incorrect.']],
             ], 422);
         }
 

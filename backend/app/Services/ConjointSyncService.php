@@ -17,19 +17,20 @@ class ConjointSyncService
     /**
      * Synchronise les données du conjoint pour un client.
      *
-     * @param Client $client Client concerné
-     * @param array $conjointData Données du conjoint extraites
+     * @param  Client  $client  Client concerné
+     * @param  array  $conjointData  Données du conjoint extraites
      */
     public function syncConjoint(Client $client, array $conjointData): void
     {
         Log::info("💑 [CONJOINT] Synchronisation du conjoint pour le client #{$client->id}", [
-            'has_conjoint_data' => !empty($conjointData),
+            'has_conjoint_data' => ! empty($conjointData),
             'keys' => array_keys($conjointData),
         ]);
 
         // Si aucune donnée de conjoint, on ne fait rien
         if (empty($conjointData)) {
             Log::info('💑 [CONJOINT] Aucune donnée de conjoint à synchroniser');
+
             return;
         }
 
@@ -39,10 +40,11 @@ class ConjointSyncService
         // Si après filtrage il ne reste rien, on ne fait rien
         if (empty($conjointData)) {
             Log::info('💑 [CONJOINT] Données de conjoint vides après filtrage');
+
             return;
         }
 
-        Log::info("💑 [CONJOINT] Données à synchroniser", [
+        Log::info('💑 [CONJOINT] Données à synchroniser', [
             'fields' => array_keys($conjointData),
         ]);
 
@@ -72,7 +74,7 @@ class ConjointSyncService
     /**
      * Filtre les valeurs null et vides.
      *
-     * @param array $data Données à filtrer
+     * @param  array  $data  Données à filtrer
      * @return array Données filtrées
      */
     private function filterEmptyValues(array $data): array
@@ -91,7 +93,7 @@ class ConjointSyncService
     /**
      * Normalise une chaîne pour la comparaison.
      *
-     * @param string|null $value Valeur à normaliser
+     * @param  string|null  $value  Valeur à normaliser
      * @return string|null Valeur normalisée
      */
     private function normalizeString(?string $value): ?string

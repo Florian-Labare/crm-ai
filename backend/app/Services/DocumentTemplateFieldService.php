@@ -44,7 +44,7 @@ class DocumentTemplateFieldService
             $suffix = 2;
 
             while (in_array($column, $used, true)) {
-                $column = $this->limitColumnLength($base . '_' . $suffix, $variable);
+                $column = $this->limitColumnLength($base.'_'.$suffix, $variable);
                 $suffix++;
             }
 
@@ -63,10 +63,10 @@ class DocumentTemplateFieldService
         }
 
         $hash = substr(sha1($variable), 0, 8);
-        $suffix = '_' . $hash;
+        $suffix = '_'.$hash;
         $trimLength = $maxLength - strlen($suffix);
 
-        return substr($column, 0, $trimLength) . $suffix;
+        return substr($column, 0, $trimLength).$suffix;
     }
 
     public function labelForVariable(string $variable): string
@@ -103,7 +103,7 @@ class DocumentTemplateFieldService
         $label = str_replace(['.', '_'], ' ', $label);
         $label = Str::of($label)->replace('  ', ' ')->trim()->title()->toString();
 
-        return $label . $suffix;
+        return $label.$suffix;
     }
 
     /**
@@ -123,7 +123,8 @@ class DocumentTemplateFieldService
         if (str_ends_with($lower, 'conjoint')) {
             $base = substr($variable, 0, -8);
             $fieldSuffix = $this->getFieldTypeSuffix($base);
-            return ['label' => $base, 'suffix' => $fieldSuffix . ' (conjoint)'];
+
+            return ['label' => $base, 'suffix' => $fieldSuffix.' (conjoint)'];
         }
 
         // Enfants: nomprenomenfant1, datenaissanceenfant11, fiscalcharge1, etc.
@@ -181,19 +182,22 @@ class DocumentTemplateFieldService
         // Nature d'emprunt: natureA, natureB, natureC, etc.
         if (preg_match('/^nature([A-E])$/i', $variable, $m)) {
             $index = ord(strtoupper($m[1])) - ord('A') + 1;
+
             return ['label' => 'Nature', 'suffix' => " (emprunt {$index})"];
         }
         if (preg_match('/^periodicite([A-E])$/i', $variable, $m)) {
             $index = ord(strtoupper($m[1])) - ord('A') + 1;
+
             return ['label' => 'Périodicité', 'suffix' => " (charge {$index})"];
         }
         if (preg_match('/^montant([A-E])$/i', $variable, $m)) {
             $index = ord(strtoupper($m[1])) - ord('A') + 1;
+
             return ['label' => 'Montant', 'suffix' => " (charge {$index})"];
         }
 
         // Questionnaire risque: opcvmdominanteactionoperation, etc.
-        if (preg_match('/operation|opert|real/i', $variable) && !preg_match('/montant/i', $variable)) {
+        if (preg_match('/operation|opert|real/i', $variable) && ! preg_match('/montant/i', $variable)) {
             return ['label' => $variable, 'suffix' => ' - opérations'];
         }
         if (preg_match('/montant.*annuel|montannuel|montaannuel/i', $variable)) {
@@ -303,7 +307,7 @@ class DocumentTemplateFieldService
         if (str_contains($lower, 'ville')) {
             return ' - ville';
         }
-        if (str_contains($lower, 'adresse') && !str_contains($lower, 'code') && !str_contains($lower, 'ville')) {
+        if (str_contains($lower, 'adresse') && ! str_contains($lower, 'code') && ! str_contains($lower, 'ville')) {
             return ' - adresse';
         }
 

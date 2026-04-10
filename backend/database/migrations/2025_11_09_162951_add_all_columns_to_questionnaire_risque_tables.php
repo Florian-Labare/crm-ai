@@ -13,22 +13,22 @@ return new class extends Migration
     {
         // 1. Table principale : questionnaire_risques
         Schema::table('questionnaire_risques', function (Blueprint $table) {
-            if (!Schema::hasColumn('questionnaire_risques', 'client_id')) {
+            if (! Schema::hasColumn('questionnaire_risques', 'client_id')) {
                 $table->foreignId('client_id')->nullable()->after('id')->constrained('clients')->onDelete('cascade');
             }
-            if (!Schema::hasColumn('questionnaire_risques', 'score_global')) {
+            if (! Schema::hasColumn('questionnaire_risques', 'score_global')) {
                 $table->integer('score_global')->default(0)->after('client_id');
             }
-            if (!Schema::hasColumn('questionnaire_risques', 'profil_calcule')) {
+            if (! Schema::hasColumn('questionnaire_risques', 'profil_calcule')) {
                 $table->string('profil_calcule')->default('Prudent')->after('score_global');
             }
-            if (!Schema::hasColumn('questionnaire_risques', 'recommandation')) {
+            if (! Schema::hasColumn('questionnaire_risques', 'recommandation')) {
                 $table->text('recommandation')->nullable()->after('profil_calcule');
             }
         });
 
         // 2. Table questionnaire_risque_financiers
-        if (!Schema::hasColumn('questionnaire_risque_financiers', 'questionnaire_risque_id')) {
+        if (! Schema::hasColumn('questionnaire_risque_financiers', 'questionnaire_risque_id')) {
             Schema::table('questionnaire_risque_financiers', function (Blueprint $table) {
                 $table->unsignedBigInteger('questionnaire_risque_id')->nullable()->after('id');
                 $table->foreign('questionnaire_risque_id', 'qr_financier_qr_id_fk')
@@ -55,7 +55,7 @@ return new class extends Migration
         }
 
         // 3. Table questionnaire_risque_connaissances
-        if (!Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
+        if (! Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
             Schema::table('questionnaire_risque_connaissances', function (Blueprint $table) {
                 $table->unsignedBigInteger('questionnaire_risque_id')->nullable()->after('id');
                 $table->foreign('questionnaire_risque_id', 'qr_connaissance_qr_id_fk')

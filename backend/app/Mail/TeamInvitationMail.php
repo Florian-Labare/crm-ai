@@ -18,13 +18,13 @@ class TeamInvitationMail extends Mailable
     public function __construct(public TeamInvitation $invitation)
     {
         $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173'));
-        $this->acceptUrl = $frontendUrl . '/invitations/' . $invitation->token . '/accept';
+        $this->acceptUrl = $frontendUrl.'/invitations/'.$invitation->token.'/accept';
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Invitation à rejoindre ' . $this->invitation->team->name,
+            subject: 'Invitation à rejoindre '.$this->invitation->team->name,
         );
     }
 

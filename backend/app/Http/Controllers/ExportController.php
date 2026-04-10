@@ -4,12 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\QuestionnaireRisque;
-use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
-use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\SimpleType\Jc;
-use PhpOffice\PhpWord\Style\Font;
 
 class ExportController extends Controller
 {
@@ -21,10 +19,10 @@ class ExportController extends Controller
         $client = Client::with(['conjoint', 'enfants', 'santeSouhait'])->findOrFail($id);
 
         $pdf = Pdf::loadView('exports.client-pdf', [
-            'client' => $client
+            'client' => $client,
         ]);
 
-        $filename = 'fiche_client_' . $client->nom . '_' . $client->prenom . '.pdf';
+        $filename = 'fiche_client_'.$client->nom.'_'.$client->prenom.'.pdf';
 
         return $pdf->download($filename);
     }
@@ -36,7 +34,7 @@ class ExportController extends Controller
     {
         $client = Client::with(['conjoint', 'enfants', 'santeSouhait'])->findOrFail($id);
 
-        $phpWord = new PhpWord();
+        $phpWord = new PhpWord;
 
         // Configuration du document
         $phpWord->setDefaultFontName('Arial');
@@ -104,7 +102,7 @@ class ExportController extends Controller
         if ($client->enfants && $client->enfants->count() > 0) {
             $section->addText('ENFANTS', $heading2Style, ['spaceAfter' => 200, 'spaceBefore' => 300]);
             foreach ($client->enfants as $index => $enfant) {
-                $section->addText('Enfant ' . ($index + 1), ['bold' => true, 'size' => 11], ['spaceAfter' => 100]);
+                $section->addText('Enfant '.($index + 1), ['bold' => true, 'size' => 11], ['spaceAfter' => 100]);
                 $this->addField($section, 'Prénom', $enfant->prenom, $labelStyle, $textStyle);
                 $this->addField($section, 'Date de naissance', $enfant->date_naissance ? \Carbon\Carbon::parse($enfant->date_naissance)->format('d/m/Y') : null, $labelStyle, $textStyle);
             }
@@ -114,7 +112,7 @@ class ExportController extends Controller
         $section->addText('SITUATION PROFESSIONNELLE', $heading1Style, ['spaceAfter' => 200, 'spaceBefore' => 400]);
         $this->addField($section, 'Profession', $client->profession, $labelStyle, $textStyle);
         $this->addField($section, 'Date événement professionnel', $client->date_evenement_professionnel ? \Carbon\Carbon::parse($client->date_evenement_professionnel)->format('d/m/Y') : null, $labelStyle, $textStyle);
-        $this->addField($section, 'Revenus annuels', $client->revenus_annuels ? number_format($client->revenus_annuels, 0, ',', ' ') . ' €' : null, $labelStyle, $textStyle);
+        $this->addField($section, 'Revenus annuels', $client->revenus_annuels ? number_format($client->revenus_annuels, 0, ',', ' ').' €' : null, $labelStyle, $textStyle);
         $this->addField($section, 'Risques professionnels', $client->risques_professionnels ? 'Oui' : 'Non', $labelStyle, $textStyle);
         $this->addField($section, 'Détails risques', $client->details_risques_professionnels, $labelStyle, $textStyle);
         $this->addField($section, 'Charge clientèle', $client->charge_clientele, $labelStyle, $textStyle);
@@ -150,7 +148,7 @@ class ExportController extends Controller
                 $this->addField($section, 'Contrat en place', $sante->contrat_en_place, $labelStyle, $textStyle);
             }
             if ($sante->budget_mensuel_maximum) {
-                $this->addField($section, 'Budget mensuel maximum', $sante->budget_mensuel_maximum . ' €', $labelStyle, $textStyle);
+                $this->addField($section, 'Budget mensuel maximum', $sante->budget_mensuel_maximum.' €', $labelStyle, $textStyle);
             }
         }
 
@@ -167,17 +165,17 @@ class ExportController extends Controller
             ['alignment' => Jc::CENTER, 'spaceAfter' => 100, 'spaceBefore' => 400]
         );
         $section->addText(
-            'Document généré le ' . now()->format('d/m/Y à H:i') . ' par Whisper CRM',
+            'Document généré le '.now()->format('d/m/Y à H:i').' par Whisper CRM',
             ['size' => 9, 'color' => '6B7280'],
             ['alignment' => Jc::CENTER]
         );
 
         // Génération du fichier
-        $filename = 'fiche_client_' . $client->nom . '_' . $client->prenom . '.docx';
-        $tempFile = storage_path('app/temp/' . $filename);
+        $filename = 'fiche_client_'.$client->nom.'_'.$client->prenom.'.docx';
+        $tempFile = storage_path('app/temp/'.$filename);
 
         // Créer le dossier temp s'il n'existe pas
-        if (!file_exists(storage_path('app/temp'))) {
+        if (! file_exists(storage_path('app/temp'))) {
             mkdir(storage_path('app/temp'), 0755, true);
         }
 
@@ -197,7 +195,7 @@ class ExportController extends Controller
             ->where('client_id', $id)
             ->first();
 
-        if (!$questionnaire) {
+        if (! $questionnaire) {
             abort(404, 'Questionnaire introuvable pour ce client.');
         }
 
@@ -209,7 +207,7 @@ class ExportController extends Controller
             'quizResponses' => $this->formatQuizResponses($questionnaire->quiz),
         ]);
 
-        $filename = 'questionnaire_client_' . $client->nom . '_' . $client->prenom . '.pdf';
+        $filename = 'questionnaire_client_'.$client->nom.'_'.$client->prenom.'.pdf';
 
         return $pdf->download($filename);
     }
@@ -220,13 +218,13 @@ class ExportController extends Controller
     private function addField($section, $label, $value, $labelStyle, $textStyle)
     {
         if ($value !== null && $value !== '') {
-            $section->addText($label . ' : ' . $value, array_merge($textStyle, $labelStyle), ['spaceAfter' => 100]);
+            $section->addText($label.' : '.$value, array_merge($textStyle, $labelStyle), ['spaceAfter' => 100]);
         }
     }
 
     private function formatFinancierResponses($financier): array
     {
-        if (!$financier) {
+        if (! $financier) {
             return [];
         }
 
@@ -235,10 +233,10 @@ class ExportController extends Controller
                 'label' => 'La valeur de votre investissement baisse, combien de temps êtes-vous disposé à attendre ?',
                 'options' => [
                     'moins_1_an' => "Moins d'1 an",
-                    '1_3_ans' => "Entre 1 et 3 ans",
-                    '3_5_ans' => "Entre 3 et 5 ans",
-                    'plus_5_ans' => "Plus de 5 ans",
-                    'plus_3_ans' => "Plus de 3 ans",
+                    '1_3_ans' => 'Entre 1 et 3 ans',
+                    '3_5_ans' => 'Entre 3 et 5 ans',
+                    'plus_5_ans' => 'Plus de 5 ans',
+                    'plus_3_ans' => 'Plus de 3 ans',
                 ],
             ],
             'niveau_perte_inquietude' => [
@@ -376,7 +374,7 @@ class ExportController extends Controller
         $responses = [];
 
         foreach ($questions as $field => $meta) {
-            if (!isset($financier->$field) || $financier->$field === null || $financier->$field === '') {
+            if (! isset($financier->$field) || $financier->$field === null || $financier->$field === '') {
                 continue;
             }
 
@@ -386,7 +384,7 @@ class ExportController extends Controller
             } elseif (isset($meta['options'][$value])) {
                 $answer = $meta['options'][$value];
             } elseif ($field === 'pourcentage_perte_max') {
-                $answer = rtrim(rtrim((string)$value, '0'), '.') . ' %';
+                $answer = rtrim(rtrim((string) $value, '0'), '.').' %';
             } else {
                 $answer = $value;
             }
@@ -402,7 +400,7 @@ class ExportController extends Controller
 
     private function formatConnaissanceResponses($connaissances): array
     {
-        if (!$connaissances) {
+        if (! $connaissances) {
             return [];
         }
 
@@ -422,7 +420,7 @@ class ExportController extends Controller
         $responses = [];
 
         foreach ($labels as $field => $label) {
-            if (!isset($connaissances->$field)) {
+            if (! isset($connaissances->$field)) {
                 continue;
             }
 
@@ -437,7 +435,7 @@ class ExportController extends Controller
 
     private function formatQuizResponses($quiz): array
     {
-        if (!$quiz) {
+        if (! $quiz) {
             return [];
         }
 
@@ -446,7 +444,7 @@ class ExportController extends Controller
             'instruments_tous_cotes' => 'Tous les instruments financiers sont cotés en bourse',
             'risque_liquidite_signification' => 'Le risque de liquidité signifie qu’on pourrait ne pas pouvoir revendre un placement rapidement',
             'livret_a_rendement_negatif' => 'Le livret A peut avoir un rendement réel négatif (après inflation)',
-            'assurance_vie_valeur_rachats_uc' => "En assurance vie, la valeur de rachat des UC est toujours garantie",
+            'assurance_vie_valeur_rachats_uc' => 'En assurance vie, la valeur de rachat des UC est toujours garantie',
             'assurance_vie_fiscalite_deces' => 'L’assurance vie bénéficie d’une fiscalité avantageuse en cas de décès',
             'per_non_rachatable' => 'Le PER est en principe non rachetable avant la retraite (sauf exceptions)',
             'per_objectif_revenus_retraite' => 'Le PER a pour objectif de générer des revenus complémentaires à la retraite',
@@ -479,7 +477,7 @@ class ExportController extends Controller
         $responses = [];
 
         foreach ($questions as $field => $label) {
-            if (!isset($quiz->$field) || $quiz->$field === null || $quiz->$field === '') {
+            if (! isset($quiz->$field) || $quiz->$field === null || $quiz->$field === '') {
                 continue;
             }
 

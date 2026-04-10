@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\AudioRecord;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class AudioRecordPolicy
 {
@@ -30,6 +29,7 @@ class AudioRecordPolicy
     public function create(User $user): bool
     {
         $team = $user->currentTeam();
+
         return $team && $user->canManageResources($team);
     }
 

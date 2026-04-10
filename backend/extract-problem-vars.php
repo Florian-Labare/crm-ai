@@ -8,10 +8,10 @@ $templates = [
 
 foreach ($templates as $templateName) {
     echo "\n📄 Template: {$templateName}\n";
-    echo str_repeat("=", 80) . "\n";
+    echo str_repeat('=', 80)."\n";
 
-    $zip = new ZipArchive();
-    $zip->open(__DIR__ . '/storage/app/templates/' . $templateName);
+    $zip = new ZipArchive;
+    $zip->open(__DIR__.'/storage/app/templates/'.$templateName);
     $xml = $zip->getFromName('word/document.xml');
     $zip->close();
 
@@ -23,7 +23,7 @@ foreach ($templates as $templateName) {
     $variables = array_unique($varMatches[1]);
 
     $problemVars = [
-        'impot_paye_n_1', 'SOCOGEA', 'Date', 'fumeur', 'nbkm'
+        'impot_paye_n_1', 'SOCOGEA', 'Date', 'fumeur', 'nbkm',
     ];
 
     foreach ($variables as $var) {
@@ -31,8 +31,8 @@ foreach ($templates as $templateName) {
         foreach ($problemVars as $needle) {
             if (stripos($var, $needle) !== false) {
                 echo "Variable: {{$var}}\n";
-                echo "Hex: " . bin2hex($var) . "\n";
-                echo "Length: " . strlen($var) . "\n";
+                echo 'Hex: '.bin2hex($var)."\n";
+                echo 'Length: '.strlen($var)."\n";
 
                 // Test regex
                 if (preg_match('/^([a-z_]+)(?:\[(\d+)\])?\.([a-z0-9_]+)$/i', $var)) {

@@ -52,7 +52,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Les informations d\'identification fournies sont incorrectes.'],
             ]);
@@ -106,7 +106,7 @@ class AuthController extends Controller
             'team_role' => $teamRole,
             'is_admin' => $currentTeam ? $user->isTeamAdmin($currentTeam) : false,
             'is_super_admin' => $user->isSuperAdmin(),
-            'has_team'         => $currentTeam !== null,
+            'has_team' => $currentTeam !== null,
             'linked_providers' => $user->socialAccounts()->pluck('provider')->toArray(),
         ]);
     }
@@ -117,11 +117,11 @@ class AuthController extends Controller
     private function ensureUserHasTeam(User $user): void
     {
         // Check if user already has a personal team
-        if (!$user->ownedTeams()->where('personal_team', true)->exists()) {
+        if (! $user->ownedTeams()->where('personal_team', true)->exists()) {
             // Create personal team
             $team = Team::create([
                 'user_id' => $user->id,
-                'name' => explode(' ', $user->name, 2)[0] . "'s Team",
+                'name' => explode(' ', $user->name, 2)[0]."'s Team",
                 'personal_team' => true,
             ]);
 

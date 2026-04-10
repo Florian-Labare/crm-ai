@@ -23,8 +23,7 @@ class DerController extends Controller
     public function __construct(
         private readonly DerService $derService,
         private readonly OAuthMailService $oauthMailService,
-    ) {
-    }
+    ) {}
 
     /**
      * Afficher le formulaire de création de rendez-vous DER
@@ -33,10 +32,10 @@ class DerController extends Controller
     {
         $currentTeam = auth()->user()->currentTeam();
 
-        if (!$currentTeam) {
+        if (! $currentTeam) {
             return response()->json([
                 'error' => 'No team found for current user',
-                'mias' => []
+                'mias' => [],
             ], 400);
         }
 
@@ -84,13 +83,13 @@ class DerController extends Controller
 
             // 4. Envoyer le DER par email depuis le compte du user connecté (secrétaire / super admin)
             $sender = auth()->user();
-            $subject = "Votre Document d'Entrée en Relation - {$client->prenom} " . strtoupper($client->nom);
+            $subject = "Votre Document d'Entrée en Relation - {$client->prenom} ".strtoupper($client->nom);
             $htmlBody = view('emails.der', [
-                'client'          => $client,
+                'client' => $client,
                 'chargeClientele' => $chargeClientele,
-                'sender'          => $sender,
+                'sender' => $sender,
             ])->render();
-            $attachmentName = 'DER_' . strtoupper($client->nom) . '_' . strtoupper($client->prenom) . '.docx';
+            $attachmentName = 'DER_'.strtoupper($client->nom).'_'.strtoupper($client->prenom).'.docx';
 
             $this->oauthMailService->sendEmail(
                 $sender,
@@ -113,7 +112,7 @@ class DerController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error("❌ Erreur lors de la création du rendez-vous DER : " . $e->getMessage());
+            Log::error('❌ Erreur lors de la création du rendez-vous DER : '.$e->getMessage());
             Log::error($e->getTraceAsString());
 
             return response()->json([

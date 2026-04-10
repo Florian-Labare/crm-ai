@@ -39,7 +39,7 @@ class ComplianceRequirement extends Model
     public static function getRequirementsForBesoins(array $besoins): \Illuminate\Database\Eloquent\Collection
     {
         $toInclude = ['global'];
-        if (!empty($besoins)) {
+        if (! empty($besoins)) {
             $toInclude[] = 'any_besoin';
             $toInclude = array_merge($toInclude, $besoins);
         }

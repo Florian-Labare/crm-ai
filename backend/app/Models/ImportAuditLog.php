@@ -10,28 +10,45 @@ class ImportAuditLog extends Model
 {
     // Actions
     public const ACTION_UPLOAD = 'upload';
+
     public const ACTION_CONNECT = 'connect';
+
     public const ACTION_IMPORT = 'import';
+
     public const ACTION_EXPORT = 'export';
+
     public const ACTION_DELETE = 'delete';
+
     public const ACTION_VIEW = 'view';
+
     public const ACTION_CONSENT = 'consent';
+
     public const ACTION_CONNECTION_TEST = 'connection_test';
+
     public const ACTION_CONNECTION_CREATE = 'connection_create';
+
     public const ACTION_CONNECTION_DELETE = 'connection_delete';
 
     // Resource types
     public const RESOURCE_SESSION = 'import_session';
+
     public const RESOURCE_CONNECTION = 'database_connection';
+
     public const RESOURCE_CLIENT = 'client';
+
     public const RESOURCE_MAPPING = 'import_mapping';
 
     // Legal bases (RGPD Article 6)
     public const LEGAL_BASIS_CONSENT = 'consent';
+
     public const LEGAL_BASIS_CONTRACT = 'contract';
+
     public const LEGAL_BASIS_LEGAL_OBLIGATION = 'legal_obligation';
+
     public const LEGAL_BASIS_VITAL_INTERESTS = 'vital_interests';
+
     public const LEGAL_BASIS_PUBLIC_TASK = 'public_task';
+
     public const LEGAL_BASIS_LEGITIMATE_INTEREST = 'legitimate_interest';
 
     protected $fillable = [

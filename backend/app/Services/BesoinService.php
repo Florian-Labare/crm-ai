@@ -20,9 +20,9 @@ class BesoinService
     /** Labels affichables */
     public const LABELS = [
         'prevoyance' => 'Prévoyance',
-        'retraite'   => 'Retraite',
-        'epargne'    => 'Épargne',
-        'sante'      => 'Santé',
+        'retraite' => 'Retraite',
+        'epargne' => 'Épargne',
+        'sante' => 'Santé',
         'emprunteur' => 'Emprunteur',
     ];
 
@@ -32,65 +32,65 @@ class BesoinService
      */
     private const ALIAS_MAP = [
         // Prévoyance
-        'prevoyance'               => 'prevoyance',
-        'prévoyance'               => 'prevoyance',
-        'décès'                    => 'prevoyance',
-        'deces'                    => 'prevoyance',
-        'invalidité'               => 'prevoyance',
-        'invalidite'               => 'prevoyance',
-        'incapacité'               => 'prevoyance',
-        'incapacite'               => 'prevoyance',
-        'arrêt de travail'         => 'prevoyance',
-        'arret de travail'         => 'prevoyance',
-        'obsèques'                 => 'prevoyance',
-        'obseques'                 => 'prevoyance',
-        'protection sociale'       => 'prevoyance',
-        'garanties collectives'    => 'prevoyance',
+        'prevoyance' => 'prevoyance',
+        'prévoyance' => 'prevoyance',
+        'décès' => 'prevoyance',
+        'deces' => 'prevoyance',
+        'invalidité' => 'prevoyance',
+        'invalidite' => 'prevoyance',
+        'incapacité' => 'prevoyance',
+        'incapacite' => 'prevoyance',
+        'arrêt de travail' => 'prevoyance',
+        'arret de travail' => 'prevoyance',
+        'obsèques' => 'prevoyance',
+        'obseques' => 'prevoyance',
+        'protection sociale' => 'prevoyance',
+        'garanties collectives' => 'prevoyance',
         // Retraite
-        'retraite'                 => 'retraite',
-        'per'                      => 'retraite',
-        'plan epargne retraite'    => 'retraite',
-        'plan épargne retraite'    => 'retraite',
-        'pension'                  => 'retraite',
-        'retraite complémentaire'  => 'retraite',
+        'retraite' => 'retraite',
+        'per' => 'retraite',
+        'plan epargne retraite' => 'retraite',
+        'plan épargne retraite' => 'retraite',
+        'pension' => 'retraite',
+        'retraite complémentaire' => 'retraite',
         // Épargne
-        'épargne'                  => 'epargne',
-        'epargne'                  => 'epargne',
-        'placement'                => 'epargne',
-        'assurance vie'            => 'epargne',
-        'assurance-vie'            => 'epargne',
-        'capitalisation'           => 'epargne',
+        'épargne' => 'epargne',
+        'epargne' => 'epargne',
+        'placement' => 'epargne',
+        'assurance vie' => 'epargne',
+        'assurance-vie' => 'epargne',
+        'capitalisation' => 'epargne',
         'assurance vie capitalisation' => 'epargne',
-        'pea'                      => 'epargne',
-        'patrimoine'               => 'epargne',
-        'investissement'           => 'epargne',
+        'pea' => 'epargne',
+        'patrimoine' => 'epargne',
+        'investissement' => 'epargne',
         // Santé
-        'santé'                    => 'sante',
-        'sante'                    => 'sante',
-        'mutuelle'                 => 'sante',
-        'complémentaire santé'     => 'sante',
-        'complementaire sante'     => 'sante',
-        'complémentaire'           => 'sante',
-        'complementaire'           => 'sante',
+        'santé' => 'sante',
+        'sante' => 'sante',
+        'mutuelle' => 'sante',
+        'complémentaire santé' => 'sante',
+        'complementaire sante' => 'sante',
+        'complémentaire' => 'sante',
+        'complementaire' => 'sante',
         // Emprunteur
-        'emprunteur'               => 'emprunteur',
-        'ade'                      => 'emprunteur',
-        'assurance emprunteur'     => 'emprunteur',
-        'assurance de prêt'        => 'emprunteur',
-        'assurance de pret'        => 'emprunteur',
-        'prêt'                     => 'emprunteur',
-        'pret'                     => 'emprunteur',
-        'crédit'                   => 'emprunteur',
-        'credit'                   => 'emprunteur',
-        'emprunt'                  => 'emprunteur',
+        'emprunteur' => 'emprunteur',
+        'ade' => 'emprunteur',
+        'assurance emprunteur' => 'emprunteur',
+        'assurance de prêt' => 'emprunteur',
+        'assurance de pret' => 'emprunteur',
+        'prêt' => 'emprunteur',
+        'pret' => 'emprunteur',
+        'crédit' => 'emprunteur',
+        'credit' => 'emprunteur',
+        'emprunt' => 'emprunteur',
     ];
 
     /** Mapping slug → relation BAE sur le modèle Client */
     private const BAE_RELATIONS = [
         'prevoyance' => 'baePrevoyance',
-        'retraite'   => 'baeRetraite',
-        'epargne'    => 'baeEpargne',
-        'sante'      => 'santeSouhait',
+        'retraite' => 'baeRetraite',
+        'epargne' => 'baeEpargne',
+        'sante' => 'santeSouhait',
     ];
 
     /**
@@ -102,10 +102,11 @@ class BesoinService
         foreach ($besoins as $besoin) {
             $key = mb_strtolower(trim((string) $besoin));
             $slug = self::ALIAS_MAP[$key] ?? null;
-            if ($slug && !in_array($slug, $slugs, true)) {
+            if ($slug && ! in_array($slug, $slugs, true)) {
                 $slugs[] = $slug;
             }
         }
+
         return $slugs;
     }
 
@@ -124,7 +125,7 @@ class BesoinService
         $besoins = $this->normalizeSlugs($raw);
 
         foreach (self::BAE_RELATIONS as $slug => $relation) {
-            if ($client->{$relation} && !in_array($slug, $besoins, true)) {
+            if ($client->{$relation} && ! in_array($slug, $besoins, true)) {
                 $besoins[] = $slug;
             }
         }
@@ -139,7 +140,7 @@ class BesoinService
     public function syncBesoinsFromBae(Client $client): void
     {
         $effective = $this->getEffectiveBesoins($client);
-        $current   = is_array($client->besoins) ? $client->besoins : [];
+        $current = is_array($client->besoins) ? $client->besoins : [];
 
         if (count($effective) !== count($current) || array_diff($effective, $current)) {
             $client->update(['besoins' => $effective]);
@@ -154,7 +155,7 @@ class BesoinService
         $slugs = $this->normalizeSlugs($besoins);
 
         foreach (self::BAE_RELATIONS as $slug => $relation) {
-            if (in_array($slug, $slugs, true) && !$client->{$relation}) {
+            if (in_array($slug, $slugs, true) && ! $client->{$relation}) {
                 $client->{$relation}()->create(['client_id' => $client->id]);
             }
         }

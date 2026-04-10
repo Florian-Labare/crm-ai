@@ -15,7 +15,7 @@ return new class extends Migration
     {
         // Nullify existing plaintext tokens before encrypting
         DB::table('social_accounts')->update([
-            'token'         => null,
+            'token' => null,
             'refresh_token' => null,
         ]);
 

@@ -13,7 +13,7 @@ class ConjointExtractorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->extractor = new ConjointExtractor();
+        $this->extractor = new ConjointExtractor;
 
         // Configuration par défaut pour les tests
         config(['mistral.features.use_for_llm' => true]);
@@ -54,7 +54,7 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon mari est médecin");
+        $data = $this->extractor->extract('Mon mari est médecin');
 
         $this->assertEquals('médecin', $data['conjoint']['profession'] ?? null);
     }
@@ -71,7 +71,7 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Ma femme Sophie est née le 20 août 1982");
+        $data = $this->extractor->extract('Ma femme Sophie est née le 20 août 1982');
 
         $this->assertEquals('1982-08-20', $data['conjoint']['date_naissance'] ?? null);
     }
@@ -149,7 +149,7 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon conjoint est comptable");
+        $data = $this->extractor->extract('Mon conjoint est comptable');
 
         $this->assertEquals('comptable', $data['conjoint']['profession'] ?? null);
     }
@@ -166,7 +166,7 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Mon épouse Marie est avocate");
+        $data = $this->extractor->extract('Mon épouse Marie est avocate');
 
         $this->assertEquals('Marie', $data['conjoint']['prenom'] ?? null);
         $this->assertEquals('avocate', $data['conjoint']['profession'] ?? null);
@@ -184,7 +184,7 @@ class ConjointExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Ma femme travaille, elle est professeur");
+        $data = $this->extractor->extract('Ma femme travaille, elle est professeur');
 
         $this->assertEquals('professeur', $data['conjoint']['profession'] ?? null);
     }

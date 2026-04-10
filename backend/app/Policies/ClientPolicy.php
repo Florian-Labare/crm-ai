@@ -74,6 +74,7 @@ class ClientPolicy
     public function forceDelete(User $user, Client $client): bool
     {
         $team = $user->currentTeam();
+
         return $team && $user->isTeamAdmin($team);
     }
 

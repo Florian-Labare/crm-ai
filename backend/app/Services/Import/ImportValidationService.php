@@ -3,7 +3,6 @@
 namespace App\Services\Import;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class ImportValidationService
 {
@@ -148,7 +147,7 @@ class ImportValidationService
                 $normalized['enfants']
             );
             // Remove empty enfants
-            $normalized['enfants'] = array_filter($normalized['enfants'], fn ($e) => !empty(array_filter($e)));
+            $normalized['enfants'] = array_filter($normalized['enfants'], fn ($e) => ! empty(array_filter($e)));
             $normalized['enfants'] = array_values($normalized['enfants']);
         }
 
@@ -238,7 +237,7 @@ class ImportValidationService
     {
         $normalized = strtolower(trim($value));
 
-        if (!filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
+        if (! filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
             return "Format d'email invalide";
         }
 
@@ -250,7 +249,7 @@ class ImportValidationService
         $cleaned = preg_replace('/[\s.\-()]/', '', $value);
         $cleaned = preg_replace('/[^0-9+]/', '', $cleaned);
 
-        if (!preg_match('/^(\+33|0)[0-9]{9,}$/', $cleaned)) {
+        if (! preg_match('/^(\+33|0)[0-9]{9,}$/', $cleaned)) {
             return 'Format de téléphone invalide (attendu: 0X XX XX XX XX ou +33...)';
         }
 
@@ -272,7 +271,7 @@ class ImportValidationService
     {
         $cleaned = preg_replace('/[^0-9]/', '', $value);
 
-        if (!preg_match('/^\d{5}$/', $cleaned)) {
+        if (! preg_match('/^\d{5}$/', $cleaned)) {
             return 'Code postal invalide (5 chiffres attendus)';
         }
 
@@ -284,7 +283,7 @@ class ImportValidationService
         $normalized = $this->normalizeStringForComparison($value);
         $valid = ['m', 'mr', 'monsieur', 'mme', 'madame', 'mlle', 'mademoiselle', 'm.'];
 
-        if (!in_array($normalized, $valid)) {
+        if (! in_array($normalized, $valid)) {
             return 'Civilité invalide (M., Mme, Mlle)';
         }
 
@@ -309,7 +308,7 @@ class ImportValidationService
             'marie(e)', 'pacse(e)', 'divorce(e)', 'veuf/veuve', 'separe(e)',
         ];
 
-        if (!in_array($normalized, $valid)) {
+        if (! in_array($normalized, $valid)) {
             return 'Situation matrimoniale non reconnue';
         }
 
@@ -336,7 +335,7 @@ class ImportValidationService
         $cleaned = str_replace([' ', ','], ['', '.'], $value);
         $cleaned = preg_replace('/[^0-9.\-]/', '', $cleaned);
 
-        if (!is_numeric($cleaned)) {
+        if (! is_numeric($cleaned)) {
             return 'Valeur numérique invalide';
         }
 
@@ -455,7 +454,7 @@ class ImportValidationService
             return (float) $value;
         }
 
-        if (!is_string($value)) {
+        if (! is_string($value)) {
             return null;
         }
 
@@ -549,14 +548,15 @@ class ImportValidationService
             }
 
             // Handle composite nom_prenom field
-            if ($key === 'nom_prenom' && !empty($value)) {
+            if ($key === 'nom_prenom' && ! empty($value)) {
                 $parts = $this->splitNomPrenom($value);
-                if (!empty($parts['nom'])) {
+                if (! empty($parts['nom'])) {
                     $normalized['nom'] = $this->normalizeName($parts['nom']);
                 }
-                if (!empty($parts['prenom'])) {
+                if (! empty($parts['prenom'])) {
                     $normalized['prenom'] = $this->normalizeName($parts['prenom']);
                 }
+
                 continue;
             }
 

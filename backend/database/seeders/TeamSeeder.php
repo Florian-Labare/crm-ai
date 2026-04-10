@@ -26,7 +26,7 @@ class TeamSeeder extends Seeder
         // Associer tous les utilisateurs existants à cette équipe
         $users = User::all();
         foreach ($users as $user) {
-            if (!$team->users()->where('user_id', $user->id)->exists()) {
+            if (! $team->users()->where('user_id', $user->id)->exists()) {
                 $team->users()->attach($user->id, ['role' => 'member']);
             }
         }

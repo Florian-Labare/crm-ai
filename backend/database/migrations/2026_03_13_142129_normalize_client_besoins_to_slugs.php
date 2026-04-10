@@ -9,52 +9,52 @@ return new class extends Migration
     private function getMapping(): array
     {
         return [
-            'prévoyance'          => 'prevoyance',
-            'prevoyance'          => 'prevoyance',
-            'décès'               => 'prevoyance',
-            'deces'               => 'prevoyance',
-            'invalidité'          => 'prevoyance',
-            'invalidite'          => 'prevoyance',
-            'incapacité'          => 'prevoyance',
-            'incapacite'          => 'prevoyance',
-            'arrêt de travail'    => 'prevoyance',
-            'arret de travail'    => 'prevoyance',
-            'protection sociale'  => 'prevoyance',
+            'prévoyance' => 'prevoyance',
+            'prevoyance' => 'prevoyance',
+            'décès' => 'prevoyance',
+            'deces' => 'prevoyance',
+            'invalidité' => 'prevoyance',
+            'invalidite' => 'prevoyance',
+            'incapacité' => 'prevoyance',
+            'incapacite' => 'prevoyance',
+            'arrêt de travail' => 'prevoyance',
+            'arret de travail' => 'prevoyance',
+            'protection sociale' => 'prevoyance',
             'garanties collectives' => 'prevoyance',
-            'obsèques'            => 'prevoyance',
-            'obseques'            => 'prevoyance',
-            'retraite'            => 'retraite',
-            'per'                 => 'retraite',
+            'obsèques' => 'prevoyance',
+            'obseques' => 'prevoyance',
+            'retraite' => 'retraite',
+            'per' => 'retraite',
             'plan epargne retraite' => 'retraite',
             'plan épargne retraite' => 'retraite',
-            'pension'             => 'retraite',
-            'épargne'             => 'epargne',
-            'epargne'             => 'epargne',
-            'placement'           => 'epargne',
-            'assurance vie'       => 'epargne',
-            'assurance-vie'       => 'epargne',
-            'capitalisation'      => 'epargne',
+            'pension' => 'retraite',
+            'épargne' => 'epargne',
+            'epargne' => 'epargne',
+            'placement' => 'epargne',
+            'assurance vie' => 'epargne',
+            'assurance-vie' => 'epargne',
+            'capitalisation' => 'epargne',
             'assurance vie capitalisation' => 'epargne',
-            'pea'                 => 'epargne',
-            'patrimoine'          => 'epargne',
-            'investissement'      => 'epargne',
-            'santé'               => 'sante',
-            'sante'               => 'sante',
-            'mutuelle'            => 'sante',
+            'pea' => 'epargne',
+            'patrimoine' => 'epargne',
+            'investissement' => 'epargne',
+            'santé' => 'sante',
+            'sante' => 'sante',
+            'mutuelle' => 'sante',
             'complémentaire santé' => 'sante',
             'complementaire sante' => 'sante',
-            'complémentaire'      => 'sante',
-            'complementaire'      => 'sante',
-            'emprunteur'          => 'emprunteur',
-            'ade'                 => 'emprunteur',
+            'complémentaire' => 'sante',
+            'complementaire' => 'sante',
+            'emprunteur' => 'emprunteur',
+            'ade' => 'emprunteur',
             'assurance emprunteur' => 'emprunteur',
-            'assurance de prêt'   => 'emprunteur',
-            'assurance de pret'   => 'emprunteur',
-            'prêt'                => 'emprunteur',
-            'pret'                => 'emprunteur',
-            'crédit'              => 'emprunteur',
-            'credit'              => 'emprunteur',
-            'emprunt'             => 'emprunteur',
+            'assurance de prêt' => 'emprunteur',
+            'assurance de pret' => 'emprunteur',
+            'prêt' => 'emprunteur',
+            'pret' => 'emprunteur',
+            'crédit' => 'emprunteur',
+            'credit' => 'emprunteur',
+            'emprunt' => 'emprunteur',
         ];
     }
 
@@ -76,7 +76,7 @@ return new class extends Migration
                 ? json_decode($client->besoins, true)
                 : (array) $client->besoins;
 
-            if (empty($raw) || !is_array($raw)) {
+            if (empty($raw) || ! is_array($raw)) {
                 continue;
             }
 
@@ -84,16 +84,17 @@ return new class extends Migration
             foreach ($raw as $besoin) {
                 $key = mb_strtolower(trim((string) $besoin));
                 $slug = $mapping[$key] ?? null;
-                if ($slug && !in_array($slug, $slugs)) {
+                if ($slug && ! in_array($slug, $slugs)) {
                     $slugs[] = $slug;
                 }
             }
 
-            $newJson  = json_encode($slugs);
+            $newJson = json_encode($slugs);
             $origJson = json_encode(array_values($raw));
 
             if ($newJson === $origJson) {
                 $skipped++;
+
                 continue;
             }
 
@@ -104,7 +105,7 @@ return new class extends Migration
             $updated++;
         }
 
-        Log::info("[MIGRATION] Besoins normalisés en slugs", [
+        Log::info('[MIGRATION] Besoins normalisés en slugs', [
             'updated' => $updated,
             'skipped' => $skipped,
         ]);

@@ -71,7 +71,7 @@ class AudioRecord extends Model
         $corrections[$originalSpeaker] = [
             'role' => $correctedRole, // 'broker' ou 'client'
             'corrected_at' => now()->toISOString(),
-            'corrected_by' => $userId
+            'corrected_by' => $userId,
         ];
 
         $this->speaker_corrections = $corrections;
@@ -89,7 +89,7 @@ class AudioRecord extends Model
     public function getSpeakersWithRoles(): array
     {
         $diarizationData = $this->diarization_data;
-        if (!$diarizationData) {
+        if (! $diarizationData) {
             return [];
         }
 
@@ -97,7 +97,7 @@ class AudioRecord extends Model
         $speakers = [];
 
         // Broker original
-        if (!empty($diarizationData['courtier_speaker'])) {
+        if (! empty($diarizationData['courtier_speaker'])) {
             $brokerId = $diarizationData['courtier_speaker'];
             $speakers[$brokerId] = [
                 'id' => $brokerId,
@@ -105,7 +105,7 @@ class AudioRecord extends Model
                 'current_role' => $corrections[$brokerId]['role'] ?? 'broker',
                 'duration' => $diarizationData['stats']['courtier_duration'] ?? 0,
                 'segments_count' => $diarizationData['stats']['courtier_num_segments'] ?? 0,
-                'corrected' => isset($corrections[$brokerId])
+                'corrected' => isset($corrections[$brokerId]),
             ];
         }
 
@@ -115,7 +115,7 @@ class AudioRecord extends Model
                 'id' => $clientId,
                 'original_role' => 'client',
                 'current_role' => $corrections[$clientId]['role'] ?? 'client',
-                'corrected' => isset($corrections[$clientId])
+                'corrected' => isset($corrections[$clientId]),
             ];
         }
 

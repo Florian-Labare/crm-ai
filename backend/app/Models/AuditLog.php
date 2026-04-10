@@ -32,7 +32,6 @@ class AuditLog extends Model
      * Scopes globaux désactivés pour permettre l'accès admin cross-team
      * L'audit doit être accessible globalement pour les admins
      */
-
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
@@ -82,6 +81,7 @@ class AuditLog extends Model
         if ($id) {
             $query->where('resource_id', $id);
         }
+
         return $query;
     }
 }

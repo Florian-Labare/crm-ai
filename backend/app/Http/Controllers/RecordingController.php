@@ -16,8 +16,7 @@ class RecordingController extends Controller
 {
     public function __construct(
         private readonly RecordingService $recordingService
-    ) {
-    }
+    ) {}
 
     /**
      * Stocke un chunk audio

@@ -13,7 +13,7 @@ class TranscriptionService
         if (config('mistral.features.use_for_transcription', false)) {
             $transcription = $this->transcribeVoxtral($audioPath);
 
-            if (!empty($transcription)) {
+            if (! empty($transcription)) {
                 return $transcription;
             }
 
@@ -39,16 +39,16 @@ class TranscriptionService
     private function transcribeVoxtral(string $audioPath): ?string
     {
         try {
-            if (!file_exists($audioPath)) {
+            if (! file_exists($audioPath)) {
                 throw new \Exception("Fichier audio introuvable : {$audioPath}");
             }
 
-            if (!is_file($audioPath)) {
+            if (! is_file($audioPath)) {
                 throw new \Exception("Chemin audio invalide (pas un fichier) : {$audioPath}");
             }
 
             $apiKey = config('mistral.api_key');
-            if (!$apiKey) {
+            if (! $apiKey) {
                 throw new \Exception('Clé API Mistral manquante.');
             }
 
@@ -58,19 +58,19 @@ class TranscriptionService
             ]);
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
+                'Authorization' => 'Bearer '.$apiKey,
             ])
                 ->withOptions([
                     'connect_timeout' => 30,
-                    'timeout'         => 180,
+                    'timeout' => 180,
                 ])
                 ->asMultipart()
                 ->attach('file', file_get_contents($audioPath), basename($audioPath))
                 ->attach('model', config('mistral.stt.model', 'voxtral-mini-latest'))
                 ->post(config('mistral.stt.endpoint'));
 
-            if (!$response->successful()) {
-                Log::error('[Voxtral] Erreur ' . $response->status() . ' : ' . $response->body());
+            if (! $response->successful()) {
+                Log::error('[Voxtral] Erreur '.$response->status().' : '.$response->body());
 
                 return null;
             }
@@ -82,7 +82,7 @@ class TranscriptionService
             return $transcription;
 
         } catch (\Throwable $e) {
-            Log::error('[Voxtral] ' . $e->getMessage());
+            Log::error('[Voxtral] '.$e->getMessage());
 
             return null;
         }
@@ -109,7 +109,8 @@ class TranscriptionService
             // base = bon compromis vitesse/qualité pour un POC
             $model = config('mistral.whisper_model', 'base');
             if (in_array($model, ['none', 'disabled', ''], true)) {
-                Log::info('[Whisper Local] Desactive par configuration (WHISPER_MODEL=' . $model . ')');
+                Log::info('[Whisper Local] Desactive par configuration (WHISPER_MODEL='.$model.')');
+
                 return null;
             }
 

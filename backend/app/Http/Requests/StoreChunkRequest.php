@@ -20,7 +20,7 @@ class StoreChunkRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        if (!$user || !$user->currentTeam()) {
+        if (! $user || ! $user->currentTeam()) {
             return false;
         }
 
@@ -41,7 +41,7 @@ class StoreChunkRequest extends FormRequest
         $clientId = $this->input('client_id');
         if ($clientId) {
             $client = Client::find($clientId);
-            if (!$client || $client->team_id !== $teamId) {
+            if (! $client || $client->team_id !== $teamId) {
                 return false;
             }
         }
@@ -69,7 +69,7 @@ class StoreChunkRequest extends FormRequest
                         $exists = Client::where('id', $value)
                             ->where('team_id', $teamId)
                             ->exists();
-                        if (!$exists) {
+                        if (! $exists) {
                             $fail('Le client spécifié n\'existe pas ou n\'appartient pas à votre équipe.');
                         }
                     }

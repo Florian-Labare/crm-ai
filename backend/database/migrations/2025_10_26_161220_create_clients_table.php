@@ -26,7 +26,7 @@ return new class extends Migration
             $table->boolean('consentement_audio')->default(false);
             $table->timestamps();
         });
-        
+
     }
 
     /**

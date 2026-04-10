@@ -24,8 +24,8 @@ class ClientExtractor
     /**
      * Extrait les données client depuis la transcription.
      *
-     * @param string $transcription Transcription vocale
-     * @param array $currentData Données client existantes (optionnel)
+     * @param  string  $transcription  Transcription vocale
+     * @param  array  $currentData  Données client existantes (optionnel)
      * @return array Données extraites
      */
     public function extract(string $transcription, array $currentData = []): array
@@ -40,7 +40,7 @@ class ClientExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientExtractor] Impossible de parser la réponse LLM');
 
                 return [];

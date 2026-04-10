@@ -28,7 +28,7 @@ class ClientActifsFinanciersExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientActifsFinanciersExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -83,9 +83,9 @@ PROMPT;
             $nature = strtolower($actif['nature'] ?? 'autre');
             $etablissement = trim($actif['etablissement'] ?? '');
 
-            if (!empty($etablissement)) {
-                $key = $nature . '_' . strtolower($etablissement);
-                if (!isset($withEtablissement[$key])) {
+            if (! empty($etablissement)) {
+                $key = $nature.'_'.strtolower($etablissement);
+                if (! isset($withEtablissement[$key])) {
                     $withEtablissement[$key] = $actif;
                 } else {
                     $withEtablissement[$key] = $this->mergeActifData($withEtablissement[$key], $actif);
@@ -103,20 +103,20 @@ PROMPT;
 
             // Chercher un actif de même nature avec établissement
             foreach ($withEtablissement as $key => &$existing) {
-                if (str_starts_with($key, $nature . '_')) {
+                if (str_starts_with($key, $nature.'_')) {
                     $withEtablissement[$key] = $this->mergeActifData($existing, $actif);
                     $merged = true;
                     Log::info('[ClientActifsFinanciersExtractor] 🔀 Fusion sans établissement → avec établissement', [
                         'nature' => $nature,
-                        'etablissement_existant' => $existing['etablissement'] ?? 'inconnu'
+                        'etablissement_existant' => $existing['etablissement'] ?? 'inconnu',
                     ]);
                     break;
                 }
             }
 
             // Si pas trouvé, ajouter comme entrée séparée par nature
-            if (!$merged) {
-                if (!isset($withEtablissement[$nature])) {
+            if (! $merged) {
+                if (! isset($withEtablissement[$nature])) {
                     $withEtablissement[$nature] = $actif;
                 } else {
                     $withEtablissement[$nature] = $this->mergeActifData($withEtablissement[$nature], $actif);
@@ -130,7 +130,7 @@ PROMPT;
             Log::info('[ClientActifsFinanciersExtractor] 🔀 Déduplication effectuée', [
                 'avant' => count($actifs),
                 'après' => count($result),
-                'actifs_fusionnés' => array_map(fn($a) => ($a['nature'] ?? 'inconnu') . ' (' . ($a['etablissement'] ?? 'sans établissement') . ')', $result)
+                'actifs_fusionnés' => array_map(fn ($a) => ($a['nature'] ?? 'inconnu').' ('.($a['etablissement'] ?? 'sans établissement').')', $result),
             ]);
         }
 
@@ -145,8 +145,8 @@ PROMPT;
         $fields = ['nature', 'etablissement', 'detenteur', 'date_ouverture_souscription', 'valeur_actuelle'];
 
         foreach ($fields as $field) {
-            if (isset($new[$field]) && !empty($new[$field])) {
-                if (!isset($existing[$field]) || empty($existing[$field])) {
+            if (isset($new[$field]) && ! empty($new[$field])) {
+                if (! isset($existing[$field]) || empty($existing[$field])) {
                     $existing[$field] = $new[$field];
                 }
             }
@@ -168,10 +168,11 @@ PROMPT;
 
             $etablissementKey = $this->normalizeKey($actif['etablissement'] ?? '');
             $valeurKey = isset($actif['valeur_actuelle']) ? number_format((float) $actif['valeur_actuelle'], 2, '.', '') : '';
-            $key = $natureKey . '|' . $etablissementKey . '|' . $valeurKey;
+            $key = $natureKey.'|'.$etablissementKey.'|'.$valeurKey;
 
             if (isset($seen[$key])) {
                 $filtered[$seen[$key]] = $this->mergeActifData($filtered[$seen[$key]], $actif);
+
                 continue;
             }
 

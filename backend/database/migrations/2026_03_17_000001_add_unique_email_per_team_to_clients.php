@@ -21,12 +21,13 @@ return new class extends Migration
             HAVING cnt > 1
         ");
 
-        if (!empty($duplicates)) {
-            $log = "=== Doublons clients détectés le " . now() . " ===\n";
+        if (! empty($duplicates)) {
+            $log = '=== Doublons clients détectés le '.now()." ===\n";
             foreach ($duplicates as $d) {
                 $log .= "team_id={$d->team_id} email={$d->email} → ids: {$d->ids}\n";
             }
             file_put_contents(storage_path('logs/duplicate_clients.log'), $log, FILE_APPEND);
+
             // Contrainte NON ajoutée — résoudre manuellement puis relancer
             return;
         }

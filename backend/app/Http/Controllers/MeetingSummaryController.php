@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AudioRecord;
 use App\Models\Client;
 use App\Services\MeetingSummaryService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MeetingSummaryController extends Controller
 {
@@ -35,7 +35,7 @@ class MeetingSummaryController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
-        if (!$audioRecord) {
+        if (! $audioRecord) {
             return response()->json(['message' => 'Aucun enregistrement audio trouvé.'], 404);
         }
 

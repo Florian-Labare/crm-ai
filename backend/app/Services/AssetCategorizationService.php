@@ -96,7 +96,7 @@ class AssetCategorizationService
     /**
      * Valide et corrige la catégorisation des actifs extraits.
      *
-     * @param array $extractedData Données extraites par GPT
+     * @param  array  $extractedData  Données extraites par GPT
      * @return array Données corrigées avec les actifs bien catégorisés
      */
     public function validateAndCorrect(array $extractedData): array
@@ -134,23 +134,23 @@ class AssetCategorizationService
         $biensImmobiliers = $this->filterResidencePrincipale($biensImmobiliers, $corrections);
 
         // Log des corrections effectuées
-        $hasCorrections = !empty($corrections['moved_to_financiers'])
-            || !empty($corrections['moved_to_immo'])
-            || !empty($corrections['moved_to_autres'])
-            || !empty($corrections['excluded_residence_principale']);
+        $hasCorrections = ! empty($corrections['moved_to_financiers'])
+            || ! empty($corrections['moved_to_immo'])
+            || ! empty($corrections['moved_to_autres'])
+            || ! empty($corrections['excluded_residence_principale']);
 
         if ($hasCorrections) {
             Log::warning('[AssetCategorizationService] Corrections de catégorisation effectuées', $corrections);
         }
 
         // Reconstruire les données corrigées
-        if (!empty($actifsFinanciers)) {
+        if (! empty($actifsFinanciers)) {
             $extractedData['client_actifs_financiers'] = $actifsFinanciers;
         }
-        if (!empty($biensImmobiliers)) {
+        if (! empty($biensImmobiliers)) {
             $extractedData['client_biens_immobiliers'] = $biensImmobiliers;
         }
-        if (!empty($autresActifs)) {
+        if (! empty($autresActifs)) {
             $extractedData['client_autres_epargnes'] = $autresActifs;
         }
 
@@ -285,6 +285,7 @@ class AssetCategorizationService
             $keywordNormalized = $this->removeAccents($keyword);
             if (str_contains($textNormalized, $keywordNormalized)) {
                 Log::debug("[AssetCategorizationService] Détecté comme IMMO: '$text' (keyword: $keyword)");
+
                 return 'IMMO';
             }
         }
@@ -309,6 +310,7 @@ class AssetCategorizationService
             $keywordNormalized = $this->removeAccents($keyword);
             if (str_contains($textNormalized, $keywordNormalized)) {
                 Log::debug("[AssetCategorizationService] Détecté comme AUTRES: '$text' (keyword: $keyword)");
+
                 return 'AUTRES';
             }
         }
@@ -325,6 +327,7 @@ class AssetCategorizationService
         $text = mb_strtolower($text, 'UTF-8');
         $accents = ['é', 'è', 'ê', 'ë', 'à', 'â', 'ä', 'ù', 'û', 'ü', 'ô', 'ö', 'î', 'ï', 'ç'];
         $noAccents = ['e', 'e', 'e', 'e', 'a', 'a', 'a', 'u', 'u', 'u', 'o', 'o', 'i', 'i', 'c'];
+
         return str_replace($accents, $noAccents, $text);
     }
 
@@ -354,10 +357,10 @@ class AssetCategorizationService
                 // Si c'est juste "maison" ou "appartement" sans mention de "locatif", c'est probablement la RP
                 (
                     (str_contains($designationNormalized, 'maison') || str_contains($designationNormalized, 'appartement'))
-                    && !str_contains($designationNormalized, 'locatif')
-                    && !str_contains($designationNormalized, 'location')
-                    && !str_contains($designationNormalized, 'secondaire')
-                    && !str_contains($designationNormalized, 'investissement')
+                    && ! str_contains($designationNormalized, 'locatif')
+                    && ! str_contains($designationNormalized, 'location')
+                    && ! str_contains($designationNormalized, 'secondaire')
+                    && ! str_contains($designationNormalized, 'investissement')
                 )
             );
 
@@ -367,6 +370,7 @@ class AssetCategorizationService
                     'designation' => $bien['designation'] ?? 'inconnu',
                     'valeur' => $bien['valeur_actuelle_estimee'] ?? 'non renseignée',
                 ]);
+
                 // On n'ajoute PAS ce bien à la liste filtrée
                 continue;
             }
@@ -386,11 +390,21 @@ class AssetCategorizationService
         $parts = [];
 
         // Champs communs
-        if (isset($item['nature'])) $parts[] = $item['nature'];
-        if (isset($item['designation'])) $parts[] = $item['designation'];
-        if (isset($item['etablissement'])) $parts[] = $item['etablissement'];
-        if (isset($item['detenteur'])) $parts[] = $item['detenteur'];
-        if (isset($item['forme_propriete'])) $parts[] = $item['forme_propriete'];
+        if (isset($item['nature'])) {
+            $parts[] = $item['nature'];
+        }
+        if (isset($item['designation'])) {
+            $parts[] = $item['designation'];
+        }
+        if (isset($item['etablissement'])) {
+            $parts[] = $item['etablissement'];
+        }
+        if (isset($item['detenteur'])) {
+            $parts[] = $item['detenteur'];
+        }
+        if (isset($item['forme_propriete'])) {
+            $parts[] = $item['forme_propriete'];
+        }
 
         return implode(' ', $parts);
     }

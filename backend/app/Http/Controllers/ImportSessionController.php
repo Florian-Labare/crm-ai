@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Jobs\AnalyzeImportFileJob;
 use App\Jobs\ProcessImportSessionJob;
 use App\Models\ImportAuditLog;
-use App\Models\ImportMapping;
 use App\Models\ImportRow;
 use App\Models\ImportSession;
 use App\Services\Import\ImportMappingService;
@@ -13,7 +12,6 @@ use App\Services\Import\ImportOrchestrationService;
 use App\Services\Import\RgpdComplianceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ImportSessionController extends Controller
 {
@@ -21,8 +19,7 @@ class ImportSessionController extends Controller
         private ImportOrchestrationService $orchestrator,
         private ImportMappingService $mappingService,
         private RgpdComplianceService $rgpdService
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -47,7 +44,7 @@ class ImportSessionController extends Controller
         ]);
 
         $file = $request->file('file');
-        $filename = time() . '_' . $file->getClientOriginalName();
+        $filename = time().'_'.$file->getClientOriginalName();
         $path = $file->storeAs('imports', $filename);
 
         $session = ImportSession::create([
@@ -126,7 +123,7 @@ class ImportSessionController extends Controller
             $session->update(['import_mapping_id' => $validated['import_mapping_id']]);
         } else {
             $errors = $this->mappingService->validateMapping($validated['column_mappings']);
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Mapping invalide',
@@ -134,7 +131,7 @@ class ImportSessionController extends Controller
                 ], 422);
             }
 
-            if (!empty($validated['save_as_template']) && !empty($validated['template_name'])) {
+            if (! empty($validated['save_as_template']) && ! empty($validated['template_name'])) {
                 $mapping = $this->mappingService->createMapping(
                     $request->user()->currentTeam()?->id,
                     $validated['template_name'],
@@ -145,7 +142,7 @@ class ImportSessionController extends Controller
             } else {
                 $mapping = $this->mappingService->createMapping(
                     $request->user()->currentTeam()?->id,
-                    'Import ' . now()->format('Y-m-d H:i'),
+                    'Import '.now()->format('Y-m-d H:i'),
                     $this->detectSourceType($session->original_filename),
                     $validated['column_mappings']
                 );
@@ -198,14 +195,14 @@ class ImportSessionController extends Controller
 
     public function start(Request $request, ImportSession $session): JsonResponse
     {
-        if (!$session->import_mapping_id) {
+        if (! $session->import_mapping_id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Veuillez configurer le mapping avant de lancer l\'import',
             ], 422);
         }
 
-        if (!in_array($session->status, [ImportSession::STATUS_MAPPING, ImportSession::STATUS_PENDING])) {
+        if (! in_array($session->status, [ImportSession::STATUS_MAPPING, ImportSession::STATUS_PENDING])) {
             return response()->json([
                 'success' => false,
                 'message' => 'L\'import ne peut pas être lancé dans cet état',
@@ -213,7 +210,7 @@ class ImportSessionController extends Controller
         }
 
         // RGPD: Require consent before starting import
-        if (!$session->hasRgpdConsent()) {
+        if (! $session->hasRgpdConsent()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Consentement RGPD requis avant de lancer l\'import',

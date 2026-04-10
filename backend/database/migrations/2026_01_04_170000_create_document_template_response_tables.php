@@ -21,12 +21,12 @@ return new class extends Migration
 
     public function up(): void
     {
-        $mapper = new DirectTemplateMapper();
-        $fieldService = new DocumentTemplateFieldService();
+        $mapper = new DirectTemplateMapper;
+        $fieldService = new DocumentTemplateFieldService;
 
         foreach ($this->templates as $filePath) {
-            $absolutePath = storage_path('app/' . $filePath);
-            if (!file_exists($absolutePath)) {
+            $absolutePath = storage_path('app/'.$filePath);
+            if (! file_exists($absolutePath)) {
                 continue;
             }
 
@@ -34,7 +34,7 @@ return new class extends Migration
             $columnMap = $fieldService->mapVariablesToColumns($variables);
             $tableName = $fieldService->tableNameForPath($filePath);
 
-            if (!Schema::hasTable($tableName)) {
+            if (! Schema::hasTable($tableName)) {
                 Schema::create($tableName, function (Blueprint $table) use ($columnMap) {
                     $table->id();
                     $table->foreignId('client_id')->constrained()->onDelete('cascade');
@@ -44,17 +44,18 @@ return new class extends Migration
                     $table->timestamps();
                     $table->unique('client_id');
                 });
+
                 continue;
             }
 
             $missing = [];
             foreach (array_values($columnMap) as $column) {
-                if (!Schema::hasColumn($tableName, $column)) {
+                if (! Schema::hasColumn($tableName, $column)) {
                     $missing[] = $column;
                 }
             }
 
-            if (!empty($missing)) {
+            if (! empty($missing)) {
                 Schema::table($tableName, function (Blueprint $table) use ($missing) {
                     foreach ($missing as $column) {
                         $table->text($column)->nullable();
@@ -66,7 +67,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        $fieldService = new DocumentTemplateFieldService();
+        $fieldService = new DocumentTemplateFieldService;
 
         foreach ($this->templates as $filePath) {
             $tableName = $fieldService->tableNameForPath($filePath);

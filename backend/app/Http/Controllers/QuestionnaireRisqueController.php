@@ -12,8 +12,7 @@ class QuestionnaireRisqueController extends Controller
 {
     public function __construct(
         private ScoringService $scoringService
-    ) {
-    }
+    ) {}
 
     public function live(Request $request): JsonResponse
     {
@@ -76,7 +75,7 @@ class QuestionnaireRisqueController extends Controller
             ->where('client_id', $clientId)
             ->first();
 
-        if (!$questionnaire) {
+        if (! $questionnaire) {
             return response()->json([
                 'questionnaire' => null,
                 'score' => 0,
@@ -110,16 +109,19 @@ class QuestionnaireRisqueController extends Controller
 
                 if ($trimmed === '') {
                     $incoming[$key] = null;
+
                     continue;
                 }
 
                 $lower = strtolower($trimmed);
                 if (in_array($lower, ['true', 'false', '0', '1'], true)) {
                     $incoming[$key] = $lower === 'true' || $lower === '1';
+
                     continue;
                 }
 
                 $incoming[$key] = $trimmed;
+
                 continue;
             }
 

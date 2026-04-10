@@ -29,7 +29,7 @@ class EpargneExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[EpargneExtractor] Impossible de parser la réponse LLM');
 
                 return [];

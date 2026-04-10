@@ -47,12 +47,12 @@ return new class extends Migration
     public function up(): void
     {
         // Corrige le nom historique erroné
-        if (Schema::hasTable('questionnaire_risque_quizs') && !Schema::hasTable('questionnaire_risque_quizzes')) {
+        if (Schema::hasTable('questionnaire_risque_quizs') && ! Schema::hasTable('questionnaire_risque_quizzes')) {
             Schema::rename('questionnaire_risque_quizs', 'questionnaire_risque_quizzes');
         }
 
         // Crée la table complète si elle n'existe pas
-        if (!Schema::hasTable('questionnaire_risque_quizzes')) {
+        if (! Schema::hasTable('questionnaire_risque_quizzes')) {
             Schema::create('questionnaire_risque_quizzes', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('questionnaire_risque_id')
@@ -72,7 +72,7 @@ return new class extends Migration
 
         // Sinon, s'assure que tous les champs requis existent
         Schema::table('questionnaire_risque_quizzes', function (Blueprint $table) {
-            if (!Schema::hasColumn('questionnaire_risque_quizzes', 'questionnaire_risque_id')) {
+            if (! Schema::hasColumn('questionnaire_risque_quizzes', 'questionnaire_risque_id')) {
                 $table->foreignId('questionnaire_risque_id')
                     ->nullable()
                     ->after('id')
@@ -81,16 +81,16 @@ return new class extends Migration
             }
 
             foreach ($this->quizColumns as $column) {
-                if (!Schema::hasColumn('questionnaire_risque_quizzes', $column)) {
+                if (! Schema::hasColumn('questionnaire_risque_quizzes', $column)) {
                     $table->string($column)->nullable()->after('questionnaire_risque_id');
                 }
             }
 
-            if (!Schema::hasColumn('questionnaire_risque_quizzes', 'score_quiz')) {
+            if (! Schema::hasColumn('questionnaire_risque_quizzes', 'score_quiz')) {
                 $table->integer('score_quiz')->default(0)->after(end($this->quizColumns));
             }
 
-            if (!Schema::hasColumn('questionnaire_risque_quizzes', 'created_at')) {
+            if (! Schema::hasColumn('questionnaire_risque_quizzes', 'created_at')) {
                 $table->timestamps();
             }
         });

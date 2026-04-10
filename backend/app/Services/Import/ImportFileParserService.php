@@ -2,12 +2,12 @@
 
 namespace App\Services\Import;
 
-use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportFileParserService
 {
     private const SUPPORTED_EXTENSIONS = ['xlsx', 'xls', 'csv', 'json', 'xml', 'sql'];
+
     private const CHUNK_SIZE = 100;
 
     public function getSupportedFormats(): array
@@ -25,6 +25,7 @@ class ImportFileParserService
     public function isSupported(string $filePath): bool
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
         return in_array($extension, self::SUPPORTED_EXTENSIONS);
     }
 
@@ -32,8 +33,8 @@ class ImportFileParserService
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        if (!in_array($extension, self::SUPPORTED_EXTENSIONS)) {
-            throw new \InvalidArgumentException("Format de fichier non supporté: {$extension}. Formats acceptés: " . implode(', ', self::SUPPORTED_EXTENSIONS));
+        if (! in_array($extension, self::SUPPORTED_EXTENSIONS)) {
+            throw new \InvalidArgumentException("Format de fichier non supporté: {$extension}. Formats acceptés: ".implode(', ', self::SUPPORTED_EXTENSIONS));
         }
 
         return match ($extension) {
@@ -97,13 +98,13 @@ class ImportFileParserService
         }
 
         $headers = array_shift($data);
-        $headers = array_map(fn($h) => trim((string) $h), $headers);
+        $headers = array_map(fn ($h) => trim((string) $h), $headers);
 
         $rows = [];
         foreach ($data as $row) {
             $rowData = [];
             foreach ($headers as $colKey => $header) {
-                if (!empty($header)) {
+                if (! empty($header)) {
                     $rowData[$header] = $row[$colKey] ?? null;
                 }
             }
@@ -121,7 +122,7 @@ class ImportFileParserService
         $worksheet = $spreadsheet->getActiveSheet();
         $firstRow = $worksheet->rangeToArray('A1:AZ1', null, true, true, true)[1] ?? [];
 
-        return array_values(array_filter(array_map(fn($h) => trim((string) $h), $firstRow)));
+        return array_values(array_filter(array_map(fn ($h) => trim((string) $h), $firstRow)));
     }
 
     private function getExcelRowCount(string $filePath): int
@@ -138,7 +139,7 @@ class ImportFileParserService
         $worksheet = $spreadsheet->getActiveSheet();
 
         $headersRow = $worksheet->rangeToArray('A1:AZ1', null, true, true, true)[1] ?? [];
-        $headers = array_map(fn($h) => trim((string) $h), $headersRow);
+        $headers = array_map(fn ($h) => trim((string) $h), $headersRow);
 
         $startRow = $offset + 2;
         $endRow = $startRow + $limit - 1;
@@ -150,8 +151,8 @@ class ImportFileParserService
         for ($rowNum = $startRow; $rowNum <= $endRow; $rowNum++) {
             $rowData = [];
             foreach ($headers as $colKey => $header) {
-                if (!empty($header)) {
-                    $rowData[$header] = $worksheet->getCell($colKey . $rowNum)->getValue();
+                if (! empty($header)) {
+                    $rowData[$header] = $worksheet->getCell($colKey.$rowNum)->getValue();
                 }
             }
             if ($this->isRowNotEmpty($rowData)) {
@@ -177,16 +178,17 @@ class ImportFileParserService
         $headers = fgetcsv($handle, 0, $delimiter);
         if ($headers === false) {
             fclose($handle);
+
             return ['headers' => [], 'rows' => []];
         }
 
-        $headers = array_map(fn($h) => $this->convertEncoding(trim($h), $encoding), $headers);
+        $headers = array_map(fn ($h) => $this->convertEncoding(trim($h), $encoding), $headers);
 
         $rows = [];
         while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $rowData = [];
             foreach ($headers as $index => $header) {
-                if (!empty($header)) {
+                if (! empty($header)) {
                     $value = $row[$index] ?? null;
                     $rowData[$header] = $value !== null ? $this->convertEncoding($value, $encoding) : null;
                 }
@@ -219,7 +221,7 @@ class ImportFileParserService
         }
 
         return array_values(array_filter(array_map(
-            fn($h) => $this->convertEncoding(trim($h), $encoding),
+            fn ($h) => $this->convertEncoding(trim($h), $encoding),
             $headers
         )));
     }
@@ -256,10 +258,11 @@ class ImportFileParserService
         $headers = fgetcsv($handle, 0, $delimiter);
         if ($headers === false) {
             fclose($handle);
+
             return [];
         }
 
-        $headers = array_map(fn($h) => $this->convertEncoding(trim($h), $encoding), $headers);
+        $headers = array_map(fn ($h) => $this->convertEncoding(trim($h), $encoding), $headers);
 
         $currentRow = 0;
         while ($currentRow < $offset && fgetcsv($handle, 0, $delimiter) !== false) {
@@ -271,7 +274,7 @@ class ImportFileParserService
         while ($count < $limit && ($row = fgetcsv($handle, 0, $delimiter)) !== false) {
             $rowData = [];
             foreach ($headers as $index => $header) {
-                if (!empty($header)) {
+                if (! empty($header)) {
                     $value = $row[$index] ?? null;
                     $rowData[$header] = $value !== null ? $this->convertEncoding($value, $encoding) : null;
                 }
@@ -298,7 +301,7 @@ class ImportFileParserService
 
         $data = json_decode($content, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \RuntimeException("JSON invalide: " . json_last_error_msg());
+            throw new \RuntimeException('JSON invalide: '.json_last_error_msg());
         }
 
         // Handle different JSON structures
@@ -317,22 +320,22 @@ class ImportFileParserService
     private function normalizeJsonData(mixed $data): array
     {
         // If it's already an array of objects
-        if (is_array($data) && !empty($data)) {
+        if (is_array($data) && ! empty($data)) {
             // Check if it's an array of arrays/objects
             if (isset($data[0]) && (is_array($data[0]) || is_object($data[0]))) {
-                return array_map(fn($item) => (array) $item, $data);
+                return array_map(fn ($item) => (array) $item, $data);
             }
 
             // Check for common wrapper keys
             $wrapperKeys = ['data', 'results', 'items', 'records', 'clients', 'rows', 'entries'];
             foreach ($wrapperKeys as $key) {
                 if (isset($data[$key]) && is_array($data[$key])) {
-                    return array_map(fn($item) => (array) $item, $data[$key]);
+                    return array_map(fn ($item) => (array) $item, $data[$key]);
                 }
             }
 
             // Single object - wrap in array
-            if (!isset($data[0])) {
+            if (! isset($data[0])) {
                 return [(array) $data];
             }
         }
@@ -379,6 +382,7 @@ class ImportFileParserService
         }
 
         $rows = $this->normalizeJsonData($data);
+
         return count($rows);
     }
 
@@ -395,6 +399,7 @@ class ImportFileParserService
         }
 
         $rows = $this->normalizeJsonData($data);
+
         return array_slice($rows, $offset, $limit);
     }
 
@@ -413,7 +418,7 @@ class ImportFileParserService
         if ($xml === false) {
             $errors = libxml_get_errors();
             libxml_clear_errors();
-            throw new \RuntimeException("XML invalide: " . ($errors[0]->message ?? 'Erreur inconnue'));
+            throw new \RuntimeException('XML invalide: '.($errors[0]->message ?? 'Erreur inconnue'));
         }
 
         $rows = $this->normalizeXmlData($xml);
@@ -434,7 +439,7 @@ class ImportFileParserService
         // Try to find record elements (first level children)
         foreach ($xml->children() as $child) {
             $row = $this->xmlElementToArray($child);
-            if (!empty($row)) {
+            if (! empty($row)) {
                 $rows[] = $row;
             }
         }
@@ -534,6 +539,7 @@ class ImportFileParserService
         }
 
         $rows = $this->normalizeXmlData($xml);
+
         return array_slice($rows, $offset, $limit);
     }
 
@@ -592,7 +598,7 @@ class ImportFileParserService
         foreach ($parts as $part) {
             $col = trim($part);
             $col = trim($col, '`"\' ');
-            if (!empty($col)) {
+            if (! empty($col)) {
                 $columns[] = $col;
             }
         }
@@ -633,7 +639,7 @@ class ImportFileParserService
                     $parenDepth--;
                     if ($parenDepth === 0) {
                         $values = $this->parseSqlValues($current);
-                        if (!empty($values)) {
+                        if (! empty($values)) {
                             $sets[] = $values;
                         }
                         $current = '';
@@ -726,6 +732,7 @@ class ImportFileParserService
         }
 
         $rows = $this->extractInsertStatements($content);
+
         return count($rows);
     }
 
@@ -737,6 +744,7 @@ class ImportFileParserService
         }
 
         $rows = $this->extractInsertStatements($content);
+
         return array_slice($rows, $offset, $limit);
     }
 

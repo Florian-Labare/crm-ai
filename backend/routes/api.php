@@ -1,30 +1,30 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ClientController;
+use App\Http\Controllers\AssureurController;
 use App\Http\Controllers\AudioController;
 use App\Http\Controllers\AudioRecordController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ClientComplianceController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ComplianceDashboardController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\DerController;
-use App\Http\Controllers\ExportController;
-use App\Http\Controllers\QuestionnaireRisqueController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\RecordingController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HealthController;
-use App\Http\Controllers\SpeakerCorrectionController;
-use App\Http\Controllers\PendingChangesController;
 use App\Http\Controllers\ImportMappingController;
 use App\Http\Controllers\ImportSessionController;
-use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\MeetingSummaryController;
-use App\Http\Controllers\ClientComplianceController;
-use App\Http\Controllers\ComplianceDashboardController;
-use App\Http\Controllers\AssureurController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\SocialAuthController;
-use App\Http\Controllers\SuperAdminController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PendingChangesController;
 use App\Http\Controllers\ProductionController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QuestionnaireRisqueController;
+use App\Http\Controllers\RecordingController;
+use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\SpeakerCorrectionController;
+use App\Http\Controllers\SuperAdminController;
+use Illuminate\Support\Facades\Route;
 
 // OAuth Social Login (sans auth)
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
@@ -278,13 +278,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // 💰 PRODUCTION - Commissions par MIA
     // ============================================
     Route::prefix('productions')->group(function () {
-        Route::get('/stats',              [ProductionController::class, 'stats']);
-        Route::post('/import/preview',    [ProductionController::class, 'importPreview']);
-        Route::post('/import/execute',    [ProductionController::class, 'importExecute']);
-        Route::get('/',                   [ProductionController::class, 'index']);
-        Route::post('/',                  [ProductionController::class, 'store']);
-        Route::put('/{production}',       [ProductionController::class, 'update']);
-        Route::delete('/{production}',    [ProductionController::class, 'destroy']);
+        Route::get('/stats', [ProductionController::class, 'stats']);
+        Route::post('/import/preview', [ProductionController::class, 'importPreview']);
+        Route::post('/import/execute', [ProductionController::class, 'importExecute']);
+        Route::get('/', [ProductionController::class, 'index']);
+        Route::post('/', [ProductionController::class, 'store']);
+        Route::put('/{production}', [ProductionController::class, 'update']);
+        Route::delete('/{production}', [ProductionController::class, 'destroy']);
     });
 
     // Super Admin
@@ -298,10 +298,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Debug routes (dev only)
     if (app()->environment('local', 'testing')) {
-        Route::get('/ping', fn() => response()->json(['pong' => true]));
+        Route::get('/ping', fn () => response()->json(['pong' => true]));
         Route::get('/test-error', function () {
             try {
                 $client = \App\Models\Client::first();
+
                 return response()->json(['client' => $client]);
             } catch (\Exception $e) {
                 return response()->json(['error' => $e->getMessage()], 500);

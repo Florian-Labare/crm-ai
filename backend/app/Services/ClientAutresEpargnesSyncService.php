@@ -11,7 +11,6 @@ class ClientAutresEpargnesSyncService
     /**
      * Synchronise les autres épargnes d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $epargnesData  Tableau d'autres épargnes extraites par GPT
      */
     public function syncAutresEpargnes(Client $client, array $epargnesData): void
@@ -34,6 +33,7 @@ class ClientAutresEpargnesSyncService
 
             if (empty($epargneData)) {
                 Log::info("💎 [AUTRES ÉPARGNES] Épargne #{$index} sans données - ignorée");
+
                 continue;
             }
 
@@ -61,7 +61,7 @@ class ClientAutresEpargnesSyncService
             Log::info("💎 [AUTRES ÉPARGNES] Conservation de {$keptEpargnes} épargne(s) existante(s) non mentionnée(s) dans cette extraction");
         }
 
-        Log::info('✅ [AUTRES ÉPARGNES] Synchronisation terminée - ' . count($processedIds) . ' épargne(s) traitée(s), total: ' . $client->autresEpargnes()->count());
+        Log::info('✅ [AUTRES ÉPARGNES] Synchronisation terminée - '.count($processedIds).' épargne(s) traitée(s), total: '.$client->autresEpargnes()->count());
     }
 
     /**
@@ -102,6 +102,7 @@ class ClientAutresEpargnesSyncService
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }

@@ -35,6 +35,7 @@ class CheckPyannoteHealth extends Command
 
         if ($json) {
             $this->line(json_encode($status, JSON_PRETTY_PRINT));
+
             return $status['available'] ? Command::SUCCESS : Command::FAILURE;
         }
 
@@ -76,7 +77,7 @@ class CheckPyannoteHealth extends Command
         }
 
         // Afficher les warnings
-        if (!empty($status['warnings'])) {
+        if (! empty($status['warnings'])) {
             $this->newLine();
             $this->warn('Warnings:');
             foreach ($status['warnings'] as $warning) {
@@ -85,7 +86,7 @@ class CheckPyannoteHealth extends Command
         }
 
         // Afficher les erreurs
-        if (!empty($status['errors'])) {
+        if (! empty($status['errors'])) {
             $this->newLine();
             $this->error('Errors:');
             foreach ($status['errors'] as $error) {
@@ -94,7 +95,7 @@ class CheckPyannoteHealth extends Command
         }
 
         $this->newLine();
-        $this->line('Checked at: ' . ($status['checked_at'] ?? 'unknown'));
+        $this->line('Checked at: '.($status['checked_at'] ?? 'unknown'));
 
         return $status['available'] ? Command::SUCCESS : Command::FAILURE;
     }

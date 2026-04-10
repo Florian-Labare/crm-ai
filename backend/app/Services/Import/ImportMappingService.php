@@ -3,7 +3,6 @@
 namespace App\Services\Import;
 
 use App\Models\ImportMapping;
-use Illuminate\Support\Str;
 
 class ImportMappingService
 {
@@ -920,6 +919,7 @@ class ImportMappingService
 
             if ($normalizedSource === $normalizedAlias) {
                 $positionBonus = max(0, 0.04 - ($index * 0.003));
+
                 return self::SCORING_WEIGHTS['alias_exact'] + $positionBonus;
             }
 
@@ -959,7 +959,7 @@ class ImportMappingService
             $scores[] = self::SCORING_WEIGHTS['semantic'] * $semanticScore;
         }
 
-        return !empty($scores) ? max($scores) : 0;
+        return ! empty($scores) ? max($scores) : 0;
     }
 
     private function calculateWordOverlap(string $str1, string $str2): float
@@ -989,7 +989,7 @@ class ImportMappingService
             }
         }
 
-        if (!$targetGroup) {
+        if (! $targetGroup) {
             return 0;
         }
 
@@ -1038,7 +1038,7 @@ class ImportMappingService
         $mappedData = [];
 
         foreach ($columnMappings as $sourceColumn => $targetField) {
-            if (empty($targetField) || !isset($rawData[$sourceColumn])) {
+            if (empty($targetField) || ! isset($rawData[$sourceColumn])) {
                 continue;
             }
 
@@ -1047,7 +1047,7 @@ class ImportMappingService
 
             switch ($tableInfo['table']) {
                 case 'conjoint':
-                    if (!isset($mappedData['conjoint'])) {
+                    if (! isset($mappedData['conjoint'])) {
                         $mappedData['conjoint'] = [];
                     }
                     $dbField = $tableInfo['db_field'] ?? str_replace('conjoint_', '', $targetField);
@@ -1057,10 +1057,10 @@ class ImportMappingService
                 case 'enfant':
                     $index = $tableInfo['index'] ?? 1;
                     $enfantIndex = $index - 1;
-                    if (!isset($mappedData['enfants'])) {
+                    if (! isset($mappedData['enfants'])) {
                         $mappedData['enfants'] = [];
                     }
-                    if (!isset($mappedData['enfants'][$enfantIndex])) {
+                    if (! isset($mappedData['enfants'][$enfantIndex])) {
                         $mappedData['enfants'][$enfantIndex] = [];
                     }
                     $dbField = $tableInfo['db_field'] ?? preg_replace('/^enfant\d+_/', '', $targetField);
@@ -1078,7 +1078,7 @@ class ImportMappingService
                 case 'client_autre_epargne':
                 case 'client_charge':
                     $tableName = $tableInfo['table'];
-                    if (!isset($mappedData["_{$tableName}"])) {
+                    if (! isset($mappedData["_{$tableName}"])) {
                         $mappedData["_{$tableName}"] = [];
                     }
                     $dbField = $tableInfo['db_field'] ?? $targetField;
@@ -1102,6 +1102,7 @@ class ImportMappingService
         foreach (self::DATABASE_SCHEMA as $table => $fields) {
             if (isset($fields[$targetField])) {
                 $fieldConfig = $fields[$targetField];
+
                 return [
                     'table' => $table,
                     'db_field' => $fieldConfig['db_field'] ?? $targetField,
@@ -1128,6 +1129,7 @@ class ImportMappingService
     public function updateMapping(ImportMapping $mapping, array $data): ImportMapping
     {
         $mapping->update($data);
+
         return $mapping->fresh();
     }
 
@@ -1249,7 +1251,7 @@ class ImportMappingService
         // Chercher un label
         $label = $labels[$fieldKey] ?? $labels[$cleanKey] ?? $labels[$shortKey] ?? null;
 
-        if (!$label) {
+        if (! $label) {
             // Générer automatiquement: snake_case -> Title Case
             $label = ucfirst(str_replace('_', ' ', $shortKey));
         }
@@ -1273,7 +1275,7 @@ class ImportMappingService
         $allFields = $this->getAllTargetFields();
 
         foreach ($columnMappings as $source => $target) {
-            if (!empty($target) && !in_array($target, $allFields)) {
+            if (! empty($target) && ! in_array($target, $allFields)) {
                 $errors[] = "Champ cible invalide: {$target} pour la colonne {$source}";
             }
         }

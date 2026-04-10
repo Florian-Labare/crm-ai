@@ -20,8 +20,8 @@ class PrevoyanceExtractor
     /**
      * Extrait les données de prévoyance depuis la transcription.
      *
-     * @param string $transcription Transcription vocale
-     * @param array $currentData Données existantes (optionnel)
+     * @param  string  $transcription  Transcription vocale
+     * @param  array  $currentData  Données existantes (optionnel)
      * @return array Données extraites
      */
     public function extract(string $transcription, array $currentData = []): array
@@ -36,7 +36,7 @@ class PrevoyanceExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[PrevoyanceExtractor] Impossible de parser la réponse LLM');
 
                 return [];

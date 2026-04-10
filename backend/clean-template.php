@@ -6,14 +6,14 @@
  * Usage: php clean-template.php "Template Mandat.docx"
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 $templateName = $argv[1] ?? 'Template Mandat.docx';
-$templatePath = __DIR__ . '/storage/app/templates/' . $templateName;
-$backupPath = __DIR__ . '/storage/app/templates/' . str_replace('.docx', '_backup_' . time() . '.docx', $templateName);
+$templatePath = __DIR__.'/storage/app/templates/'.$templateName;
+$backupPath = __DIR__.'/storage/app/templates/'.str_replace('.docx', '_backup_'.time().'.docx', $templateName);
 
-if (!file_exists($templatePath)) {
-    die("❌ Template non trouvé : {$templatePath}\n");
+if (! file_exists($templatePath)) {
+    exit("❌ Template non trouvé : {$templatePath}\n");
 }
 
 echo "🔧 Nettoyage du template : {$templateName}\n";
@@ -21,11 +21,11 @@ echo "📁 Chemin : {$templatePath}\n";
 
 // Créer une sauvegarde
 copy($templatePath, $backupPath);
-echo "💾 Sauvegarde créée : " . basename($backupPath) . "\n\n";
+echo '💾 Sauvegarde créée : '.basename($backupPath)."\n\n";
 
-$zip = new ZipArchive();
-if ($zip->open($templatePath) !== TRUE) {
-    die("❌ Impossible d'ouvrir le template\n");
+$zip = new ZipArchive;
+if ($zip->open($templatePath) !== true) {
+    exit("❌ Impossible d'ouvrir le template\n");
 }
 
 // Lire le document.xml
@@ -37,18 +37,19 @@ echo "📊 Analyse du XML...\n";
 preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/s', $xml, $textMatches);
 $fullTextBefore = implode('', $textMatches[1]);
 preg_match_all('/\{\{([^}]+)\}\}/', $fullTextBefore, $varsBefore);
-echo "   Variables détectées AVANT : " . count(array_unique($varsBefore[1])) . "\n";
+echo '   Variables détectées AVANT : '.count(array_unique($varsBefore[1]))."\n";
 
 // Nettoyer le XML : supprimer toutes les balises entre { et }
 $xml = preg_replace_callback(
     '/(\{)\{([^}]*)\}\}/',
-    function($match) {
+    function ($match) {
         // Extraire le contenu entre {{ et }}
         $content = $match[2];
         // Supprimer toutes les balises XML
         $cleanContent = preg_replace('/<[^>]+>/', '', $content);
+
         // Reconstruire la variable proprement
-        return '{{' . trim($cleanContent) . '}}';
+        return '{{'.trim($cleanContent).'}}';
     },
     $xml
 );
@@ -64,7 +65,7 @@ $fullText = html_entity_decode($fullText, ENT_XML1);
 // Trouver toutes les variables dans le texte complet
 preg_match_all('/\{\{([^}]+)\}\}/', $fullText, $varsFound);
 
-echo "   Variables trouvées dans le texte : " . count(array_unique($varsFound[1])) . "\n";
+echo '   Variables trouvées dans le texte : '.count(array_unique($varsFound[1]))."\n";
 
 // Pour chaque variable trouvée, la nettoyer dans le XML
 foreach (array_unique($varsFound[0]) as $variable) {
@@ -72,10 +73,10 @@ foreach (array_unique($varsFound[0]) as $variable) {
 
     // Pattern très permissif pour trouver la variable fragmentée
     // Cherche {{ suivi de n'importe quoi contenant $varName suivi de }}
-    $pattern = '/\{\{[^}]*?' . preg_quote($varName, '/') . '[^}]*?\}\}/s';
+    $pattern = '/\{\{[^}]*?'.preg_quote($varName, '/').'[^}]*?\}\}/s';
 
     // Remplacer par une version propre
-    $cleanVar = '{{' . $varName . '}}';
+    $cleanVar = '{{'.$varName.'}}';
 
     $xml = preg_replace($pattern, $cleanVar, $xml);
 }
@@ -86,7 +87,7 @@ $zip->addFromString('word/document.xml', $xml);
 $zip->close();
 
 // Vérifier le résultat
-$zipCheck = new ZipArchive();
+$zipCheck = new ZipArchive;
 $zipCheck->open($templatePath);
 $xmlCheck = $zipCheck->getFromName('word/document.xml');
 preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/s', $xmlCheck, $textMatchesAfter);
@@ -95,11 +96,11 @@ preg_match_all('/\{\{([^}]+)\}\}/', $fullTextAfter, $varsAfter);
 $zipCheck->close();
 
 echo "\n✅ Nettoyage terminé !\n";
-echo "   Variables détectables APRÈS : " . count(array_unique($varsAfter[1])) . "\n";
+echo '   Variables détectables APRÈS : '.count(array_unique($varsAfter[1]))."\n";
 echo "\n📋 Variables nettoyées :\n";
 foreach (array_unique($varsAfter[1]) as $var) {
     echo "   - {$var}\n";
 }
 
 echo "\n💡 Le template a été nettoyé. Retestez la génération !\n";
-echo "   Sauvegarde disponible : " . basename($backupPath) . "\n";
+echo '   Sauvegarde disponible : '.basename($backupPath)."\n";

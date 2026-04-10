@@ -9,10 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ImportSession extends Model
 {
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_ANALYZING = 'analyzing';
+
     public const STATUS_MAPPING = 'mapping';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
 
     protected $fillable = [

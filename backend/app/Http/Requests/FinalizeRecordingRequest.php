@@ -19,20 +19,20 @@ class FinalizeRecordingRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        if (!$user || !$user->currentTeam()) {
+        if (! $user || ! $user->currentTeam()) {
             return false;
         }
 
         // Récupérer le session_id depuis la route
         $sessionId = $this->route('sessionId');
-        if (!$sessionId) {
+        if (! $sessionId) {
             return false;
         }
 
         // Vérifier que la session existe et appartient à l'utilisateur/team
         $session = RecordingSession::where('session_id', $sessionId)->first();
 
-        if (!$session) {
+        if (! $session) {
             return false;
         }
 

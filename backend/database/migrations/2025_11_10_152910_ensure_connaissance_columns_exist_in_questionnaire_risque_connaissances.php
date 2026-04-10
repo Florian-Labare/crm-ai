@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('questionnaire_risque_connaissances', function (Blueprint $table) {
-            if (!Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
+            if (! Schema::hasColumn('questionnaire_risque_connaissances', 'questionnaire_risque_id')) {
                 $table->unsignedBigInteger('questionnaire_risque_id')->nullable()->after('id');
                 $table->foreign('questionnaire_risque_id', 'qr_connaissance_qr_id_fk_fix')
                     ->references('id')
@@ -34,12 +34,12 @@ return new class extends Migration
             ];
 
             foreach ($booleanColumns as $column) {
-                if (!Schema::hasColumn('questionnaire_risque_connaissances', $column)) {
+                if (! Schema::hasColumn('questionnaire_risque_connaissances', $column)) {
                     $table->boolean($column)->default(false)->after('questionnaire_risque_id');
                 }
 
                 $montantColumn = str_replace('connaissance_', 'montant_', $column);
-                if (!Schema::hasColumn('questionnaire_risque_connaissances', $montantColumn)) {
+                if (! Schema::hasColumn('questionnaire_risque_connaissances', $montantColumn)) {
                     $table->decimal($montantColumn, 15, 2)->nullable()->after($column);
                 }
             }

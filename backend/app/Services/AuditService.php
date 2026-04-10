@@ -58,7 +58,7 @@ class AuditService
                 'action' => $action,
                 'description' => $description,
                 'user_id' => $user?->id,
-                'resource' => $resource ? get_class($resource) . '#' . $resource->id : null
+                'resource' => $resource ? get_class($resource).'#'.$resource->id : null,
             ]);
         }
 
@@ -105,7 +105,7 @@ class AuditService
     {
         return $this->log(
             'upload',
-            "Audio uploadé pour traitement",
+            'Audio uploadé pour traitement',
             $audioRecord,
             'audio',
             'info'
@@ -116,7 +116,7 @@ class AuditService
     {
         return $this->log(
             'delete',
-            "Enregistrement audio supprimé",
+            'Enregistrement audio supprimé',
             $audioRecord,
             'audio',
             'warning',
@@ -128,7 +128,7 @@ class AuditService
     {
         return $this->log(
             'update',
-            "Correction des speakers appliquée",
+            'Correction des speakers appliquée',
             $audioRecord,
             'audio',
             'info',
@@ -152,7 +152,7 @@ class AuditService
                 'nom' => $client->nom,
                 'prenom' => $client->prenom,
                 'email' => $client->email,
-                'audio_records_count' => $client->audioRecords()->count()
+                'audio_records_count' => $client->audioRecords()->count(),
             ]
         );
     }

@@ -13,16 +13,16 @@ return new class extends Migration
             ->where('besoin', 'any_besoin')
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             DB::table('compliance_requirements')->insert([
-                'besoin'         => 'any_besoin',
-                'document_type'  => 'der_signe',
+                'besoin' => 'any_besoin',
+                'document_type' => 'der_signe',
                 'document_label' => 'DER signé',
-                'category'       => 'regulatory',
-                'is_mandatory'   => true,
-                'priority'       => 3,
-                'created_at'     => now(),
-                'updated_at'     => now(),
+                'category' => 'regulatory',
+                'is_mandatory' => true,
+                'priority' => 3,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

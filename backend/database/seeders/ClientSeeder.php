@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Client;
-use App\Models\User;
 use App\Models\Team;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class ClientSeeder extends Seeder
@@ -20,6 +20,7 @@ class ClientSeeder extends Seeder
 
         if ($miaUsers->isEmpty()) {
             $this->command->warn('⚠️  Aucun utilisateur MIA trouvé. Exécutez d\'abord MIAUsersSeeder.');
+
             return;
         }
 
@@ -99,8 +100,9 @@ class ClientSeeder extends Seeder
             // Récupérer la team de l'utilisateur
             $team = Team::where('user_id', $miaUser->id)->where('personal_team', true)->first();
 
-            if (!$team) {
+            if (! $team) {
                 $this->command->warn("⚠️  Pas de team trouvée pour {$miaUser->name}, skip client {$clientData['nom']}");
+
                 continue;
             }
 
@@ -126,6 +128,6 @@ class ClientSeeder extends Seeder
             $this->command->info("✓ Client créé: {$client->prenom} {$client->nom} (assigné à {$miaUser->name})");
         }
 
-        $this->command->info("\n✅ " . count($clientsData) . " clients de démonstration créés!");
+        $this->command->info("\n✅ ".count($clientsData).' clients de démonstration créés!');
     }
 }

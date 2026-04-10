@@ -1,21 +1,64 @@
 #!/bin/sh
-# Bloque les pushs directs sur main.
-# Toute modification de main doit passer par une Pull Request.
+set -e
 
 PROTECTED_BRANCH="main"
 CURRENT_BRANCH=$(git symbolic-ref HEAD 2>/dev/null | sed 's|refs/heads/||')
 
+# 1. Bloquer les pushs directs sur main
 if [ "$CURRENT_BRANCH" = "$PROTECTED_BRANCH" ]; then
   echo ""
-  echo "  [BLOQUE] Push direct sur '$PROTECTED_BRANCH' interdit."
-  echo ""
-  echo "  La branche '$PROTECTED_BRANCH' est protegee."
-  echo "  Cree une branche de feature et ouvre une Pull Request :"
-  echo ""
-  echo "    git checkout -b feature/ma-feature"
-  echo "    git push origin feature/ma-feature"
+  echo "  [BLOQUE] Push direct sur 'main' interdit."
+  echo "  Créez une branche et ouvrez une Pull Request."
   echo ""
   exit 1
 fi
 
+echo ""
+echo "  Running pre-push checks..."
+echo ""
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+FAIL=0
+
+# 2. Pint (backend) — rapide, sans DB
+if [ -f "$REPO_ROOT/backend/vendor/bin/pint" ]; then
+  printf "  → PHP code style (Pint)... "
+  if (cd "$REPO_ROOT/backend" && ./vendor/bin/pint --test --quiet 2>&1); then
+    echo "OK"
+  else
+    echo "FAIL"
+    echo "    Fix: cd backend && ./vendor/bin/pint"
+    FAIL=1
+  fi
+fi
+
+# 3. ESLint (frontend) — principal source d'erreurs
+if [ -d "$REPO_ROOT/frontend/node_modules" ]; then
+  printf "  → Frontend lint (ESLint)...   "
+  if (cd "$REPO_ROOT/frontend" && npm run lint --silent 2>&1); then
+    echo "OK"
+  else
+    echo "FAIL"
+    FAIL=1
+  fi
+
+  printf "  → TypeScript check (tsc)...   "
+  if (cd "$REPO_ROOT/frontend" && npx tsc --noEmit 2>&1); then
+    echo "OK"
+  else
+    echo "FAIL"
+    FAIL=1
+  fi
+fi
+
+echo ""
+if [ $FAIL -ne 0 ]; then
+  echo "  Pre-push checks FAILED. Corrigez les erreurs avant de pusher."
+  echo "  Lancez 'make fix' pour auto-corriger Pint et ESLint."
+  echo ""
+  exit 1
+fi
+
+echo "  All checks passed!"
+echo ""
 exit 0

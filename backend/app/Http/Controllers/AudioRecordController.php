@@ -6,7 +6,6 @@ use App\Models\AudioRecord;
 use App\Models\DiarizationLog;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -15,8 +14,8 @@ class AudioRecordController extends Controller
 {
     public function __construct(
         private readonly AuditService $auditService
-    ) {
-    }
+    ) {}
+
     /**
      * Lister tous les enregistrements audio de la team (avec client associé)
      */
@@ -57,7 +56,7 @@ class AudioRecordController extends Controller
         Log::info('[AUDIO RECORD] Suppression demandée', [
             'audio_record_id' => $record->id,
             'user_id' => auth()->id(),
-            'team_id' => $record->team_id
+            'team_id' => $record->team_id,
         ]);
 
         // Supprimer les logs de diarisation associés
@@ -75,7 +74,7 @@ class AudioRecordController extends Controller
 
         Log::info('[AUDIO RECORD] Suppression effectuée', [
             'audio_record_id' => $id,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
         ]);
 
         // Audit de la suppression

@@ -34,7 +34,7 @@ class CleanBesoinEncoding extends Command
         foreach ($clients as $client) {
             $besoins = $client->besoins;
 
-            if (!is_array($besoins)) {
+            if (! is_array($besoins)) {
                 continue;
             }
 
@@ -58,11 +58,11 @@ class CleanBesoinEncoding extends Command
                 }
             }
 
-            if ($needsUpdate && !empty($cleaned)) {
+            if ($needsUpdate && ! empty($cleaned)) {
                 $client->besoins = $cleaned;
                 $client->save();
                 $fixed++;
-                $this->line("✅ Client #{$client->id} ({$client->prenom} {$client->nom}): " . implode(', ', $cleaned));
+                $this->line("✅ Client #{$client->id} ({$client->prenom} {$client->nom}): ".implode(', ', $cleaned));
             }
         }
 

@@ -11,7 +11,7 @@ class SuperAdminController extends Controller
 {
     private function authorizeSuperAdmin(): void
     {
-        if (!auth()->user()->isSuperAdmin()) {
+        if (! auth()->user()->isSuperAdmin()) {
             abort(403, 'Super admin access required.');
         }
     }
@@ -43,7 +43,7 @@ class SuperAdminController extends Controller
             abort(400, 'Cannot remove your own super admin status.');
         }
 
-        $user->update(['is_super_admin' => !$user->is_super_admin]);
+        $user->update(['is_super_admin' => ! $user->is_super_admin]);
 
         return response()->json([
             'message' => 'Super admin status updated.',

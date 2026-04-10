@@ -28,7 +28,9 @@ class PurgeOldAudioRecords extends Command
     protected $description = 'Supprime les fichiers audio de plus de X jours (conformité RGPD)';
 
     private int $deletedFiles = 0;
+
     private int $deletedRecords = 0;
+
     private int $freedBytes = 0;
 
     public function handle(): int
@@ -58,6 +60,7 @@ class PurgeOldAudioRecords extends Command
 
         if ($records->isEmpty()) {
             $this->info('✅ Aucun enregistrement à purger.');
+
             return Command::SUCCESS;
         }
 
@@ -85,14 +88,14 @@ class PurgeOldAudioRecords extends Command
             ]
         );
 
-        if (!$dryRun && $this->deletedFiles > 0) {
+        if (! $dryRun && $this->deletedFiles > 0) {
             Log::info('[RGPD PURGE] Purge des anciens enregistrements effectuée', [
                 'retention_days' => $days,
                 'deleted_files' => $this->deletedFiles,
                 'deleted_records' => $this->deletedRecords,
                 'freed_bytes' => $this->freedBytes,
                 'team_id' => $teamId,
-                'include_transcriptions' => $includeTranscriptions
+                'include_transcriptions' => $includeTranscriptions,
             ]);
         }
 
@@ -108,7 +111,7 @@ class PurgeOldAudioRecords extends Command
         if ($record->path && Storage::exists($record->path)) {
             $size = Storage::size($record->path);
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 Storage::delete($record->path);
 
                 // Mettre à jour le record pour indiquer que le fichier a été supprimé
@@ -122,13 +125,13 @@ class PurgeOldAudioRecords extends Command
         }
 
         // 2. Supprimer les logs de diarisation si demandé
-        if ($includeTranscriptions && !$dryRun) {
+        if ($includeTranscriptions && ! $dryRun) {
             DiarizationLog::where('audio_record_id', $record->id)->delete();
         }
 
         // 3. Supprimer complètement l'enregistrement si demandé
         if ($includeTranscriptions) {
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $record->delete();
             }
             $this->deletedRecords++;
@@ -146,6 +149,7 @@ class PurgeOldAudioRecords extends Command
             $bytes /= 1024;
             $i++;
         }
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 }

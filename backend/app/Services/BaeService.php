@@ -15,13 +15,13 @@ class BaeService
     public function syncBaeData(Client $client, array $data): void
     {
         Log::info("📊 [BAE] Synchronisation des données BAE pour le client #{$client->id}");
-        Log::info("🔍 [BAE DEBUG] Clés reçues dans \$data", ['keys' => array_keys($data)]);
+        Log::info('🔍 [BAE DEBUG] Clés reçues dans $data', ['keys' => array_keys($data)]);
 
         // 0️⃣ Synchroniser Santé Souhait
         if (isset($data['sante_souhait']) && is_array($data['sante_souhait'])) {
             $this->syncSanteSouhait($client, $data['sante_souhait']);
         } else {
-            Log::warning("⚠️ [BAE DEBUG] sante_souhait non trouvé ou pas un tableau", [
+            Log::warning('⚠️ [BAE DEBUG] sante_souhait non trouvé ou pas un tableau', [
                 'isset' => isset($data['sante_souhait']),
                 'is_array' => isset($data['sante_souhait']) ? is_array($data['sante_souhait']) : 'N/A',
             ]);
@@ -60,41 +60,41 @@ class BaeService
             return;
         }
 
-        Log::info("📋 [BAE] Vérification des entrées BAE pour les besoins", ['besoins' => $besoins]);
+        Log::info('📋 [BAE] Vérification des entrées BAE pour les besoins', ['besoins' => $besoins]);
 
         foreach ($besoins as $besoin) {
             $besoinNormalized = $this->normalizeBesoinName($besoin);
 
             switch ($besoinNormalized) {
                 case 'prevoyance':
-                    if (!$client->baePrevoyance()->exists()) {
+                    if (! $client->baePrevoyance()->exists()) {
                         $client->baePrevoyance()->create([]);
-                        Log::info("✅ [BAE PRÉVOYANCE] Entrée vide créée pour le besoin détecté");
+                        Log::info('✅ [BAE PRÉVOYANCE] Entrée vide créée pour le besoin détecté');
                     }
                     break;
 
                 case 'retraite':
-                    if (!$client->baeRetraite()->exists()) {
+                    if (! $client->baeRetraite()->exists()) {
                         $client->baeRetraite()->create([]);
-                        Log::info("✅ [BAE RETRAITE] Entrée vide créée pour le besoin détecté");
+                        Log::info('✅ [BAE RETRAITE] Entrée vide créée pour le besoin détecté');
                     }
                     break;
 
                 case 'epargne':
                 case 'placement':
                 case 'investissement':
-                    if (!$client->baeEpargne()->exists()) {
+                    if (! $client->baeEpargne()->exists()) {
                         $client->baeEpargne()->create([]);
-                        Log::info("✅ [BAE ÉPARGNE] Entrée vide créée pour le besoin détecté");
+                        Log::info('✅ [BAE ÉPARGNE] Entrée vide créée pour le besoin détecté');
                     }
                     break;
 
                 case 'sante':
                 case 'mutuelle':
                 case 'complementaire':
-                    if (!$client->santeSouhait()->exists()) {
+                    if (! $client->santeSouhait()->exists()) {
                         $client->santeSouhait()->create([]);
-                        Log::info("✅ [SANTÉ SOUHAIT] Entrée vide créée pour le besoin détecté");
+                        Log::info('✅ [SANTÉ SOUHAIT] Entrée vide créée pour le besoin détecté');
                     }
                     break;
             }
@@ -352,6 +352,7 @@ class BaeService
 
         } catch (\Throwable $e) {
             Log::warning('Impossible de normaliser la date', ['date' => $date, 'error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -388,7 +389,7 @@ class BaeService
         // Remplacer les mois français par les mois anglais
         foreach ($monthMap as $fr => $en) {
             // Utiliser une regex Unicode pour matcher les mois avec accents
-            $pattern = '/\b' . preg_quote($fr, '/') . '\b/ui';
+            $pattern = '/\b'.preg_quote($fr, '/').'\b/ui';
             $normalized = preg_replace($pattern, $en, $normalized);
         }
 
@@ -400,7 +401,7 @@ class BaeService
 
             // Vérifier si c'est un mois anglais valide, sinon essayer de parser directement
             $englishMonths = ['january', 'february', 'march', 'april', 'may', 'june',
-                             'july', 'august', 'september', 'october', 'november', 'december'];
+                'july', 'august', 'september', 'october', 'november', 'december'];
 
             if (in_array(strtolower($month), $englishMonths)) {
                 return "{$day} {$month} {$year}";

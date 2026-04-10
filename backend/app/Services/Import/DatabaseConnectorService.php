@@ -2,9 +2,8 @@
 
 namespace App\Services\Import;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Connection;
-use PDO;
+use Illuminate\Support\Facades\DB;
 use PDOException;
 
 class DatabaseConnectorService
@@ -21,13 +20,13 @@ class DatabaseConnectorService
     {
         $driver = $config['driver'] ?? 'mysql';
 
-        if (!in_array($driver, self::SUPPORTED_DRIVERS)) {
+        if (! in_array($driver, self::SUPPORTED_DRIVERS)) {
             throw new \InvalidArgumentException(
-                "Driver non supporté: {$driver}. Drivers supportés: " . implode(', ', self::SUPPORTED_DRIVERS)
+                "Driver non supporté: {$driver}. Drivers supportés: ".implode(', ', self::SUPPORTED_DRIVERS)
             );
         }
 
-        $connectionName = 'import_temp_' . uniqid();
+        $connectionName = 'import_temp_'.uniqid();
 
         config(["database.connections.{$connectionName}" => $this->buildConnectionConfig($config)]);
 
@@ -50,12 +49,12 @@ class DatabaseConnectorService
         } catch (PDOException $e) {
             return [
                 'success' => false,
-                'message' => 'Échec de la connexion: ' . $this->sanitizeErrorMessage($e->getMessage()),
+                'message' => 'Échec de la connexion: '.$this->sanitizeErrorMessage($e->getMessage()),
             ];
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Erreur: ' . $e->getMessage(),
+                'message' => 'Erreur: '.$e->getMessage(),
             ];
         }
     }
@@ -84,7 +83,7 @@ class DatabaseConnectorService
      */
     public function getTableColumns(array $config, string $tableName): array
     {
-        if (!$this->isValidTableName($tableName)) {
+        if (! $this->isValidTableName($tableName)) {
             throw new \InvalidArgumentException('Nom de table invalide');
         }
 
@@ -108,13 +107,13 @@ class DatabaseConnectorService
         $connection = $this->createConnection($config);
 
         // Validate table name to prevent SQL injection
-        if (!$this->isValidTableName($tableName)) {
+        if (! $this->isValidTableName($tableName)) {
             throw new \InvalidArgumentException('Nom de table invalide');
         }
 
         $rows = $connection->table($tableName)->limit($limit)->get();
 
-        return $rows->map(fn($row) => (array) $row)->toArray();
+        return $rows->map(fn ($row) => (array) $row)->toArray();
     }
 
     /**
@@ -124,7 +123,7 @@ class DatabaseConnectorService
     {
         $connection = $this->createConnection($config);
 
-        if (!$this->isValidTableName($tableName)) {
+        if (! $this->isValidTableName($tableName)) {
             throw new \InvalidArgumentException('Nom de table invalide');
         }
 
@@ -138,7 +137,7 @@ class DatabaseConnectorService
     {
         $connection = $this->createConnection($config);
 
-        if (!$this->isValidTableName($tableName)) {
+        if (! $this->isValidTableName($tableName)) {
             throw new \InvalidArgumentException('Nom de table invalide');
         }
 
@@ -148,7 +147,7 @@ class DatabaseConnectorService
             ->get();
 
         return [
-            'rows' => $rows->map(fn($row) => (array) $row)->toArray(),
+            'rows' => $rows->map(fn ($row) => (array) $row)->toArray(),
             'offset' => $offset,
             'limit' => $limit,
             'has_more' => $rows->count() === $limit,
@@ -170,7 +169,7 @@ class DatabaseConnectorService
         $stripped = preg_replace('/\/\*.*?\*\//s', '', $stripped);
         $normalizedQuery = strtoupper(trim($stripped));
 
-        if (!str_starts_with($normalizedQuery, 'SELECT')) {
+        if (! str_starts_with($normalizedQuery, 'SELECT')) {
             throw new \InvalidArgumentException('Seules les requêtes SELECT sont autorisées');
         }
 
@@ -182,7 +181,7 @@ class DatabaseConnectorService
         ];
         foreach ($blockedPatterns as $keyword) {
             if (str_contains($normalizedQuery, $keyword)) {
-                throw new \InvalidArgumentException("Opération non autorisée détectée dans la requête");
+                throw new \InvalidArgumentException('Opération non autorisée détectée dans la requête');
             }
         }
 
@@ -194,15 +193,15 @@ class DatabaseConnectorService
         $connection = $this->createConnection($config);
 
         // Add LIMIT if not present
-        if (!str_contains($normalizedQuery, 'LIMIT')) {
-            $query = rtrim($stripped, '; ') . " LIMIT {$limit}";
+        if (! str_contains($normalizedQuery, 'LIMIT')) {
+            $query = rtrim($stripped, '; ')." LIMIT {$limit}";
         } else {
             $query = $stripped;
         }
 
         $results = $connection->select($query);
 
-        return array_map(fn($row) => (array) $row, $results);
+        return array_map(fn ($row) => (array) $row, $results);
     }
 
     /**
@@ -259,9 +258,9 @@ class DatabaseConnectorService
     private function listMysqlTables(Connection $connection): array
     {
         $results = $connection->select('SHOW TABLES');
-        $key = 'Tables_in_' . $connection->getDatabaseName();
+        $key = 'Tables_in_'.$connection->getDatabaseName();
 
-        return array_map(fn($row) => (array) $row[$key] ?? array_values((array) $row)[0], $results);
+        return array_map(fn ($row) => (array) $row[$key] ?? array_values((array) $row)[0], $results);
     }
 
     /**
@@ -273,7 +272,7 @@ class DatabaseConnectorService
             "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
         );
 
-        return array_map(fn($row) => $row->tablename, $results);
+        return array_map(fn ($row) => $row->tablename, $results);
     }
 
     /**
@@ -285,7 +284,7 @@ class DatabaseConnectorService
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         );
 
-        return array_map(fn($row) => $row->name, $results);
+        return array_map(fn ($row) => $row->name, $results);
     }
 
     /**
@@ -297,7 +296,7 @@ class DatabaseConnectorService
             "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
         );
 
-        return array_map(fn($row) => $row->TABLE_NAME, $results);
+        return array_map(fn ($row) => $row->TABLE_NAME, $results);
     }
 
     /**
@@ -307,7 +306,7 @@ class DatabaseConnectorService
     {
         $results = $connection->select("DESCRIBE `{$tableName}`");
 
-        return array_map(fn($row) => [
+        return array_map(fn ($row) => [
             'name' => $row->Field,
             'type' => $row->Type,
             'nullable' => $row->Null === 'YES',
@@ -321,14 +320,14 @@ class DatabaseConnectorService
      */
     private function getPostgresColumns(Connection $connection, string $tableName): array
     {
-        $results = $connection->select("
+        $results = $connection->select('
             SELECT column_name, data_type, is_nullable, column_default
             FROM information_schema.columns
             WHERE table_name = ?
             ORDER BY ordinal_position
-        ", [$tableName]);
+        ', [$tableName]);
 
-        return array_map(fn($row) => [
+        return array_map(fn ($row) => [
             'name' => $row->column_name,
             'type' => $row->data_type,
             'nullable' => $row->is_nullable === 'YES',
@@ -343,7 +342,7 @@ class DatabaseConnectorService
     {
         $results = $connection->select("PRAGMA table_info(`{$tableName}`)");
 
-        return array_map(fn($row) => [
+        return array_map(fn ($row) => [
             'name' => $row->name,
             'type' => $row->type,
             'nullable' => $row->notnull === 0,
@@ -357,14 +356,14 @@ class DatabaseConnectorService
      */
     private function getSqlServerColumns(Connection $connection, string $tableName): array
     {
-        $results = $connection->select("
+        $results = $connection->select('
             SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME = ?
             ORDER BY ORDINAL_POSITION
-        ", [$tableName]);
+        ', [$tableName]);
 
-        return array_map(fn($row) => [
+        return array_map(fn ($row) => [
             'name' => $row->COLUMN_NAME,
             'type' => $row->DATA_TYPE,
             'nullable' => $row->IS_NULLABLE === 'YES',

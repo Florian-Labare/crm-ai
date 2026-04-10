@@ -4,7 +4,6 @@
  * Script robuste pour corriger les variables dans les templates DOCX
  * Gère les variables fragmentées entre plusieurs balises XML
  */
-
 $templates = [
     'rc-assurance-vie.docx' => [
         '/\{\{Datedudocumentgénérer\}\}/u' => '{{current_date}}',
@@ -14,39 +13,43 @@ $templates = [
     ],
 ];
 
-$templatesDir = __DIR__ . '/storage/app/templates';
+$templatesDir = __DIR__.'/storage/app/templates';
 
 foreach ($templates as $templateName => $replacements) {
-    $templatePath = $templatesDir . '/' . $templateName;
+    $templatePath = $templatesDir.'/'.$templateName;
 
     echo "📄 Correction du template: {$templateName}\n";
-    echo str_repeat("=", 80) . "\n";
+    echo str_repeat('=', 80)."\n";
 
-    if (!file_exists($templatePath)) {
+    if (! file_exists($templatePath)) {
         echo "   ❌ Fichier introuvable\n\n";
+
         continue;
     }
 
     // Créer une backup
-    $backupPath = $templatesDir . '/' . str_replace('.docx', '_backup_' . date('YmdHis') . '.docx', $templateName);
-    if (!copy($templatePath, $backupPath)) {
+    $backupPath = $templatesDir.'/'.str_replace('.docx', '_backup_'.date('YmdHis').'.docx', $templateName);
+    if (! copy($templatePath, $backupPath)) {
         echo "   ❌ Impossible de créer une backup\n\n";
+
         continue;
     }
-    echo "   ✅ Backup créée: " . basename($backupPath) . "\n";
+    echo '   ✅ Backup créée: '.basename($backupPath)."\n";
 
     // Ouvrir le DOCX
-    $zip = new ZipArchive();
-    if ($zip->open($templatePath) !== TRUE) {
+    $zip = new ZipArchive;
+    if ($zip->open($templatePath) !== true) {
         echo "   ❌ Impossible d'ouvrir le fichier\n\n";
+
         continue;
     }
 
     // Lire le XML
     $xml = $zip->getFromName('word/document.xml');
-    if (!$xml) {
+    if (! $xml) {
         echo "   ❌ Impossible de lire document.xml\n";
         $zip->close();
+
         continue;
     }
 
@@ -58,7 +61,7 @@ foreach ($templates as $templateName => $replacements) {
         $allText .= html_entity_decode($match[0], ENT_XML1);
     }
 
-    echo "   📝 Texte extrait: " . strlen($allText) . " caractères\n";
+    echo '   📝 Texte extrait: '.strlen($allText)." caractères\n";
 
     // Effectuer les remplacements dans le XML brut
     // On doit gérer les variables qui peuvent être fragmentées
@@ -93,7 +96,7 @@ foreach ($templates as $templateName => $replacements) {
                     $flexPattern .= '(<[^>]+>)*';
                 }
                 if ($char === '{' || $char === '}' || $char === '\\') {
-                    $flexPattern .= '\\' . $char;
+                    $flexPattern .= '\\'.$char;
                 } else {
                     $flexPattern .= $char;
                 }
@@ -111,14 +114,14 @@ foreach ($templates as $templateName => $replacements) {
                 // la séquence problématique en cherchant les fragments
                 if ($templateName === 'rc-assurance-vie.docx') {
                     $xml = preg_replace('/<w:t[^>]*>Fait le \{\{Datedudocumentgénér<\/w:t>.*?<w:t[^>]*>er\}\}<\/w:t>/s',
-                                       '<w:t>Fait le {{current_date}}</w:t>', $xml, -1, $count2);
+                        '<w:t>Fait le {{current_date}}</w:t>', $xml, -1, $count2);
                     if ($count2 > 0) {
                         echo "   ✅ Corrigé manuellement {$count2} occurrence(s)\n";
                         $replacementCount += $count2;
                     }
                 } elseif ($templateName === 'rc-per.docx') {
                     $xml = preg_replace('/<w:t[^>]*>Fait le \{\{Datedudocumentgénér<\/w:t>.*?<w:t[^>]*>é\}\}<\/w:t>/s',
-                                       '<w:t>Fait le {{current_date}}</w:t>', $xml, -1, $count2);
+                        '<w:t>Fait le {{current_date}}</w:t>', $xml, -1, $count2);
                     if ($count2 > 0) {
                         echo "   ✅ Corrigé manuellement {$count2} occurrence(s)\n";
                         $replacementCount += $count2;
@@ -145,5 +148,5 @@ foreach ($templates as $templateName => $replacements) {
     echo "\n";
 }
 
-echo str_repeat("=", 80) . "\n";
+echo str_repeat('=', 80)."\n";
 echo "🏁 Correction terminée.\n";

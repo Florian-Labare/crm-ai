@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (Schema::hasTable('questionnaire_risque_quizs') && !Schema::hasTable('questionnaire_risque_quizzes')) {
+        if (Schema::hasTable('questionnaire_risque_quizs') && ! Schema::hasTable('questionnaire_risque_quizzes')) {
             Schema::rename('questionnaire_risque_quizs', 'questionnaire_risque_quizzes');
         }
 
-        if (!Schema::hasTable('questionnaire_risque_quizzes')) {
+        if (! Schema::hasTable('questionnaire_risque_quizzes')) {
             Schema::create('questionnaire_risque_quizzes', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('questionnaire_risque_id')

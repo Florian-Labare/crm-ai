@@ -42,7 +42,7 @@ return new class extends Migration
                 'diarization_success',
                 'speakers_corrected',
                 'corrected_at',
-                'corrected_by'
+                'corrected_by',
             ]);
         });
     }

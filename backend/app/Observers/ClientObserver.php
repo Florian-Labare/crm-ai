@@ -20,8 +20,7 @@ class ClientObserver
 {
     public function __construct(
         private readonly AuditService $auditService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the Client "deleting" event.
@@ -34,7 +33,7 @@ class ClientObserver
         Log::info('[CLIENT OBSERVER] Suppression en cascade initiée', [
             'client_id' => $client->id,
             'client_name' => "{$client->prenom} {$client->nom}",
-            'team_id' => $client->team_id
+            'team_id' => $client->team_id,
         ]);
 
         // 1. Supprimer les enregistrements audio et leurs fichiers
@@ -44,7 +43,7 @@ class ClientObserver
         $this->deleteRecordingSessions($client);
 
         Log::info('[CLIENT OBSERVER] Suppression en cascade terminée', [
-            'client_id' => $client->id
+            'client_id' => $client->id,
         ]);
     }
 
@@ -83,7 +82,7 @@ class ClientObserver
             Log::info('[CLIENT OBSERVER] AudioRecords supprimés', [
                 'client_id' => $client->id,
                 'deleted_count' => $deletedCount,
-                'freed_bytes' => $freedBytes
+                'freed_bytes' => $freedBytes,
             ]);
         }
     }
@@ -114,7 +113,7 @@ class ClientObserver
         if ($deletedCount > 0) {
             Log::info('[CLIENT OBSERVER] RecordingSessions supprimées', [
                 'client_id' => $client->id,
-                'deleted_count' => $deletedCount
+                'deleted_count' => $deletedCount,
             ]);
         }
     }
@@ -144,7 +143,7 @@ class ClientObserver
      */
     private function recursiveDelete(string $path): void
     {
-        if (!is_dir($path)) {
+        if (! is_dir($path)) {
             return;
         }
 

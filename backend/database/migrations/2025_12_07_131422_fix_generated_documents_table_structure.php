@@ -12,22 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         // Ajouter les colonnes manquantes
-        if (!Schema::hasColumn('generated_documents', 'user_id')) {
+        if (! Schema::hasColumn('generated_documents', 'user_id')) {
             Schema::table('generated_documents', function (Blueprint $table) {
                 $table->foreignId('user_id')->nullable()->after('client_id');
             });
         }
-        if (!Schema::hasColumn('generated_documents', 'format')) {
+        if (! Schema::hasColumn('generated_documents', 'format')) {
             Schema::table('generated_documents', function (Blueprint $table) {
                 $table->string('format')->default('pdf')->after('file_path');
             });
         }
-        if (!Schema::hasColumn('generated_documents', 'sent_by_email')) {
+        if (! Schema::hasColumn('generated_documents', 'sent_by_email')) {
             Schema::table('generated_documents', function (Blueprint $table) {
                 $table->boolean('sent_by_email')->default(false);
             });
         }
-        if (!Schema::hasColumn('generated_documents', 'sent_at')) {
+        if (! Schema::hasColumn('generated_documents', 'sent_at')) {
             Schema::table('generated_documents', function (Blueprint $table) {
                 $table->timestamp('sent_at')->nullable();
             });

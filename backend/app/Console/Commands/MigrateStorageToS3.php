@@ -27,8 +27,11 @@ class MigrateStorageToS3 extends Command
     protected $description = 'Migre les fichiers existants du stockage local vers S3';
 
     private int $migratedCount = 0;
+
     private int $skippedCount = 0;
+
     private int $errorCount = 0;
+
     private int $migratedBytes = 0;
 
     public function handle(): int
@@ -44,6 +47,7 @@ class MigrateStorageToS3 extends Command
 
         if ($cleanup && $dryRun) {
             $this->error('❌ Les options --cleanup et --dry-run sont incompatibles');
+
             return Command::FAILURE;
         }
 
@@ -52,20 +56,21 @@ class MigrateStorageToS3 extends Command
 
         // Vérifier la configuration S3
         $this->info('📋 Configuration S3:');
-        $this->info('   Bucket: ' . config('filesystems.disks.s3.bucket'));
-        $this->info('   Region: ' . config('filesystems.disks.s3.region'));
-        $this->info('   Endpoint: ' . (config('filesystems.disks.s3.endpoint') ?: 'AWS par défaut'));
+        $this->info('   Bucket: '.config('filesystems.disks.s3.bucket'));
+        $this->info('   Region: '.config('filesystems.disks.s3.region'));
+        $this->info('   Endpoint: '.(config('filesystems.disks.s3.endpoint') ?: 'AWS par défaut'));
         $this->newLine();
 
         // Vérifier la connexion S3
-        if (!$dryRun) {
+        if (! $dryRun) {
             try {
                 Storage::disk('s3')->put('_migration_test.txt', 'test');
                 Storage::disk('s3')->delete('_migration_test.txt');
                 $this->info('✅ Connexion S3 vérifiée');
             } catch (\Exception $e) {
-                $this->error('❌ Impossible de se connecter à S3 : ' . $e->getMessage());
+                $this->error('❌ Impossible de se connecter à S3 : '.$e->getMessage());
                 $this->error('   Vérifiez votre configuration avec: php scripts/check-s3-config.php');
+
                 return Command::FAILURE;
             }
         }
@@ -76,7 +81,7 @@ class MigrateStorageToS3 extends Command
 
         foreach ($types as $t) {
             $this->info("📦 Migration des fichiers: {$t}");
-            $method = 'migrate' . ucfirst($t);
+            $method = 'migrate'.ucfirst($t);
 
             if (method_exists($this, $method)) {
                 $this->$method($dryRun, $cleanup);
@@ -99,7 +104,7 @@ class MigrateStorageToS3 extends Command
             ]
         );
 
-        if (!$dryRun && $this->migratedCount > 0) {
+        if (! $dryRun && $this->migratedCount > 0) {
             Log::info('[STORAGE MIGRATION] Migration vers S3 terminée', [
                 'migrated' => $this->migratedCount,
                 'skipped' => $this->skippedCount,
@@ -122,6 +127,7 @@ class MigrateStorageToS3 extends Command
 
         if ($records->count() === 0) {
             $this->info('   Aucun fichier audio à migrer');
+
             return;
         }
 
@@ -143,16 +149,17 @@ class MigrateStorageToS3 extends Command
                 }
             }
 
-            if (!$localPath) {
+            if (! $localPath) {
                 $this->skippedCount++;
                 $bar->advance();
+
                 continue;
             }
 
             try {
                 $size = filesize($localPath);
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     // Upload vers S3 avec le chemin DB
                     Storage::disk('s3')->put($record->path, file_get_contents($localPath));
 
@@ -185,6 +192,7 @@ class MigrateStorageToS3 extends Command
 
         if ($docs->count() === 0) {
             $this->info('   Aucun document de compliance à migrer');
+
             return;
         }
 
@@ -206,16 +214,17 @@ class MigrateStorageToS3 extends Command
                 }
             }
 
-            if (!$localPath) {
+            if (! $localPath) {
                 $this->skippedCount++;
                 $bar->advance();
+
                 continue;
             }
 
             try {
                 $size = filesize($localPath);
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     Storage::disk('s3')->put($doc->file_path, file_get_contents($localPath));
 
                     if ($cleanup) {
@@ -246,6 +255,7 @@ class MigrateStorageToS3 extends Command
 
         if ($docs->count() === 0) {
             $this->info('   Aucun document généré à migrer');
+
             return;
         }
 
@@ -267,16 +277,17 @@ class MigrateStorageToS3 extends Command
                 }
             }
 
-            if (!$localPath) {
+            if (! $localPath) {
                 $this->skippedCount++;
                 $bar->advance();
+
                 continue;
             }
 
             try {
                 $size = filesize($localPath);
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     Storage::disk('s3')->put($doc->file_path, file_get_contents($localPath));
 
                     if ($cleanup) {
@@ -307,6 +318,7 @@ class MigrateStorageToS3 extends Command
 
         if ($sessions->count() === 0) {
             $this->info('   Aucun fichier d\'import à migrer');
+
             return;
         }
 
@@ -328,16 +340,17 @@ class MigrateStorageToS3 extends Command
                 }
             }
 
-            if (!$localPath) {
+            if (! $localPath) {
                 $this->skippedCount++;
                 $bar->advance();
+
                 continue;
             }
 
             try {
                 $size = filesize($localPath);
 
-                if (!$dryRun) {
+                if (! $dryRun) {
                     Storage::disk('s3')->put($session->file_path, file_get_contents($localPath));
 
                     if ($cleanup) {
@@ -370,6 +383,7 @@ class MigrateStorageToS3 extends Command
             $bytes /= 1024;
             $i++;
         }
-        return round($bytes, 2) . ' ' . $units[$i];
+
+        return round($bytes, 2).' '.$units[$i];
     }
 }

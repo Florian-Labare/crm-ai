@@ -11,7 +11,6 @@ class ClientPassifsSyncService
     /**
      * Synchronise les passifs (prêts/emprunts) d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $passifsData  Tableau de passifs extraits par GPT
      */
     public function syncPassifs(Client $client, array $passifsData): void
@@ -24,7 +23,7 @@ class ClientPassifsSyncService
         // Fusionne les entrées de même nature pour éviter les doublons
         $passifsData = $this->deduplicateIncomingPassifs($passifsData);
 
-        Log::info("📉 [PASSIFS] Après déduplication entrante: " . count($passifsData) . " passif(s)");
+        Log::info('📉 [PASSIFS] Après déduplication entrante: '.count($passifsData).' passif(s)');
 
         // Charger les passifs existants
         $existingPassifs = $client->passifs;
@@ -40,6 +39,7 @@ class ClientPassifsSyncService
 
             if (empty($passifData)) {
                 Log::info("📉 [PASSIFS] Passif #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -67,7 +67,7 @@ class ClientPassifsSyncService
             Log::info("📉 [PASSIFS] Conservation de {$keptPassifs} passif(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [PASSIFS] Synchronisation terminée - ' . count($processedIds) . ' passif(s) traité(s), total: ' . $client->passifs()->count());
+        Log::info('✅ [PASSIFS] Synchronisation terminée - '.count($processedIds).' passif(s) traité(s), total: '.$client->passifs()->count());
     }
 
     /**
@@ -96,7 +96,7 @@ class ClientPassifsSyncService
             $preteur = isset($passif['preteur']) ? $this->normalizeString($passif['preteur']) : null;
 
             // Clé de regroupement : nature + prêteur (si disponible)
-            $key = $nature . ($preteur ? '_' . $preteur : '');
+            $key = $nature.($preteur ? '_'.$preteur : '');
 
             // Chercher une entrée existante avec la même nature
             $found = false;
@@ -106,19 +106,19 @@ class ClientPassifsSyncService
 
                 // Match si même nature ET (même prêteur OU l'un des deux n'a pas de prêteur)
                 if ($existingNature === $nature) {
-                    if ($preteur === $existingPreteur || !$preteur || !$existingPreteur) {
+                    if ($preteur === $existingPreteur || ! $preteur || ! $existingPreteur) {
                         // Fusionner : garder les infos non vides de chaque côté
                         foreach ($passif as $field => $value) {
-                            if (!empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
+                            if (! empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
                                 $existing[$field] = $value;
                             }
                         }
                         // Si le nouveau a un prêteur et l'existant non, utiliser le nouveau prêteur
-                        if (!empty($passif['preteur']) && empty($existing['preteur'])) {
+                        if (! empty($passif['preteur']) && empty($existing['preteur'])) {
                             $existing['preteur'] = $passif['preteur'];
                         }
                         $found = true;
-                        Log::info("📉 [PASSIFS] 🔀 Fusion de passifs de même nature", [
+                        Log::info('📉 [PASSIFS] 🔀 Fusion de passifs de même nature', [
                             'nature' => $nature,
                             'preteur' => $existing['preteur'] ?? 'non spécifié',
                         ]);
@@ -127,7 +127,7 @@ class ClientPassifsSyncService
                 }
             }
 
-            if (!$found) {
+            if (! $found) {
                 $merged[$key] = $passif;
             }
         }
@@ -135,7 +135,7 @@ class ClientPassifsSyncService
         $result = array_values($merged);
 
         if (count($result) < count($passifs)) {
-            Log::info("📉 [PASSIFS] 🔀 Déduplication entrante: " . count($passifs) . " → " . count($result) . " passif(s)");
+            Log::info('📉 [PASSIFS] 🔀 Déduplication entrante: '.count($passifs).' → '.count($result).' passif(s)');
         }
 
         return $result;
@@ -180,6 +180,7 @@ class ClientPassifsSyncService
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // Ajouter colonnes tags et custom_label sur client_compliance_documents
-        if (!Schema::hasColumn('client_compliance_documents', 'tags')) {
+        if (! Schema::hasColumn('client_compliance_documents', 'tags')) {
             Schema::table('client_compliance_documents', function (Blueprint $table) {
                 $table->json('tags')->nullable()->after('category');
                 $table->string('custom_label')->nullable()->after('tags');
@@ -20,7 +20,7 @@ return new class extends Migration
         }
 
         // Table de liaison document ↔ requirement (many-to-many avec pivot enrichi)
-        if (!Schema::hasTable('compliance_document_requirements')) {
+        if (! Schema::hasTable('compliance_document_requirements')) {
             Schema::create('compliance_document_requirements', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('document_id')->constrained('client_compliance_documents')->cascadeOnDelete();

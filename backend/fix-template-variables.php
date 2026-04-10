@@ -3,7 +3,6 @@
 /**
  * Script pour corriger les variables invalides dans les templates DOCX
  */
-
 $templates = [
     'rc-assurance-vie.docx' => [
         '{SOCOGEAvousindique}' => '{current_date}',
@@ -23,39 +22,43 @@ $templates = [
     ],
 ];
 
-$templatesDir = __DIR__ . '/storage/app/templates';
+$templatesDir = __DIR__.'/storage/app/templates';
 
 foreach ($templates as $templateName => $replacements) {
-    $templatePath = $templatesDir . '/' . $templateName;
+    $templatePath = $templatesDir.'/'.$templateName;
 
     echo "📄 Correction du template: {$templateName}\n";
-    echo str_repeat("=", 80) . "\n";
+    echo str_repeat('=', 80)."\n";
 
-    if (!file_exists($templatePath)) {
+    if (! file_exists($templatePath)) {
         echo "   ❌ Fichier introuvable: {$templatePath}\n\n";
+
         continue;
     }
 
     // Créer une backup
-    $backupPath = $templatesDir . '/' . str_replace('.docx', '_backup_' . date('YmdHis') . '.docx', $templateName);
-    if (!copy($templatePath, $backupPath)) {
+    $backupPath = $templatesDir.'/'.str_replace('.docx', '_backup_'.date('YmdHis').'.docx', $templateName);
+    if (! copy($templatePath, $backupPath)) {
         echo "   ❌ Impossible de créer une backup\n\n";
+
         continue;
     }
-    echo "   ✅ Backup créée: " . basename($backupPath) . "\n";
+    echo '   ✅ Backup créée: '.basename($backupPath)."\n";
 
     // Ouvrir le DOCX
-    $zip = new ZipArchive();
-    if ($zip->open($templatePath) !== TRUE) {
+    $zip = new ZipArchive;
+    if ($zip->open($templatePath) !== true) {
         echo "   ❌ Impossible d'ouvrir le fichier\n\n";
+
         continue;
     }
 
     // Lire le XML
     $xml = $zip->getFromName('word/document.xml');
-    if (!$xml) {
+    if (! $xml) {
         echo "   ❌ Impossible de lire document.xml\n";
         $zip->close();
+
         continue;
     }
 
@@ -89,5 +92,5 @@ foreach ($templates as $templateName => $replacements) {
     echo "\n";
 }
 
-echo str_repeat("=", 80) . "\n";
+echo str_repeat('=', 80)."\n";
 echo "🏁 Correction terminée.\n";

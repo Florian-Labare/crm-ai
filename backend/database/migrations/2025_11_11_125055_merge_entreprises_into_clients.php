@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('clients', function (Blueprint $table) {
             foreach (['chef_entreprise' => 'boolean', 'statut' => 'string', 'travailleur_independant' => 'boolean', 'mandataire_social' => 'boolean'] as $column => $type) {
-                if (!Schema::hasColumn('clients', $column)) {
+                if (! Schema::hasColumn('clients', $column)) {
                     if ($type === 'boolean') {
                         $table->boolean($column)->default(false)->after('charge_clientele');
                     } else {

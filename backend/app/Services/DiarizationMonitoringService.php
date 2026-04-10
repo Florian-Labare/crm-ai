@@ -27,7 +27,7 @@ class DiarizationMonitoringService
                 'log_id' => $log->id,
                 'status' => $data['status'],
                 'error' => $data['error_message'] ?? 'Unknown error',
-                'audio_record_id' => $data['audio_record_id'] ?? null
+                'audio_record_id' => $data['audio_record_id'] ?? null,
             ]);
         }
 
@@ -152,7 +152,7 @@ class DiarizationMonitoringService
             'period' => [
                 'start' => $startDate->toDateString(),
                 'end' => now()->toDateString(),
-                'days' => $days
+                'days' => $days,
             ],
             'totals' => [
                 'total' => (int) $totals->total,
@@ -167,15 +167,15 @@ class DiarizationMonitoringService
                 'failure_rate' => round(100 - $successRate, 1),
                 'single_speaker_rate' => $totals->total > 0
                     ? round(($totals->single_speaker_count / $totals->total) * 100, 1)
-                    : 0
+                    : 0,
             ],
             'performance' => [
                 'avg_duration_ms' => round($totals->avg_duration_ms ?? 0),
                 'avg_success_duration_ms' => round($totals->avg_success_duration_ms ?? 0),
-                'avg_speakers_detected' => round($totals->avg_speakers ?? 0, 1)
+                'avg_speakers_detected' => round($totals->avg_speakers ?? 0, 1),
             ],
             'daily' => $dailyStats,
-            'top_errors' => $topErrors
+            'top_errors' => $topErrors,
         ];
     }
 
@@ -198,7 +198,7 @@ class DiarizationMonitoringService
                     'audio_record_id' => $log->audio_record_id,
                     'duration_ms' => $log->duration_ms,
                     'audio_duration_seconds' => $log->audio_duration_seconds,
-                    'created_at' => $log->created_at->toISOString()
+                    'created_at' => $log->created_at->toISOString(),
                 ];
             })
             ->toArray();
@@ -269,10 +269,10 @@ class DiarizationMonitoringService
                 'total' => (int) $last24h->total,
                 'success' => (int) $last24h->success_count,
                 'failures' => (int) $last24h->failure_count,
-                'success_rate' => round($successRate24h, 1)
+                'success_rate' => round($successRate24h, 1),
             ],
             'consecutive_failures' => $consecutiveFailures,
-            'checked_at' => now()->toISOString()
+            'checked_at' => now()->toISOString(),
         ];
     }
 }

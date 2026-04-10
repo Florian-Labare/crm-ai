@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -16,7 +16,7 @@ return new class extends Migration {
             // Create personal team
             $team = \App\Models\Team::create([
                 'user_id' => $user->id,
-                'name' => $user->name . "'s Team",
+                'name' => $user->name."'s Team",
                 'personal_team' => true,
             ]);
 

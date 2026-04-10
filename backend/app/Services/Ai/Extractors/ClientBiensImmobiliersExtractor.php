@@ -28,7 +28,7 @@ class ClientBiensImmobiliersExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientBiensImmobiliersExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -79,7 +79,7 @@ PROMPT;
         foreach ($biens as $bien) {
             $key = $this->normalizeBienKey($bien['designation'] ?? '');
 
-            if (!isset($merged[$key])) {
+            if (! isset($merged[$key])) {
                 $merged[$key] = $bien;
             } else {
                 $merged[$key] = $this->mergeBienData($merged[$key], $bien);
@@ -92,7 +92,7 @@ PROMPT;
             Log::info('[ClientBiensImmobiliersExtractor] 🔀 Déduplication effectuée', [
                 'avant' => count($biens),
                 'après' => count($result),
-                'biens_fusionnés' => array_map(fn($b) => $b['designation'] ?? 'inconnu', $result)
+                'biens_fusionnés' => array_map(fn ($b) => $b['designation'] ?? 'inconnu', $result),
             ]);
         }
 
@@ -123,12 +123,12 @@ PROMPT;
         foreach ($types as $type => $keywords) {
             foreach ($keywords as $keyword) {
                 if (str_contains($designation, $keyword)) {
-                    $key .= $type . '_';
+                    $key .= $type.'_';
                 }
             }
         }
 
-        return $key ?: 'bien_' . substr(md5($designation), 0, 8);
+        return $key ?: 'bien_'.substr(md5($designation), 0, 8);
     }
 
     /**
@@ -139,8 +139,8 @@ PROMPT;
         $fields = ['designation', 'detenteur', 'forme_propriete', 'valeur_actuelle_estimee', 'annee_acquisition', 'valeur_acquisition'];
 
         foreach ($fields as $field) {
-            if (isset($new[$field]) && !empty($new[$field])) {
-                if (!isset($existing[$field]) || empty($existing[$field])) {
+            if (isset($new[$field]) && ! empty($new[$field])) {
+                if (! isset($existing[$field]) || empty($existing[$field])) {
                     $existing[$field] = $new[$field];
                 }
             }

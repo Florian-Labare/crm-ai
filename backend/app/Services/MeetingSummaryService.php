@@ -75,7 +75,7 @@ PROMPT;
                 true
             );
 
-            if (!$summaryJson) {
+            if (! $summaryJson) {
                 return [
                     'summary_text' => null,
                     'summary_json' => null,
@@ -120,7 +120,7 @@ PROMPT;
     private function formatSummaryText(array $summaryJson): string
     {
         $parts = [];
-        if (!empty($summaryJson['overview'])) {
+        if (! empty($summaryJson['overview'])) {
             $parts[] = $summaryJson['overview'];
         }
 
@@ -128,15 +128,15 @@ PROMPT;
         foreach ($chronology as $phase) {
             $phaseTitle = $phase['phase'] ?? null;
             if ($phaseTitle) {
-                $parts[] = $phaseTitle . ':';
+                $parts[] = $phaseTitle.':';
             }
             foreach ($phase['topics'] ?? [] as $topic) {
                 $topicTitle = $topic['title'] ?? null;
                 if ($topicTitle) {
-                    $parts[] = '- ' . $topicTitle;
+                    $parts[] = '- '.$topicTitle;
                 }
                 foreach ($topic['details'] ?? [] as $detail) {
-                    $parts[] = '  • ' . $detail;
+                    $parts[] = '  • '.$detail;
                 }
             }
         }

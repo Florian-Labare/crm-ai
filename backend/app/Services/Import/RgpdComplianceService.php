@@ -2,13 +2,12 @@
 
 namespace App\Services\Import;
 
+use App\Models\Client;
 use App\Models\ImportAuditLog;
 use App\Models\ImportSession;
-use App\Models\DatabaseConnection;
-use App\Models\Client;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class RgpdComplianceService
 {
@@ -257,7 +256,7 @@ class RgpdComplianceService
         // Clear import reference from clients (don't delete clients, just unlink)
         Client::where('import_session_id', $session->id)->update([
             'import_session_id' => null,
-            'import_source' => 'unlinked_' . $session->id,
+            'import_source' => 'unlinked_'.$session->id,
         ]);
 
         // Delete rows

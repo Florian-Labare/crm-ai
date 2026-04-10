@@ -35,7 +35,7 @@ class DerMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Votre Document d\'Entrée en Relation - ' . $this->client->prenom . ' ' . strtoupper($this->client->nom),
+            subject: 'Votre Document d\'Entrée en Relation - '.$this->client->prenom.' '.strtoupper($this->client->nom),
         );
     }
 
@@ -60,7 +60,7 @@ class DerMail extends Mailable
     {
         return [
             Attachment::fromPath($this->derFilePath)
-                ->as('DER_' . $this->client->nom . '_' . $this->client->prenom . '.docx')
+                ->as('DER_'.$this->client->nom.'_'.$this->client->prenom.'.docx')
                 ->withMime('application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
         ];
     }

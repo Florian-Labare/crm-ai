@@ -55,7 +55,7 @@ class AppServiceProvider extends ServiceProvider
                 ->response(function () {
                     return response()->json([
                         'message' => 'Trop de requêtes d\'upload. Veuillez patienter avant de réessayer.',
-                        'retry_after' => 60
+                        'retry_after' => 60,
                     ], 429);
                 });
         });
@@ -63,12 +63,13 @@ class AppServiceProvider extends ServiceProvider
         // Rate limiting pour les chunks : 30 chunks par minute par session
         RateLimiter::for('audio-chunk', function (Request $request) {
             $sessionId = $request->input('session_id', 'unknown');
+
             return Limit::perMinute(30)
-                ->by($request->user()?->id . ':' . $sessionId)
+                ->by($request->user()?->id.':'.$sessionId)
                 ->response(function () {
                     return response()->json([
                         'message' => 'Trop de chunks envoyés. Veuillez patienter.',
-                        'retry_after' => 60
+                        'retry_after' => 60,
                     ], 429);
                 });
         });
@@ -80,7 +81,7 @@ class AppServiceProvider extends ServiceProvider
                 ->response(function () {
                     return response()->json([
                         'message' => 'Trop de finalisations. Veuillez patienter.',
-                        'retry_after' => 60
+                        'retry_after' => 60,
                     ], 429);
                 });
         });

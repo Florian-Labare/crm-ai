@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class TeamInvitation extends Model
 {
@@ -42,7 +42,7 @@ class TeamInvitation extends Model
 
     public function isPending(): bool
     {
-        return is_null($this->accepted_at) && !$this->isExpired();
+        return is_null($this->accepted_at) && ! $this->isExpired();
     }
 
     public function scopePending(Builder $query): Builder

@@ -12,9 +12,9 @@ enum TeamRole: string
     public function label(): string
     {
         return match ($this) {
-            self::OWNER      => 'Propriétaire',
-            self::ADMIN      => 'Admin',
-            self::MIA        => 'MIA',
+            self::OWNER => 'Propriétaire',
+            self::ADMIN => 'Admin',
+            self::MIA => 'MIA',
             self::SECRETAIRE => 'Secrétaire',
         };
     }
@@ -22,9 +22,9 @@ enum TeamRole: string
     public function permissions(): array
     {
         return match ($this) {
-            self::OWNER      => ['*'],
-            self::ADMIN      => ['manage-team', 'manage-members', 'crud-resources'],
-            self::MIA        => ['create-resources', 'update-own-resources', 'view-resources'],
+            self::OWNER => ['*'],
+            self::ADMIN => ['manage-team', 'manage-members', 'crud-resources'],
+            self::MIA => ['create-resources', 'update-own-resources', 'view-resources'],
             self::SECRETAIRE => ['view-resources'],
         };
     }
@@ -56,6 +56,6 @@ enum TeamRole: string
 
     public static function values(): array
     {
-        return array_map(fn($role) => $role->value, self::all());
+        return array_map(fn ($role) => $role->value, self::all());
     }
 }

@@ -4,17 +4,17 @@
  * Script pour analyser tous les documents contractuels et extraire leurs variables
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 $sourceDir = '/Users/florian/Documents/projet-courtier/DOCUMENTS CONTRACTUELS/';
 
-if (!is_dir($sourceDir)) {
-    die("❌ Dossier non trouvé: {$sourceDir}\n");
+if (! is_dir($sourceDir)) {
+    exit("❌ Dossier non trouvé: {$sourceDir}\n");
 }
 
-$files = glob($sourceDir . '*.docx');
+$files = glob($sourceDir.'*.docx');
 
-echo "📁 Analyse de " . count($files) . " documents contractuels\n";
+echo '📁 Analyse de '.count($files)." documents contractuels\n";
 echo "=======================================================\n\n";
 
 $allVariables = [];
@@ -25,9 +25,10 @@ foreach ($files as $filePath) {
 
     echo "📄 {$fileName}\n";
 
-    $zip = new ZipArchive();
-    if ($zip->open($filePath) !== TRUE) {
+    $zip = new ZipArchive;
+    if ($zip->open($filePath) !== true) {
         echo "   ❌ Impossible d'ouvrir\n\n";
+
         continue;
     }
 
@@ -44,11 +45,11 @@ foreach ($files as $filePath) {
 
     // Nettoyer les variables (supprimer espaces, etc.)
     $variables = array_map('trim', $variables);
-    $variables = array_filter($variables, fn($v) => !empty($v));
+    $variables = array_filter($variables, fn ($v) => ! empty($v));
 
     sort($variables);
 
-    echo "   Variables trouvées: " . count($variables) . "\n";
+    echo '   Variables trouvées: '.count($variables)."\n";
 
     $documentVariables[$fileName] = $variables;
     $allVariables = array_merge($allVariables, $variables);
@@ -72,7 +73,7 @@ sort($allVariables);
 echo "=======================================================\n";
 echo "📊 RÉSUMÉ GLOBAL\n";
 echo "=======================================================\n\n";
-echo "Total de variables uniques: " . count($allVariables) . "\n\n";
+echo 'Total de variables uniques: '.count($allVariables)."\n\n";
 
 echo "Liste complète des variables:\n";
 foreach ($allVariables as $var) {
@@ -80,7 +81,7 @@ foreach ($allVariables as $var) {
 }
 
 // Sauvegarder dans un fichier JSON
-$outputFile = __DIR__ . '/document-variables-analysis.json';
+$outputFile = __DIR__.'/document-variables-analysis.json';
 file_put_contents($outputFile, json_encode([
     'summary' => [
         'total_documents' => count($files),

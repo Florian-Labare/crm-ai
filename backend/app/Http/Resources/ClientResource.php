@@ -35,7 +35,7 @@ class ClientResource extends JsonResource
             'nom' => $this->nom,
             'nom_jeune_fille' => $this->nom_jeune_fille,
             'prenom' => $this->prenom,
-            'nom_complet' => $this->prenom . ' ' . strtoupper($this->nom ?? ''),
+            'nom_complet' => $this->prenom.' '.strtoupper($this->nom ?? ''),
 
             // Dates et lieux
             'date_naissance' => $this->date_naissance,
@@ -95,7 +95,7 @@ class ClientResource extends JsonResource
             'actifs_financiers' => ClientActifFinancierResource::collection($this->whenLoaded('actifsFinanciers')),
             'biens_immobiliers' => ClientBienImmobilierResource::collection($this->whenLoaded('biensImmobiliers')),
             'autres_epargnes' => ClientAutreEpargneResource::collection($this->whenLoaded('autresEpargnes')),
-            'contrats' => $this->whenLoaded('contrats', fn() => $this->contrats->map(fn($c) => [
+            'contrats' => $this->whenLoaded('contrats', fn () => $this->contrats->map(fn ($c) => [
                 'id' => $c->id,
                 'type' => $c->type,
                 'assureur_id' => $c->assureur_id,

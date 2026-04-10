@@ -13,20 +13,22 @@
  * - Configuration des disks Laravel
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 
 // Bootstrap Laravel
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 class S3ConfigChecker
 {
     private array $errors = [];
+
     private array $warnings = [];
+
     private array $success = [];
 
     public function run(): int
@@ -93,7 +95,7 @@ class S3ConfigChecker
 
         // Vérifier que le disk par défaut est S3
         if (env('FILESYSTEM_DISK') !== 's3') {
-            $this->warnings[] = "FILESYSTEM_DISK n'est pas configuré sur 's3' (valeur actuelle: " . env('FILESYSTEM_DISK') . ")";
+            $this->warnings[] = "FILESYSTEM_DISK n'est pas configuré sur 's3' (valeur actuelle: ".env('FILESYSTEM_DISK').')';
         }
 
         echo "\n";
@@ -116,7 +118,7 @@ class S3ConfigChecker
                     $this->errors[] = "Disk '{$disk}' non configuré";
                 }
             } catch (\Exception $e) {
-                $this->errors[] = "Erreur lors de la vérification du disk '{$disk}': " . $e->getMessage();
+                $this->errors[] = "Erreur lors de la vérification du disk '{$disk}': ".$e->getMessage();
             }
         }
 
@@ -132,11 +134,11 @@ class S3ConfigChecker
 
             // Tenter de lister les fichiers (ne devrait pas échouer même si vide)
             $files = $disk->files('/', false);
-            $this->success[] = "Connexion S3 réussie (bucket accessible)";
-            $this->success[] = "Fichiers trouvés à la racine: " . count($files);
+            $this->success[] = 'Connexion S3 réussie (bucket accessible)';
+            $this->success[] = 'Fichiers trouvés à la racine: '.count($files);
 
         } catch (\Exception $e) {
-            $this->errors[] = "Impossible de se connecter à S3: " . $e->getMessage();
+            $this->errors[] = 'Impossible de se connecter à S3: '.$e->getMessage();
         }
 
         echo "\n";
@@ -148,38 +150,38 @@ class S3ConfigChecker
 
         try {
             $disk = Storage::disk('s3');
-            $testFile = 'test-permissions-' . time() . '.txt';
+            $testFile = 'test-permissions-'.time().'.txt';
             $testContent = 'Test de permissions S3';
 
             // Test d'écriture (PutObject)
             $disk->put($testFile, $testContent);
-            $this->success[] = "Permission PutObject: OK";
+            $this->success[] = 'Permission PutObject: OK';
 
             // Test de lecture (GetObject)
             $content = $disk->get($testFile);
             if ($content === $testContent) {
-                $this->success[] = "Permission GetObject: OK";
+                $this->success[] = 'Permission GetObject: OK';
             } else {
-                $this->errors[] = "Permission GetObject: échec de lecture";
+                $this->errors[] = 'Permission GetObject: échec de lecture';
             }
 
             // Test d'existence (HeadObject)
             if ($disk->exists($testFile)) {
-                $this->success[] = "Permission HeadObject: OK";
+                $this->success[] = 'Permission HeadObject: OK';
             } else {
-                $this->errors[] = "Permission HeadObject: échec";
+                $this->errors[] = 'Permission HeadObject: échec';
             }
 
             // Test de suppression (DeleteObject)
             $disk->delete($testFile);
-            if (!$disk->exists($testFile)) {
-                $this->success[] = "Permission DeleteObject: OK";
+            if (! $disk->exists($testFile)) {
+                $this->success[] = 'Permission DeleteObject: OK';
             } else {
-                $this->errors[] = "Permission DeleteObject: échec de suppression";
+                $this->errors[] = 'Permission DeleteObject: échec de suppression';
             }
 
         } catch (\Exception $e) {
-            $this->errors[] = "Erreur lors du test de permissions: " . $e->getMessage();
+            $this->errors[] = 'Erreur lors du test de permissions: '.$e->getMessage();
         }
 
         echo "\n";
@@ -216,24 +218,24 @@ class S3ConfigChecker
         echo "  Résumé\n";
         echo "========================================\n\n";
 
-        if (!empty($this->success)) {
-            echo "✓ Succès (" . count($this->success) . "):\n";
+        if (! empty($this->success)) {
+            echo '✓ Succès ('.count($this->success)."):\n";
             foreach ($this->success as $msg) {
                 echo "  ✓ {$msg}\n";
             }
             echo "\n";
         }
 
-        if (!empty($this->warnings)) {
-            echo "⚠ Avertissements (" . count($this->warnings) . "):\n";
+        if (! empty($this->warnings)) {
+            echo '⚠ Avertissements ('.count($this->warnings)."):\n";
             foreach ($this->warnings as $msg) {
                 echo "  ⚠ {$msg}\n";
             }
             echo "\n";
         }
 
-        if (!empty($this->errors)) {
-            echo "✗ Erreurs (" . count($this->errors) . "):\n";
+        if (! empty($this->errors)) {
+            echo '✗ Erreurs ('.count($this->errors)."):\n";
             foreach ($this->errors as $msg) {
                 echo "  ✗ {$msg}\n";
             }
@@ -254,5 +256,5 @@ class S3ConfigChecker
 }
 
 // Exécuter le script
-$checker = new S3ConfigChecker();
+$checker = new S3ConfigChecker;
 exit($checker->run());

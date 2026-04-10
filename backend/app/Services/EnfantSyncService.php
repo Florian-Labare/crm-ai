@@ -72,7 +72,7 @@ class EnfantSyncService
         // 3️⃣ Mettre à jour le champ nombre_enfants du client (SUPPRIMÉ car colonne inexistante)
         // $client->update(['nombre_enfants' => count($processedIds)]);
 
-        Log::info('✅ [ENFANTS] Synchronisation terminée - ' . count($processedIds) . ' enfant(s)');
+        Log::info('✅ [ENFANTS] Synchronisation terminée - '.count($processedIds).' enfant(s)');
     }
 
     /**

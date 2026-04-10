@@ -326,11 +326,11 @@ class ImportFieldsService
 
         foreach (self::TABLE_CONFIG as $tableName => $config) {
             $modelClass = $config['model'];
-            $model = new $modelClass();
+            $model = new $modelClass;
             $fillable = $model->getFillable();
 
             // Filtrer les champs exclus
-            $fields = array_filter($fillable, fn($field) => !in_array($field, self::EXCLUDED_FIELDS));
+            $fields = array_filter($fillable, fn ($field) => ! in_array($field, self::EXCLUDED_FIELDS));
 
             $tableFields = [];
             foreach ($fields as $field) {
@@ -349,8 +349,8 @@ class ImportFieldsService
                         $prefix = str_replace('{n}', $i, $config['prefix']);
                         $indexedFields[] = [
                             'field' => $fieldInfo['field'],
-                            'label' => $fieldInfo['label'] . " (#{$i})",
-                            'full_key' => $prefix . $fieldInfo['field'],
+                            'label' => $fieldInfo['label']." (#{$i})",
+                            'full_key' => $prefix.$fieldInfo['field'],
                             'index' => $i,
                         ];
                     }
@@ -444,14 +444,14 @@ class ImportFieldsService
             return $field;
         }
 
-        $prefix = $config['prefix'] ?? ($tableName . '_');
+        $prefix = $config['prefix'] ?? ($tableName.'_');
 
         // Pour les tables non-multiples, on enlève le placeholder {n}
-        if (!$config['multiple']) {
-            return $prefix . $field;
+        if (! $config['multiple']) {
+            return $prefix.$field;
         }
 
-        return $prefix . $field;
+        return $prefix.$field;
     }
 
     /**
@@ -460,7 +460,7 @@ class ImportFieldsService
     public function parseFieldKey(string $fullKey): ?array
     {
         // Client direct (pas de préfixe)
-        $clientModel = new Client();
+        $clientModel = new Client;
         if (in_array($fullKey, $clientModel->getFillable())) {
             return [
                 'table' => 'client',
@@ -471,18 +471,20 @@ class ImportFieldsService
 
         // Tables avec préfixe
         foreach (self::TABLE_CONFIG as $tableName => $config) {
-            if ($tableName === 'client') continue;
+            if ($tableName === 'client') {
+                continue;
+            }
 
             $prefix = $config['prefix'] ?? '';
 
             if ($config['multiple']) {
                 // Pattern pour tables multiples: prefix{n}_field
                 $basePrefix = str_replace('{n}', '', $prefix);
-                if (preg_match('/^' . preg_quote($basePrefix, '/') . '(\d+)_(.+)$/', $fullKey, $matches)) {
+                if (preg_match('/^'.preg_quote($basePrefix, '/').'(\d+)_(.+)$/', $fullKey, $matches)) {
                     return [
                         'table' => $tableName,
                         'field' => $matches[2],
-                        'index' => (int)$matches[1],
+                        'index' => (int) $matches[1],
                     ];
                 }
             } else {

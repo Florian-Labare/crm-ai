@@ -10,7 +10,7 @@ class Production extends Model
 {
     protected static function booted(): void
     {
-        static::addGlobalScope(new TeamScope());
+        static::addGlobalScope(new TeamScope);
     }
 
     protected $fillable = [
@@ -45,20 +45,20 @@ class Production extends Model
     ];
 
     protected $casts = [
-        'date_signature'    => 'date',
-        'date_effet'        => 'date',
-        'date_commission'   => 'date',
-        'date_resiliation'  => 'date',
-        'date_reprise'      => 'date',
-        'regul_transmise'   => 'boolean',
-        'regul_signee'      => 'boolean',
-        'prime_ttc'         => 'decimal:2',
-        'prime_ht'          => 'decimal:2',
-        'fond_euro'         => 'decimal:2',
-        'uc'                => 'decimal:2',
-        'taux_commission'   => 'decimal:4',
+        'date_signature' => 'date',
+        'date_effet' => 'date',
+        'date_commission' => 'date',
+        'date_resiliation' => 'date',
+        'date_reprise' => 'date',
+        'regul_transmise' => 'boolean',
+        'regul_signee' => 'boolean',
+        'prime_ttc' => 'decimal:2',
+        'prime_ht' => 'decimal:2',
+        'fond_euro' => 'decimal:2',
+        'uc' => 'decimal:2',
+        'taux_commission' => 'decimal:4',
         'commission_compagnie' => 'decimal:2',
-        'commission_mia'    => 'decimal:2',
+        'commission_mia' => 'decimal:2',
         'commission_recurrente' => 'decimal:2',
         'encours_commission' => 'decimal:2',
     ];

@@ -11,19 +11,19 @@
  * - Vérification connexion S3
  */
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
-use Illuminate\Support\Facades\Storage;
 use App\Models\AudioRecord;
 use App\Models\ClientComplianceDocument;
 use App\Models\GeneratedDocument;
 use App\Models\ImportSession;
+use Illuminate\Support\Facades\Storage;
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 echo "📊 Rapport de Pré-Migration S3\n";
-echo str_repeat('=', 70) . "\n\n";
+echo str_repeat('=', 70)."\n\n";
 
 $report = [
     'timestamp' => date('Y-m-d H:i:s'),
@@ -37,13 +37,13 @@ $report = [
 // 1. Test connexion S3
 echo "1️⃣  Test de connexion S3/MinIO...\n";
 try {
-    $testFile = '_pre_migration_test_' . time() . '.txt';
+    $testFile = '_pre_migration_test_'.time().'.txt';
     Storage::disk('s3')->put($testFile, 'test');
     Storage::disk('s3')->delete($testFile);
     $report['s3_connection'] = true;
     echo "   ✅ Connexion S3 fonctionnelle\n\n";
 } catch (\Exception $e) {
-    echo "   ❌ Erreur: " . $e->getMessage() . "\n";
+    echo '   ❌ Erreur: '.$e->getMessage()."\n";
     echo "   ⚠️  Migration impossible sans connexion S3\n\n";
     $report['s3_connection'] = false;
 }
@@ -60,9 +60,10 @@ $directories = [
 ];
 
 foreach ($directories as $key => $dir) {
-    $path = $storagePath . '/' . $dir;
-    if (!is_dir($path)) {
+    $path = $storagePath.'/'.$dir;
+    if (! is_dir($path)) {
         echo sprintf("   %-15s : (inexistant)\n", $key);
+
         continue;
     }
 
@@ -124,13 +125,15 @@ $dbPaths = array_merge(
 );
 
 // Normaliser les chemins DB (enlever 'public/', 'private/' du début)
-$dbPathsNormalized = array_map(function($path) {
+$dbPathsNormalized = array_map(function ($path) {
     return preg_replace('#^(public|private)/#', '', $path);
 }, $dbPaths);
 
 $orphans = [];
 foreach (['private', 'public'] as $dir) {
-    if (!isset($report['local_storage'][$dir])) continue;
+    if (! isset($report['local_storage'][$dir])) {
+        continue;
+    }
 
     foreach ($report['local_storage'][$dir]['files_list'] as $file) {
         $relativePath = str_replace(storage_path("app/{$dir}/"), '', $file['path']);
@@ -146,7 +149,7 @@ foreach (['private', 'public'] as $dir) {
 
         // Vérifier si référencé en DB
         $fullPath = "{$dir}/{$relativePath}";
-        if (!in_array($relativePath, $dbPathsNormalized) && !in_array($fullPath, $dbPaths)) {
+        if (! in_array($relativePath, $dbPathsNormalized) && ! in_array($fullPath, $dbPaths)) {
             $orphans[] = [
                 'path' => $file['path'],
                 'relative' => $relativePath,
@@ -199,9 +202,9 @@ echo "\n";
 
 // 6. Résumé et recommandations
 echo "6️⃣  Résumé et recommandations:\n";
-echo str_repeat('-', 70) . "\n";
+echo str_repeat('-', 70)."\n";
 
-if (!$report['s3_connection']) {
+if (! $report['s3_connection']) {
     echo "   ❌ MIGRATION IMPOSSIBLE\n";
     echo "      - Connexion S3 échouée\n";
     echo "      - Vérifier la configuration (voir check-s3-config.php)\n\n";
@@ -235,7 +238,7 @@ function scanDirectoryRecursive(string $dir): array
 {
     $files = [];
 
-    if (!is_dir($dir)) {
+    if (! is_dir($dir)) {
         return $files;
     }
 
@@ -265,5 +268,6 @@ function formatBytes(int $bytes): string
         $bytes /= 1024;
         $i++;
     }
-    return round($bytes, 2) . ' ' . $units[$i];
+
+    return round($bytes, 2).' '.$units[$i];
 }

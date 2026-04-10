@@ -28,7 +28,7 @@ return new class extends Migration
                 'approved',     // Validé, prêt à appliquer
                 'applied',      // Appliqué au client
                 'rejected',     // Rejeté par l'utilisateur
-                'partial'       // Partiellement appliqué
+                'partial',       // Partiellement appliqué
             ])->default('pending');
 
             // Décisions de l'utilisateur (champ par champ)

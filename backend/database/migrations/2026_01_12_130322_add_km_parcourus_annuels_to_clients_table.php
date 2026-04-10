@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasColumn('clients', 'km_parcourus_annuels')) {
+        if (! Schema::hasColumn('clients', 'km_parcourus_annuels')) {
             Schema::table('clients', function (Blueprint $table) {
                 $table->integer('km_parcourus_annuels')->nullable()->after('niveau_activites_sportives');
             });

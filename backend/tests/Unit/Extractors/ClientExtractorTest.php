@@ -13,7 +13,7 @@ class ClientExtractorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->extractor = new ClientExtractor();
+        $this->extractor = new ClientExtractor;
 
         // Configuration par défaut pour les tests
         config(['mistral.features.use_for_llm' => true]);
@@ -89,7 +89,7 @@ class ClientExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je suis architecte salarié");
+        $data = $this->extractor->extract('Je suis architecte salarié');
 
         $this->assertEquals('architecte', $data['profession'] ?? null);
     }
@@ -147,7 +147,7 @@ class ClientExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je ne fume pas");
+        $data = $this->extractor->extract('Je ne fume pas');
 
         $this->assertFalse($data['fumeur'] ?? true);
     }
@@ -164,7 +164,7 @@ class ClientExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je fume environ 10 cigarettes par jour");
+        $data = $this->extractor->extract('Je fume environ 10 cigarettes par jour');
 
         $this->assertTrue($data['fumeur'] ?? false);
     }
@@ -181,7 +181,7 @@ class ClientExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je fais de la musculation trois fois par semaine");
+        $data = $this->extractor->extract('Je fais de la musculation trois fois par semaine');
 
         $this->assertTrue($data['activites_sportives'] ?? false);
         $this->assertEquals('musculation', $data['details_activites_sportives'] ?? null);
@@ -280,7 +280,7 @@ class ClientExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je suis marié depuis 2010");
+        $data = $this->extractor->extract('Je suis marié depuis 2010');
 
         $this->assertEquals('Marié(e)', $data['situation_matrimoniale'] ?? null);
     }

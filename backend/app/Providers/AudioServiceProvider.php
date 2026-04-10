@@ -83,12 +83,12 @@ class AudioServiceProvider extends ServiceProvider
             } else {
                 Log::warning('[AUDIO PROVIDER] Pyannote non disponible - diarisation désactivée', [
                     'errors' => $status['errors'],
-                    'warnings' => $status['warnings']
+                    'warnings' => $status['warnings'],
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('[AUDIO PROVIDER] Erreur lors de la vérification de pyannote', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }

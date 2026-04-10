@@ -13,7 +13,7 @@ class RouterServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->router = new RouterService();
+        $this->router = new RouterService;
 
         // Configuration par défaut pour les tests
         config(['mistral.features.use_for_llm' => true]);
@@ -107,7 +107,7 @@ class RouterServiceTest extends TestCase
             ], 200),
         ]);
 
-        $sections = $this->router->detectSections("");
+        $sections = $this->router->detectSections('');
 
         $this->assertEquals(['client'], $sections);
     }
@@ -124,7 +124,7 @@ class RouterServiceTest extends TestCase
             ], 200),
         ]);
 
-        $sections = $this->router->detectSections("Texte quelconque");
+        $sections = $this->router->detectSections('Texte quelconque');
 
         $this->assertEquals(['client'], $sections);
     }
@@ -135,7 +135,7 @@ class RouterServiceTest extends TestCase
             'api.mistral.ai/*' => Http::response(['error' => 'Server error'], 500),
         ]);
 
-        $sections = $this->router->detectSections("Texte quelconque");
+        $sections = $this->router->detectSections('Texte quelconque');
 
         $this->assertEquals(['client'], $sections);
     }
@@ -191,7 +191,7 @@ class RouterServiceTest extends TestCase
             ], 200),
         ]);
 
-        $sections = $this->router->detectSections("Mon mari est architecte.");
+        $sections = $this->router->detectSections('Mon mari est architecte.');
 
         $this->assertContains('conjoint', $sections);
     }
@@ -208,7 +208,7 @@ class RouterServiceTest extends TestCase
             ], 200),
         ]);
 
-        $sections = $this->router->detectSections("Mon conjoint travaille chez EDF.");
+        $sections = $this->router->detectSections('Mon conjoint travaille chez EDF.');
 
         $this->assertContains('conjoint', $sections);
     }
@@ -228,7 +228,7 @@ class RouterServiceTest extends TestCase
         $sections = $this->router->detectSections("Ma femme s'appelle Sophie.");
 
         // "conjoint" ne doit apparaître qu'une fois
-        $this->assertEquals(1, count(array_filter($sections, fn($s) => $s === 'conjoint')));
+        $this->assertEquals(1, count(array_filter($sections, fn ($s) => $s === 'conjoint')));
     }
 
     public function test_handles_gibberish_gracefully(): void
@@ -243,7 +243,7 @@ class RouterServiceTest extends TestCase
             ], 200),
         ]);
 
-        $sections = $this->router->detectSections("asdf jkl; qwer uiop");
+        $sections = $this->router->detectSections('asdf jkl; qwer uiop');
 
         $this->assertIsArray($sections);
         $this->assertEquals(['client'], $sections);
@@ -254,7 +254,7 @@ class RouterServiceTest extends TestCase
         $validSections = [
             'client', 'conjoint', 'prevoyance', 'retraite', 'epargne',
             'sante', 'emprunteur', 'revenus', 'passifs',
-            'actifs_financiers', 'biens_immobiliers', 'autres_epargnes'
+            'actifs_financiers', 'biens_immobiliers', 'autres_epargnes',
         ];
 
         Http::fake([
@@ -267,7 +267,7 @@ class RouterServiceTest extends TestCase
             ], 200),
         ]);
 
-        $sections = $this->router->detectSections("Texte complet avec toutes les sections");
+        $sections = $this->router->detectSections('Texte complet avec toutes les sections');
 
         foreach ($validSections as $section) {
             $this->assertContains($section, $sections, "Section '$section' devrait être détectée");

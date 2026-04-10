@@ -68,7 +68,7 @@ class RecordingService
         $chunks = $this->getChunksInOrder($sessionId, $session->total_chunks);
         if (empty($chunks)) {
             $session->update(['status' => 'failed']);
-            throw new \Exception("Aucun chunk trouve pour cette session");
+            throw new \Exception('Aucun chunk trouve pour cette session');
         }
 
         // Creer l'AudioRecord en attente (sera rempli par le job)
@@ -105,6 +105,7 @@ class RecordingService
                 Log::warning("[RECORDING] Chunk manquant : {$filename}");
             }
         }
+
         return $chunks;
     }
 }

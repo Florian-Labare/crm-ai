@@ -13,8 +13,7 @@ class ImportMappingController extends Controller
     public function __construct(
         private ImportMappingService $mappingService,
         private ImportFieldsService $fieldsService
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -38,7 +37,7 @@ class ImportMappingController extends Controller
         ]);
 
         $errors = $this->mappingService->validateMapping($validated['column_mappings']);
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Mapping invalide',
@@ -80,7 +79,7 @@ class ImportMappingController extends Controller
 
         if (isset($validated['column_mappings'])) {
             $errors = $this->mappingService->validateMapping($validated['column_mappings']);
-            if (!empty($errors)) {
+            if (! empty($errors)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Mapping invalide',

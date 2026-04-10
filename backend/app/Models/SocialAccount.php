@@ -19,7 +19,7 @@ class SocialAccount extends Model
     protected $hidden = ['token', 'refresh_token'];
 
     protected $casts = [
-        'token'         => 'encrypted',
+        'token' => 'encrypted',
         'refresh_token' => 'encrypted',
     ];
 

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\ClientPendingChange;
 use App\Services\MergeService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class PendingChangesController extends Controller
@@ -36,7 +36,7 @@ class PendingChangesController extends Controller
                         'nom' => $pc->client->nom,
                         'prenom' => $pc->client->prenom,
                         'email' => $pc->client->email,
-                        'full_name' => trim(($pc->client->prenom ?? '') . ' ' . ($pc->client->nom ?? '')),
+                        'full_name' => trim(($pc->client->prenom ?? '').' '.($pc->client->nom ?? '')),
                     ] : null,
                     'source' => $pc->source,
                     'status' => $pc->status,
@@ -72,7 +72,7 @@ class PendingChangesController extends Controller
                 'nom' => $pendingChange->client->nom,
                 'prenom' => $pendingChange->client->prenom,
                 'email' => $pendingChange->client->email,
-                'full_name' => trim(($pendingChange->client->prenom ?? '') . ' ' . ($pendingChange->client->nom ?? '')),
+                'full_name' => trim(($pendingChange->client->prenom ?? '').' '.($pendingChange->client->nom ?? '')),
             ] : null,
             'source' => $pendingChange->source,
             'status' => $pendingChange->status,
@@ -102,7 +102,7 @@ class PendingChangesController extends Controller
         $this->authorize('update', $pendingChange);
 
         // Vérifier le statut
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
                 'status' => $pendingChange->status,
@@ -123,7 +123,7 @@ class PendingChangesController extends Controller
                 $request->input('overrides', [])
             );
 
-            Log::info("✅ [PENDING CHANGES] Changements appliqués", [
+            Log::info('✅ [PENDING CHANGES] Changements appliqués', [
                 'pending_change_id' => $pendingChange->id,
                 'applied_count' => count($result['applied']),
                 'rejected_count' => count($result['rejected']),
@@ -161,7 +161,7 @@ class PendingChangesController extends Controller
     {
         $this->authorize('update', $pendingChange);
 
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
             ], 422);
@@ -200,7 +200,7 @@ class PendingChangesController extends Controller
     {
         $this->authorize('update', $pendingChange);
 
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
             ], 422);
@@ -223,7 +223,7 @@ class PendingChangesController extends Controller
     {
         $this->authorize('update', $pendingChange);
 
-        if (!in_array($pendingChange->status, ['pending', 'reviewing'])) {
+        if (! in_array($pendingChange->status, ['pending', 'reviewing'])) {
             return response()->json([
                 'error' => 'Ce changement a déjà été traité',
             ], 422);

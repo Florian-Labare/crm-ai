@@ -28,7 +28,7 @@ class ClientAutresEpargnesExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientAutresEpargnesExtractor] Impossible de parser la réponse LLM');
 
                 return [];

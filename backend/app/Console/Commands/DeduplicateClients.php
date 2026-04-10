@@ -23,6 +23,7 @@ class DeduplicateClients extends Command
         $clients = Client::with(['conjoint', 'enfants', 'santeSouhait'])->get();
         if ($clients->isEmpty()) {
             $this->info('Aucun client enregistré.');
+
             return self::SUCCESS;
         }
 
@@ -30,6 +31,7 @@ class DeduplicateClients extends Command
 
         if ($duplicates->isEmpty()) {
             $this->info('Aucun doublon détecté 🎉');
+
             return self::SUCCESS;
         }
 
@@ -46,7 +48,7 @@ class DeduplicateClients extends Command
             }
         }
 
-        if (!$merge) {
+        if (! $merge) {
             $this->line('');
             $this->comment('Ajoutez --merge pour fusionner automatiquement les doublons.');
         }
@@ -63,10 +65,11 @@ class DeduplicateClients extends Command
                 $client->user_id,
                 $this->normalize($client->email),
             ];
+
             return implode('|', $keyParts);
         })->each(function (Collection $group) use ($groups) {
-            if ($group->filter(fn (Client $c) => !empty($c->email))->count() > 1) {
-                $groups->push($group->filter(fn (Client $c) => !empty($c->email)));
+            if ($group->filter(fn (Client $c) => ! empty($c->email))->count() > 1) {
+                $groups->push($group->filter(fn (Client $c) => ! empty($c->email)));
             }
         });
 
@@ -75,10 +78,11 @@ class DeduplicateClients extends Command
                 $client->user_id,
                 $this->normalizePhone($client->telephone),
             ];
+
             return implode('|', $keyParts);
         })->each(function (Collection $group) use ($groups) {
-            if ($group->filter(fn (Client $c) => !empty($this->normalizePhone($c->telephone)))->count() > 1) {
-                $groups->push($group->filter(fn (Client $c) => !empty($this->normalizePhone($c->telephone))));
+            if ($group->filter(fn (Client $c) => ! empty($this->normalizePhone($c->telephone)))->count() > 1) {
+                $groups->push($group->filter(fn (Client $c) => ! empty($this->normalizePhone($c->telephone))));
             }
         });
 
@@ -104,8 +108,9 @@ class DeduplicateClients extends Command
     {
         $first = $group->first();
         $ids = $group->pluck('id')->implode(', ');
+
         return sprintf(
-            "User #%d • %s %s • %d doublon(s) [IDs: %s]",
+            'User #%d • %s %s • %d doublon(s) [IDs: %s]',
             $first->user_id,
             $first->prenom,
             $first->nom,
@@ -150,6 +155,7 @@ class DeduplicateClients extends Command
             return null;
         }
         $normalized = Str::ascii(Str::lower(trim($value)));
+
         return $normalized === '' ? null : $normalized;
     }
 
@@ -165,7 +171,7 @@ class DeduplicateClients extends Command
         }
 
         if (str_starts_with($digits, '33') && strlen($digits) === 11) {
-            $digits = '0' . substr($digits, 2);
+            $digits = '0'.substr($digits, 2);
         }
 
         return $digits;

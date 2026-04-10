@@ -26,7 +26,7 @@ class LlmClientTraitTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new LlmTestService();
+        $this->service = new LlmTestService;
     }
 
     public function test_mistral_api_returns_valid_json(): void

@@ -60,7 +60,7 @@ class AudioService
             ->where('user_id', $userId)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             throw new AuthorizationException(
                 'Le client spécifié n\'existe pas ou ne vous appartient pas.'
             );

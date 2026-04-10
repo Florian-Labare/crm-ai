@@ -38,14 +38,20 @@ class ClientPendingChange extends Model
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_REVIEWING = 'reviewing';
+
     const STATUS_APPLIED = 'applied';
+
     const STATUS_PARTIALLY_APPLIED = 'partially_applied';
+
     const STATUS_REJECTED = 'rejected';
 
     // Source constants
     const SOURCE_AUDIO = 'audio';
+
     const SOURCE_MANUAL = 'manual';
+
     const SOURCE_IMPORT = 'import';
 
     // ============================================
@@ -115,7 +121,8 @@ class ClientPendingChange extends Model
     public function getChangesCountAttribute(): int
     {
         $diff = $this->changes_diff ?? [];
-        return collect($diff)->filter(fn($change) => $change['has_change'] ?? false)->count();
+
+        return collect($diff)->filter(fn ($change) => $change['has_change'] ?? false)->count();
     }
 
     /**
@@ -124,7 +131,8 @@ class ClientPendingChange extends Model
     public function getConflictsCountAttribute(): int
     {
         $diff = $this->changes_diff ?? [];
-        return collect($diff)->filter(fn($change) => $change['is_conflict'] ?? false)->count();
+
+        return collect($diff)->filter(fn ($change) => $change['is_conflict'] ?? false)->count();
     }
 
     /**
@@ -133,6 +141,7 @@ class ClientPendingChange extends Model
     public function getCriticalCountAttribute(): int
     {
         $diff = $this->changes_diff ?? [];
-        return collect($diff)->filter(fn($change) => $change['is_critical'] ?? false)->count();
+
+        return collect($diff)->filter(fn ($change) => $change['is_critical'] ?? false)->count();
     }
 }

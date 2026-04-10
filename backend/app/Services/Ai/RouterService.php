@@ -17,7 +17,7 @@ class RouterService
     /**
      * Détecte les sections concernées par la transcription.
      *
-     * @param string $transcription Transcription vocale
+     * @param  string  $transcription  Transcription vocale
      * @return array Tableau de sections (ex: ["client", "prevoyance"])
      */
     public function detectSections(string $transcription): array
@@ -32,8 +32,9 @@ class RouterService
                 true
             );
 
-            if (!is_array($data) || !isset($data['sections'])) {
+            if (! is_array($data) || ! isset($data['sections'])) {
                 Log::warning('[RouterService] Format de réponse invalide', ['content' => $data]);
+
                 // Par défaut, considérer que c'est une transcription client
                 return ['client'];
             }
@@ -41,13 +42,13 @@ class RouterService
             $sections = $data['sections'];
 
             // Validation : sections doit être un tableau
-            if (!is_array($sections)) {
+            if (! is_array($sections)) {
                 return ['client'];
             }
 
             // Filtrer les sections invalides
             $validSections = ['client', 'conjoint', 'prevoyance', 'retraite', 'epargne', 'sante', 'emprunteur', 'revenus', 'passifs', 'actifs_financiers', 'biens_immobiliers', 'autres_epargnes'];
-            $sections = array_filter($sections, fn($s) => in_array($s, $validSections));
+            $sections = array_filter($sections, fn ($s) => in_array($s, $validSections));
 
             // Si aucune section détectée, par défaut "client"
             if (empty($sections)) {
@@ -63,6 +64,7 @@ class RouterService
 
         } catch (\Throwable $e) {
             Log::error('[RouterService] Erreur lors de la détection', ['message' => $e->getMessage()]);
+
             // En cas d'erreur, par défaut "client"
             return ['client'];
         }
@@ -114,7 +116,7 @@ PROMPT;
         foreach ($conjointPatterns as $pattern) {
             if (preg_match($pattern, $text)) {
                 // Ajouter "conjoint" si pas déjà présent
-                if (!in_array('conjoint', $sections)) {
+                if (! in_array('conjoint', $sections)) {
                     $sections[] = 'conjoint';
                     Log::info('🔒 [RouterService] Section "conjoint" forcée par détection de mots-clés', [
                         'pattern_matched' => $pattern,

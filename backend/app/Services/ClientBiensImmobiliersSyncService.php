@@ -11,7 +11,6 @@ class ClientBiensImmobiliersSyncService
     /**
      * Synchronise les biens immobiliers d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $biensData  Tableau de biens immobiliers extraits par GPT
      */
     public function syncBiensImmobiliers(Client $client, array $biensData): void
@@ -34,6 +33,7 @@ class ClientBiensImmobiliersSyncService
 
             if (empty($bienData)) {
                 Log::info("🏠 [BIENS IMMOBILIERS] Bien #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -61,7 +61,7 @@ class ClientBiensImmobiliersSyncService
             Log::info("🏠 [BIENS IMMOBILIERS] Conservation de {$keptBiens} bien(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [BIENS IMMOBILIERS] Synchronisation terminée - ' . count($processedIds) . ' bien(s) traité(s), total: ' . $client->biensImmobiliers()->count());
+        Log::info('✅ [BIENS IMMOBILIERS] Synchronisation terminée - '.count($processedIds).' bien(s) traité(s), total: '.$client->biensImmobiliers()->count());
     }
 
     /**
@@ -87,6 +87,7 @@ class ClientBiensImmobiliersSyncService
                     $this->normalizeString($bienData['designation']) ?? ''
                 );
                 $valeurMatch = abs($bien->valeur_actuelle_estimee - $bienData['valeur_actuelle_estimee']) < 0.01;
+
                 return $designationMatch && $valeurMatch;
             });
             if ($match) {
@@ -106,6 +107,7 @@ class ClientBiensImmobiliersSyncService
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }

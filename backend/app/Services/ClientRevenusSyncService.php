@@ -11,7 +11,6 @@ class ClientRevenusSyncService
     /**
      * Synchronise les revenus d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $revenusData  Tableau de revenus extraits par GPT
      */
     public function syncRevenus(Client $client, array $revenusData): void
@@ -34,6 +33,7 @@ class ClientRevenusSyncService
 
             if (empty($revenuData)) {
                 Log::info("💰 [REVENUS] Revenu #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -61,7 +61,7 @@ class ClientRevenusSyncService
             Log::info("💰 [REVENUS] Conservation de {$keptRevenus} revenu(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [REVENUS] Synchronisation terminée - ' . count($processedIds) . ' revenu(s) traité(s), total: ' . $client->revenus()->count());
+        Log::info('✅ [REVENUS] Synchronisation terminée - '.count($processedIds).' revenu(s) traité(s), total: '.$client->revenus()->count());
     }
 
     /**
@@ -79,13 +79,13 @@ class ClientRevenusSyncService
                 return $this->normalizeString($revenu->nature) === $this->normalizeString($revenuData['nature'])
                     && abs($revenu->montant - $revenuData['montant']) < 0.01;
             });
-            if ($match && (!$isAutre || $this->normalizeString($match->details ?? null) === $details)) {
+            if ($match && (! $isAutre || $this->normalizeString($match->details ?? null) === $details)) {
                 return $match;
             }
         }
 
         // Match par nature seule (si unique)
-        if (isset($revenuData['nature']) && !$isAutre) {
+        if (isset($revenuData['nature']) && ! $isAutre) {
             $matches = $existingRevenus->filter(function ($revenu) use ($revenuData) {
                 return $this->normalizeString($revenu->nature) === $this->normalizeString($revenuData['nature']);
             });
@@ -107,6 +107,7 @@ class ClientRevenusSyncService
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }

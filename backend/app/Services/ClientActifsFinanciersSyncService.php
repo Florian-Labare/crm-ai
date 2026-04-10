@@ -11,7 +11,6 @@ class ClientActifsFinanciersSyncService
     /**
      * Synchronise les actifs financiers d'un client avec les données extraites
      *
-     * @param  Client  $client
      * @param  array  $actifsData  Tableau d'actifs financiers extraits par GPT
      */
     public function syncActifsFinanciers(Client $client, array $actifsData): void
@@ -43,6 +42,7 @@ class ClientActifsFinanciersSyncService
 
             if (empty($actifData)) {
                 Log::info("📈 [ACTIFS FINANCIERS] Actif #{$index} sans données - ignoré");
+
                 continue;
             }
 
@@ -70,7 +70,7 @@ class ClientActifsFinanciersSyncService
             Log::info("📈 [ACTIFS FINANCIERS] Conservation de {$keptActifs} actif(s) existant(s) non mentionné(s) dans cette extraction");
         }
 
-        Log::info('✅ [ACTIFS FINANCIERS] Synchronisation terminée - ' . count($processedIds) . ' actif(s) traité(s), total: ' . $client->actifsFinanciers()->count());
+        Log::info('✅ [ACTIFS FINANCIERS] Synchronisation terminée - '.count($processedIds).' actif(s) traité(s), total: '.$client->actifsFinanciers()->count());
     }
 
     /**
@@ -136,15 +136,15 @@ class ClientActifsFinanciersSyncService
 
                 // Match si même nature ET (même établissement OU l'un des deux n'a pas d'établissement)
                 if ($existingNature === $nature) {
-                    if ($etablissement === $existingEtab || !$etablissement || !$existingEtab) {
+                    if ($etablissement === $existingEtab || ! $etablissement || ! $existingEtab) {
                         // Fusionner : garder les infos non vides de chaque côté
                         foreach ($actif as $field => $value) {
-                            if (!empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
+                            if (! empty($value) && (empty($existing[$field]) || $existing[$field] === null)) {
                                 $existing[$field] = $value;
                             }
                         }
                         // Si le nouveau a un établissement et l'existant non, utiliser le nouveau
-                        if (!empty($actif['etablissement']) && empty($existing['etablissement'])) {
+                        if (! empty($actif['etablissement']) && empty($existing['etablissement'])) {
                             $existing['etablissement'] = $actif['etablissement'];
                         }
                         $found = true;
@@ -157,8 +157,8 @@ class ClientActifsFinanciersSyncService
                 }
             }
 
-            if (!$found) {
-                $key = $nature . ($etablissement ? '_' . $etablissement : '');
+            if (! $found) {
+                $key = $nature.($etablissement ? '_'.$etablissement : '');
                 $merged[$key] = $actif;
             }
         }
@@ -166,7 +166,7 @@ class ClientActifsFinanciersSyncService
         $result = array_values($merged);
 
         if (count($result) < count($actifs)) {
-            Log::info("📈 [ACTIFS FINANCIERS] 🔀 Déduplication par nature: " . count($actifs) . " → " . count($result) . " actif(s)");
+            Log::info('📈 [ACTIFS FINANCIERS] 🔀 Déduplication par nature: '.count($actifs).' → '.count($result).' actif(s)');
         }
 
         return $result;
@@ -187,9 +187,10 @@ class ClientActifsFinanciersSyncService
             }
 
             if ($this->isCryptoNature($nature)) {
-                Log::info("📈 [ACTIFS FINANCIERS] Actif crypto ignoré (autres épargnes)", [
+                Log::info('📈 [ACTIFS FINANCIERS] Actif crypto ignoré (autres épargnes)', [
                     'nature' => $actif['nature'] ?? 'inconnu',
                 ]);
+
                 continue;
             }
 
@@ -208,11 +209,12 @@ class ClientActifsFinanciersSyncService
             $nature = $this->normalizeString($actif['nature'] ?? '');
             $etablissement = $this->normalizeString($actif['etablissement'] ?? '');
             $valueKey = isset($actif['valeur_actuelle']) ? number_format((float) $actif['valeur_actuelle'], 2, '.', '') : '';
-            $key = ($nature ?? '') . '|' . ($etablissement ?? '') . '|' . $valueKey;
+            $key = ($nature ?? '').'|'.($etablissement ?? '').'|'.$valueKey;
 
             if (isset($seen[$key])) {
                 $index = $seen[$key];
-                $result[$index] = array_merge($result[$index], array_filter($actif, fn($v) => $v !== null && $v !== ''));
+                $result[$index] = array_merge($result[$index], array_filter($actif, fn ($v) => $v !== null && $v !== ''));
+
                 continue;
             }
 
@@ -244,6 +246,7 @@ class ClientActifsFinanciersSyncService
             if (is_bool($value)) {
                 return true;
             }
+
             return $value !== null && $value !== '';
         }, ARRAY_FILTER_USE_BOTH);
     }

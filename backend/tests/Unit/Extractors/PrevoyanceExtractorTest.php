@@ -13,7 +13,7 @@ class PrevoyanceExtractorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->extractor = new PrevoyanceExtractor();
+        $this->extractor = new PrevoyanceExtractor;
 
         config(['mistral.features.use_for_llm' => true]);
         config(['mistral.api_key' => 'test-mistral-key']);
@@ -69,7 +69,7 @@ class PrevoyanceExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux un capital décès de 200000€");
+        $data = $this->extractor->extract('Je veux un capital décès de 200000€');
 
         $this->assertEquals(200000, $data['bae_prevoyance']['capital_deces_souhaite'] ?? null);
     }
@@ -86,7 +86,7 @@ class PrevoyanceExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux une rente de 1500€ pour ma femme en cas de décès");
+        $data = $this->extractor->extract('Je veux une rente de 1500€ pour ma femme en cas de décès');
 
         $this->assertEquals(1500, $data['bae_prevoyance']['rente_conjoint'] ?? null);
     }
@@ -103,7 +103,7 @@ class PrevoyanceExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux couvrir mes charges professionnelles de 50000€ par an");
+        $data = $this->extractor->extract('Je veux couvrir mes charges professionnelles de 50000€ par an');
 
         $this->assertTrue($data['bae_prevoyance']['souhaite_couvrir_charges_professionnelles'] ?? false);
         $this->assertEquals(50000, $data['bae_prevoyance']['montant_annuel_charges_professionnelles'] ?? null);
@@ -138,7 +138,7 @@ class PrevoyanceExtractorTest extends TestCase
             ], 200),
         ]);
 
-        $data = $this->extractor->extract("Je veux préparer ma retraite");
+        $data = $this->extractor->extract('Je veux préparer ma retraite');
 
         $this->assertEquals([], $data);
     }

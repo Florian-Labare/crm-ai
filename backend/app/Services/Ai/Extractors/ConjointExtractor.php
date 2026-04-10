@@ -23,8 +23,8 @@ class ConjointExtractor
     /**
      * Extrait les données du conjoint depuis la transcription.
      *
-     * @param string $transcription Transcription vocale
-     * @param array $currentData Données existantes (optionnel)
+     * @param  string  $transcription  Transcription vocale
+     * @param  array  $currentData  Données existantes (optionnel)
      * @return array Données extraites
      */
     public function extract(string $transcription, array $currentData = []): array
@@ -39,7 +39,7 @@ class ConjointExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ConjointExtractor] Impossible de parser la réponse LLM');
 
                 return [];

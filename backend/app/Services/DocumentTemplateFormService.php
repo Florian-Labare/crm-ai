@@ -26,21 +26,20 @@ class DocumentTemplateFormService
         private readonly DirectTemplateMapper $mapper,
         private readonly DocumentTemplateFieldService $fieldService,
         private readonly DocumentTemplateQuestionService $questionService
-    ) {
-    }
+    ) {}
 
     /**
      * Retourne les champs du formulaire pour un template donné.
      */
     public function getFields(DocumentTemplate $template, Client $client): array
     {
-        $templatePath = storage_path('app/' . $template->file_path);
+        $templatePath = storage_path('app/'.$template->file_path);
         $variables = $this->mapper->extractTemplateVariables($templatePath);
         $columnMap = $this->fieldService->mapVariablesToColumns($variables);
         $tableName = $this->fieldService->tableNameForPath($template->file_path);
         $questionLabels = $this->questionService->extractQuestions($templatePath);
 
-        if (!Schema::hasTable($tableName)) {
+        if (! Schema::hasTable($tableName)) {
             throw new \Exception("Table de formulaire introuvable : {$tableName}");
         }
 
@@ -52,7 +51,7 @@ class DocumentTemplateFormService
         $newDefaults = $this->mapper->mapVariables($client, $variables);
 
         // Ne garder que les valeurs non-vides du nouveau mapper pour ne pas écraser les valeurs legacy
-        $newDefaultsFiltered = array_filter($newDefaults, fn($v) => $v !== '' && $v !== null);
+        $newDefaultsFiltered = array_filter($newDefaults, fn ($v) => $v !== '' && $v !== null);
         $defaults = array_merge($legacyDefaults, $newDefaultsFiltered);
 
         $fields = [];
@@ -69,6 +68,7 @@ class DocumentTemplateFormService
                     'label' => $label,
                     'value' => $defaultValue,
                 ];
+
                 continue;
             }
 
@@ -98,7 +98,7 @@ class DocumentTemplateFormService
         $generatedLabel = $this->fieldService->labelForVariable($variable);
 
         // Si pas de label du template, utiliser le label généré
-        if (!$baseLabel) {
+        if (! $baseLabel) {
             return $generatedLabel;
         }
 
@@ -112,11 +112,11 @@ class DocumentTemplateFormService
         $suffix = $this->extractSuffix($generatedLabel);
 
         // Si le label du template contient déjà le contexte, ne pas ajouter de suffixe
-        if (!$suffix || $this->labelAlreadyHasContext($baseLabel, $variable)) {
+        if (! $suffix || $this->labelAlreadyHasContext($baseLabel, $variable)) {
             return $baseLabel;
         }
 
-        return trim($baseLabel) . $suffix;
+        return trim($baseLabel).$suffix;
     }
 
     /**
@@ -166,6 +166,7 @@ class DocumentTemplateFormService
         if (preg_match('/(\s*\([^)]+\))$/', $label, $matches)) {
             return $matches[1];
         }
+
         return '';
     }
 
@@ -193,17 +194,17 @@ class DocumentTemplateFormService
      */
     public function getSavedValues(DocumentTemplate $template, Client $client): array
     {
-        $templatePath = storage_path('app/' . $template->file_path);
+        $templatePath = storage_path('app/'.$template->file_path);
         $variables = $this->mapper->extractTemplateVariables($templatePath);
         $columnMap = $this->fieldService->mapVariablesToColumns($variables);
         $tableName = $this->fieldService->tableNameForPath($template->file_path);
 
-        if (!Schema::hasTable($tableName)) {
+        if (! Schema::hasTable($tableName)) {
             return [];
         }
 
         $row = DB::table($tableName)->where('client_id', $client->id)->first();
-        if (!$row) {
+        if (! $row) {
             return [];
         }
 
@@ -229,12 +230,12 @@ class DocumentTemplateFormService
      */
     public function saveValues(DocumentTemplate $template, Client $client, array $values): void
     {
-        $templatePath = storage_path('app/' . $template->file_path);
+        $templatePath = storage_path('app/'.$template->file_path);
         $variables = $this->mapper->extractTemplateVariables($templatePath);
         $columnMap = $this->fieldService->mapVariablesToColumns($variables);
         $tableName = $this->fieldService->tableNameForPath($template->file_path);
 
-        if (!Schema::hasTable($tableName)) {
+        if (! Schema::hasTable($tableName)) {
             throw new \Exception("Table de formulaire introuvable : {$tableName}");
         }
 
@@ -248,7 +249,7 @@ class DocumentTemplateFormService
                 continue;
             }
             $column = $columnMap[$variable] ?? null;
-            if (!$column || !Schema::hasColumn($tableName, $column)) {
+            if (! $column || ! Schema::hasColumn($tableName, $column)) {
                 continue;
             }
 

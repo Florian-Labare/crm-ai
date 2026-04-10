@@ -1465,7 +1465,7 @@ class AnalysisService
         ];
 
         foreach ($monthMap as $fr => $en) {
-            $normalized = preg_replace('/\b' . $fr . '\b/', $en, $normalized);
+            $normalized = preg_replace('/\b'.$fr.'\b/', $en, $normalized);
         }
 
         return $normalized;
@@ -1604,7 +1604,7 @@ class AnalysisService
         // Pattern 2: Chercher autour des keywords
         foreach ($keywords as $keyword) {
             // Chercher "keyword c'est/est X Y Z" avec lettres espacées
-            $pattern = '/' . preg_quote($keyword, '/') . '\s+(?:c\'?est|est)?\s*([a-zàâäéèêëïîôùûüÿçæœ\s\-\']{3,})/ui';
+            $pattern = '/'.preg_quote($keyword, '/').'\s+(?:c\'?est|est)?\s*([a-zàâäéèêëïîôùûüÿçæœ\s\-\']{3,})/ui';
             if (preg_match($pattern, $text, $matches)) {
                 $spelled = $this->reconstructSpelledWord($matches[1]);
                 if ($spelled) {
@@ -1784,10 +1784,10 @@ class AnalysisService
                     // Pour les codes postaux: concaténation, pas multiplication
                     if ($secondPart === 'cent') {
                         // "51 cent" → "51100"
-                        return str_pad($firstNumber, 2, '0', STR_PAD_LEFT) . '100';
+                        return str_pad($firstNumber, 2, '0', STR_PAD_LEFT).'100';
                     } elseif ($secondPart === 'mille') {
                         // "51 mille" → "51000"
-                        return str_pad($firstNumber, 2, '0', STR_PAD_LEFT) . '000';
+                        return str_pad($firstNumber, 2, '0', STR_PAD_LEFT).'000';
                     }
                 }
 
@@ -1798,13 +1798,13 @@ class AnalysisService
 
         // Remplacer les nombres composés (plus longs en premier)
         foreach ($composedNumbers as $verbal => $numeric) {
-            $pattern = '/\b' . preg_quote($verbal, '/') . '\b/u';
+            $pattern = '/\b'.preg_quote($verbal, '/').'\b/u';
             $textLower = preg_replace($pattern, (string) $numeric, $textLower);
         }
 
         // Remplacer les nombres simples
         foreach ($numbers as $verbal => $numeric) {
-            $pattern = '/\b' . preg_quote($verbal, '/') . '\b/u';
+            $pattern = '/\b'.preg_quote($verbal, '/').'\b/u';
             $textLower = preg_replace($pattern, (string) $numeric, $textLower);
         }
 
@@ -2044,6 +2044,7 @@ class AnalysisService
             if (preg_match($regex, $text)) {
                 Log::info('🔍 [CONSENTEMENT] Refus détecté', ['pattern' => $regex]);
                 $data['consentement_audio'] = false;
+
                 return;
             }
         }
@@ -2064,6 +2065,7 @@ class AnalysisService
             if (preg_match($regex, $text)) {
                 Log::info('✅ [CONSENTEMENT] Accord détecté', ['pattern' => $regex]);
                 $data['consentement_audio'] = true;
+
                 return;
             }
         }
@@ -2294,7 +2296,7 @@ class AnalysisService
 
     private function hydrateResidenceFiscaleFromTranscript(string $transcription, array &$data): void
     {
-        if (!empty($data['residence_fiscale'])) {
+        if (! empty($data['residence_fiscale'])) {
             return;
         }
 
@@ -2316,7 +2318,7 @@ class AnalysisService
         ];
 
         foreach ($patterns as $pattern) {
-            if (!preg_match($pattern, $transcription, $matches)) {
+            if (! preg_match($pattern, $transcription, $matches)) {
                 continue;
             }
 

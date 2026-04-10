@@ -28,7 +28,7 @@ class ClientPassifsExtractor
                 true
             );
 
-            if (!is_array($data)) {
+            if (! is_array($data)) {
                 Log::warning('[ClientPassifsExtractor] Impossible de parser la réponse LLM');
 
                 return [];
@@ -84,9 +84,9 @@ PROMPT;
             $nature = strtolower($passif['nature'] ?? 'autre');
             $preteur = trim($passif['preteur'] ?? '');
 
-            if (!empty($preteur)) {
-                $key = $nature . '_' . strtolower($preteur);
-                if (!isset($withPreteur[$key])) {
+            if (! empty($preteur)) {
+                $key = $nature.'_'.strtolower($preteur);
+                if (! isset($withPreteur[$key])) {
                     $withPreteur[$key] = $passif;
                 } else {
                     $withPreteur[$key] = $this->mergePassifData($withPreteur[$key], $passif);
@@ -104,20 +104,20 @@ PROMPT;
 
             // Chercher un passif de même nature avec prêteur
             foreach ($withPreteur as $key => &$existing) {
-                if (str_starts_with($key, $nature . '_')) {
+                if (str_starts_with($key, $nature.'_')) {
                     $withPreteur[$key] = $this->mergePassifData($existing, $passif);
                     $merged = true;
                     Log::info('[ClientPassifsExtractor] 🔀 Fusion sans prêteur → avec prêteur', [
                         'nature' => $nature,
-                        'preteur_existant' => $existing['preteur'] ?? 'inconnu'
+                        'preteur_existant' => $existing['preteur'] ?? 'inconnu',
                     ]);
                     break;
                 }
             }
 
             // Si pas trouvé, ajouter comme entrée séparée par nature
-            if (!$merged) {
-                if (!isset($withPreteur[$nature])) {
+            if (! $merged) {
+                if (! isset($withPreteur[$nature])) {
                     $withPreteur[$nature] = $passif;
                 } else {
                     $withPreteur[$nature] = $this->mergePassifData($withPreteur[$nature], $passif);
@@ -131,7 +131,7 @@ PROMPT;
             Log::info('[ClientPassifsExtractor] 🔀 Déduplication effectuée', [
                 'avant' => count($passifs),
                 'après' => count($result),
-                'passifs_fusionnés' => array_map(fn($p) => ($p['nature'] ?? 'inconnu') . ' (' . ($p['preteur'] ?? 'sans prêteur') . ')', $result)
+                'passifs_fusionnés' => array_map(fn ($p) => ($p['nature'] ?? 'inconnu').' ('.($p['preteur'] ?? 'sans prêteur').')', $result),
             ]);
         }
 
@@ -147,8 +147,8 @@ PROMPT;
 
         foreach ($fields as $field) {
             // Si le champ existe dans new et pas dans existing (ou est vide/null)
-            if (isset($new[$field]) && !empty($new[$field])) {
-                if (!isset($existing[$field]) || empty($existing[$field])) {
+            if (isset($new[$field]) && ! empty($new[$field])) {
+                if (! isset($existing[$field]) || empty($existing[$field])) {
                     $existing[$field] = $new[$field];
                 }
                 // Si les deux ont une valeur, garder celle de existing (première mention)
