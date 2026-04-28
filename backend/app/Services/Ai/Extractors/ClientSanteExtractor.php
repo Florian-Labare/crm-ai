@@ -70,6 +70,12 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de besoins SANTÉ (complémentaire santé / mutuelle).
 
+[FORMAT DE TRANSCRIPTION]
+La transcription peut être labelisée avec 2 locuteurs :
+- "[Courtier]: ..." → le conseiller financier (courtier) — IGNORER ses phrases pour l'extraction
+- "[Client]: ..." → le client (assuré) — SOURCE UNIQUE des données à extraire
+Si les labels sont absents, identifier le client par les formulations à la 1ère personne ("je", "moi", "mon", "ma").
+
 [OBJECTIF]
 Détecter si le client exprime un besoin de complémentaire santé et extraire les données associées.
 

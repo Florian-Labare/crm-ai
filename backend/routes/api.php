@@ -22,7 +22,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionnaireRisqueController;
 use App\Http\Controllers\RecordingController;
 use App\Http\Controllers\SocialAuthController;
-use App\Http\Controllers\SpeakerCorrectionController;
 use App\Http\Controllers\SuperAdminController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,7 +42,6 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 // Health check endpoints (publics pour monitoring externe) - avec rate limiting
 Route::prefix('health')->middleware('throttle:health-check')->group(function () {
     Route::get('/audio', [HealthController::class, 'audioSystem']);
-    Route::get('/pyannote', [HealthController::class, 'pyannote']);
 });
 
 // Routes protégées par authentification Sanctum
@@ -231,19 +229,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/recordings/{sessionId}/finalize', [RecordingController::class, 'finalize'])
         ->middleware('throttle:audio-finalize');
 
-    // Correction des speakers (diarisation) - avec rate limiting
-    Route::prefix('audio-records/{audioRecord}/speakers')
-        ->middleware('throttle:speaker-correction')
-        ->group(function () {
-            Route::get('/', [SpeakerCorrectionController::class, 'show']);
-            Route::post('/correct', [SpeakerCorrectionController::class, 'correct']);
-            Route::post('/correct-batch', [SpeakerCorrectionController::class, 'correctBatch']);
-            Route::post('/reset', [SpeakerCorrectionController::class, 'reset']);
-        });
-    Route::get('/audio-records/needs-review', [SpeakerCorrectionController::class, 'needsReview']);
-
-    // Monitoring de la diarisation (admin/stats)
-    Route::get('/diarization/stats', [HealthController::class, 'diarizationStats']);
 
     // Questionnaire de risque
     Route::post('/questionnaire-risque/live', [QuestionnaireRisqueController::class, 'live']);

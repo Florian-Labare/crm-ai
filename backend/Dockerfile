@@ -1,6 +1,6 @@
 FROM php:8.3-apache
 
-# Installer les extensions PHP nécessaires à Laravel + Python pour Whisper
+# Installer les extensions PHP nécessaires à Laravel + ffmpeg pour la concaténation audio
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -11,12 +11,10 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
-    python3 \
-    python3-pip \
-    python3-venv \
     ffmpeg \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql gd mbstring exif pcntl bcmath opcache zip
+    && docker-php-ext-install pdo pdo_mysql gd mbstring exif pcntl bcmath opcache zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Installer l'extension Redis (phpredis)
 RUN pecl install redis \
@@ -46,13 +44,6 @@ RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-s
 # Donner les permissions nécessaires
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
-
-# --- Installation des dépendances Python (Whisper, WhisperX, Pyannote) ---
-# Note: Cette étape peut prendre plusieurs minutes (torch, pyannote, etc.)
-RUN pip3 install --no-cache-dir --break-system-packages -r /var/www/html/scripts/requirements.txt \
-    && chmod +x /var/www/html/scripts/whisper_transcribe.py \
-    && chmod +x /var/www/html/scripts/diarize_audio.py \
-    && chmod +x /var/www/html/scripts/init_pyannote.py
 
 # --- Créer les dossiers nécessaires pour l'enregistrement audio ---
 RUN mkdir -p /var/www/html/storage/app/recordings \

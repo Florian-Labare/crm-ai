@@ -33,14 +33,3 @@ Schedule::command('audio:purge-old --days=30')
     ->appendOutputTo(storage_path('logs/purge-audio.log'))
     ->description('Supprime les fichiers audio de plus de 30 jours (RGPD)');
 
-// Vérification de la santé de Pyannote - toutes les heures
-Schedule::command('pyannote:health --refresh')
-    ->hourly()
-    ->withoutOverlapping()
-    ->description('Vérifie la disponibilité du système de diarisation');
-
-// Statistiques de diarisation quotidiennes - tous les jours à 6h
-Schedule::command('diarization:stats --days=1 --json')
-    ->dailyAt('06:00')
-    ->appendOutputTo(storage_path('logs/diarization-stats.log'))
-    ->description('Génère les statistiques quotidiennes de diarisation');

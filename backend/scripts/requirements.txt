@@ -1,3 +1,3 @@
-openai-whisper
-whisperx
-pyannote.audio
+# Python dependencies for audio processing
+# ML dependencies (openai-whisper, whisperx, pyannote.audio) removed:
+# Diarisation is now handled natively by Voxtral (Mistral STT API)

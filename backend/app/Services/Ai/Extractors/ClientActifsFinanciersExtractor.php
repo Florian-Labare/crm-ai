@@ -209,6 +209,12 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction d'ACTIFS FINANCIERS clients.
 
+[FORMAT DE TRANSCRIPTION]
+La transcription peut être labelisée avec 2 locuteurs :
+- "[Courtier]: ..." → le conseiller financier (courtier) — IGNORER ses phrases pour l'extraction
+- "[Client]: ..." → le client (assuré) — SOURCE UNIQUE des données à extraire
+Si les labels sont absents, identifier le client par les formulations à la 1ère personne ("je", "moi", "mon", "ma").
+
 [OBJECTIF]
 Détecter et extraire tous les actifs financiers mentionnés par le client (assurance-vie, PEA, compte-titres, livrets, etc.).
 

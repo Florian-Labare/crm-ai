@@ -1,0 +1,27 @@
+{
+    # FrankenPHP global options
+    frankenphp
+    auto_https off
+    admin off
+}
+
+:80 {
+    root * /var/www/html/public
+
+    # Encode gzip
+    encode gzip
+
+    # PHP via FrankenPHP worker mode (Laravel Octane)
+    php_server {
+        # Worker mode — Octane manages the PHP workers
+        # FrankenPHP passes requests directly to the running Octane worker
+    }
+
+    # Static file serving with fallback to PHP
+    file_server
+
+    log {
+        output stderr
+        level INFO
+    }
+}

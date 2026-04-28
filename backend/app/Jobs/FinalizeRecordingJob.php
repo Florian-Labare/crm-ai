@@ -35,7 +35,6 @@ class FinalizeRecordingJob implements ShouldQueue
 
         Log::info("[FINALIZE] Debut du traitement pour session {$sessionId}");
 
-        // Marquer l'AudioRecord comme en cours de traitement (signal pour le polling frontend)
         $this->audioRecord->update(['status' => 'processing']);
 
         // 1. Recuperer les chunks dans l'ordre (disque local recordings)
@@ -52,19 +51,26 @@ class FinalizeRecordingJob implements ShouldQueue
         $concatenatedAudio = $this->concatenateChunks($chunks, $sessionId);
 
         try {
-            // 3. Transcrire l'audio complet directement (sans diarisation)
-            Log::info("[FINALIZE] Transcription de l'audio complet...");
-            $finalTranscription = $this->transcribeAudio($concatenatedAudio, $transcriptionService);
+            // 3. Transcrire avec diarisation native Voxtral (Courtier / Client)
+            Log::info("[FINALIZE] Transcription avec diarisation Voxtral...");
+            $result = $transcriptionService->transcribeWithDiarization($concatenatedAudio);
 
-            Log::info('[FINALIZE] Transcription finale : '.strlen($finalTranscription).' caracteres');
+            $finalTranscription = $result['transcript'];
+            $clientTranscription = $result['client_transcript'];
+
+            Log::info('[FINALIZE] Transcription finale : '.strlen($finalTranscription).' caracteres', [
+                'has_diarization' => $clientTranscription !== null,
+                'client_transcript_length' => strlen($clientTranscription ?? ''),
+            ]);
 
             if (trim($finalTranscription) === '') {
                 throw new \Exception('Transcription vide apres traitement des chunks');
             }
 
-            // 4. Mettre a jour l'AudioRecord avec la transcription
+            // 4. Mettre a jour l'AudioRecord
             $this->audioRecord->update([
                 'transcription' => $finalTranscription,
+                'client_transcription' => $clientTranscription,
                 'status' => 'pending',
             ]);
 
@@ -75,26 +81,23 @@ class FinalizeRecordingJob implements ShouldQueue
                 'finalized_at' => now(),
             ]);
 
-            // 6. Dispatcher ProcessAudioRecording (sur queue 'audio' -> worker-server)
+            // 6. Dispatcher ProcessAudioRecording (queue 'audio')
+            // On passe la transcription client si disponible, sinon la transcription complète
             ProcessAudioRecording::dispatch($this->audioRecord, $this->session->client_id);
             Log::info("[FINALIZE] ProcessAudioRecording dispatche pour audio #{$this->audioRecord->id}");
 
-            // 7. Dispatcher DiarizeRecordingJob en background (sur queue 'finalize')
-            DiarizeRecordingJob::dispatch($this->audioRecord, $concatenatedAudio, $sessionId);
-            Log::info("[FINALIZE] DiarizeRecordingJob dispatche en background pour audio #{$this->audioRecord->id}");
-
-            // 8. Cleanup chunks (mais PAS le fichier concatene - DiarizeRecordingJob s'en charge)
+            // 7. Cleanup chunks + fichier concatene
             $this->cleanupChunks($sessionId);
 
-            Log::info("[FINALIZE] Session {$sessionId} finalisee avec succes");
-
-        } catch (\Throwable $e) {
-            // Nettoyer le fichier concatene en cas d'erreur (DiarizeRecordingJob ne sera pas dispatche)
+        } finally {
+            // Toujours nettoyer le fichier concatene
             if (file_exists($concatenatedAudio) && str_contains($concatenatedAudio, '/temp/')) {
                 @unlink($concatenatedAudio);
+                Log::info('[FINALIZE] Fichier concatene supprime');
             }
-            throw $e;
         }
+
+        Log::info("[FINALIZE] Session {$sessionId} finalisee avec succes");
     }
 
     public function failed(\Throwable $exception): void
@@ -123,28 +126,6 @@ class FinalizeRecordingJob implements ShouldQueue
         }
 
         return $chunks;
-    }
-
-    private function transcribeAudio(string $filePath, TranscriptionService $transcriptionService): string
-    {
-        if (! file_exists($filePath)) {
-            throw new \Exception("Fichier audio introuvable : {$filePath}");
-        }
-
-        $fileSize = filesize($filePath);
-        if ($fileSize < 1024) {
-            Log::warning("[FINALIZE] Fichier trop petit ({$fileSize} bytes), ignore");
-
-            return '';
-        }
-
-        $transcription = $transcriptionService->transcribe($filePath);
-
-        if (empty($transcription)) {
-            throw new \Exception('Erreur lors de la transcription');
-        }
-
-        return $transcription;
     }
 
     private function concatenateChunks(array $chunks, string $sessionId): string

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\AudioRecord;
-use App\Models\DiarizationLog;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
@@ -58,9 +57,6 @@ class AudioRecordController extends Controller
             'user_id' => auth()->id(),
             'team_id' => $record->team_id,
         ]);
-
-        // Supprimer les logs de diarisation associés
-        DiarizationLog::where('audio_record_id', $record->id)->delete();
 
         // Supprimer le fichier audio du stockage (S3)
         if ($record->path && Storage::exists($record->path)) {

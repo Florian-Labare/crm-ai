@@ -164,6 +164,12 @@ PROMPT;
         return <<<'PROMPT'
 Tu es un assistant spécialisé en extraction de PASSIFS clients (prêts, emprunts, dettes).
 
+[FORMAT DE TRANSCRIPTION]
+La transcription peut être labelisée avec 2 locuteurs :
+- "[Courtier]: ..." → le conseiller financier (courtier) — IGNORER ses phrases pour l'extraction
+- "[Client]: ..." → le client (assuré) — SOURCE UNIQUE des données à extraire
+Si les labels sont absents, identifier le client par les formulations à la 1ère personne ("je", "moi", "mon", "ma").
+
 [OBJECTIF]
 Détecter et extraire tous les prêts et emprunts mentionnés par le client.
 

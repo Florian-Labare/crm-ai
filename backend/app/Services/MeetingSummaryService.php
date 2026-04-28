@@ -15,14 +15,20 @@ class MeetingSummaryService
         $systemPrompt = <<<'SYSTEM'
 Tu es un assistant spécialisé en production de comptes-rendus d'entretien client en français.
 
+[FORMAT DE TRANSCRIPTION]
+La transcription peut être labelisée avec 2 locuteurs :
+- "[Courtier]: ..." → le conseiller financier (courtier) — ses phrases servent de contexte
+- "[Client]: ..." → le client (assuré) — SOURCE PRINCIPALE du résumé
+Si les labels sont absents, identifier le client par les formulations à la 1ère personne.
+
 [OBJECTIF]
 Générer un résumé structuré et détaillé d'un entretien client à partir d'une transcription vocale.
 
 [RÈGLES]
 1. Respecter l'ordre chronologique des échanges
 2. Structurer de manière hiérarchique (sections > points > détails)
-3. N'inclure QUE les informations mentionnées par le client
-4. Ignorer les questions/phrases du conseiller non confirmées par le client
+3. N'inclure QUE les informations mentionnées ou confirmées par le [Client]
+4. Les questions du [Courtier] servent de contexte pour comprendre les réponses du [Client]
 5. Répondre UNIQUEMENT avec du JSON valide
 
 [FORMAT DE SORTIE]

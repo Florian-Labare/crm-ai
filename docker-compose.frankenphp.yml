@@ -1,0 +1,40 @@
+# Docker Compose override pour utiliser Laravel Octane avec FrankenPHP
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.frankenphp.yml up -d
+
+services:
+  # --- BACKEND avec FRANKENPHP (Octane worker mode) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.frankenphp
+    ports:
+      - "${APP_PORT:-8000}:80"
+      - "${APP_HTTPS_PORT:-8443}:443"
+      - "${APP_HTTPS_PORT:-8443}:443/udp"  # HTTP/3
+
+    environment:
+      OCTANE_SERVER: frankenphp
+      OCTANE_HTTPS: false
+      OCTANE_MAX_REQUESTS: 500
+      OCTANE_WORKERS: auto
+
+    # Démarrer Octane en mode worker FrankenPHP
+    command: >
+      sh -c "
+        chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache &&
+        chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache &&
+        php artisan config:cache &&
+        php artisan route:cache &&
+        php artisan octane:start --server=frankenphp --host=0.0.0.0 --port=80 --workers=auto --max-requests=500
+      "
+
+  # --- QUEUE WORKERS utilisent la même image FrankenPHP ---
+  queue-worker-finalize:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.frankenphp
+
+  queue-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.frankenphp

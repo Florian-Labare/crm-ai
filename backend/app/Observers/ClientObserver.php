@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\AudioRecord;
 use App\Models\Client;
-use App\Models\DiarizationLog;
 use App\Models\RecordingSession;
 use App\Services\AuditService;
 use Illuminate\Support\Facades\Log;
@@ -66,9 +65,6 @@ class ClientObserver
                 Storage::delete($record->path);
                 $freedBytes += $size;
             }
-
-            // Supprimer les logs de diarisation
-            DiarizationLog::where('audio_record_id', $record->id)->delete();
 
             // Nettoyer les fichiers temporaires
             $this->cleanupTempFiles($record->id);

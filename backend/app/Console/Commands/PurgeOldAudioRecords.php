@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\AudioRecord;
-use App\Models\DiarizationLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -124,12 +123,7 @@ class PurgeOldAudioRecords extends Command
             $this->freedBytes += $size;
         }
 
-        // 2. Supprimer les logs de diarisation si demandé
-        if ($includeTranscriptions && ! $dryRun) {
-            DiarizationLog::where('audio_record_id', $record->id)->delete();
-        }
-
-        // 3. Supprimer complètement l'enregistrement si demandé
+        // 2. Supprimer complètement l'enregistrement si demandé
         if ($includeTranscriptions) {
             if (! $dryRun) {
                 $record->delete();

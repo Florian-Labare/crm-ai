@@ -28,9 +28,6 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
-    python3 \
-    python3-pip \
-    python3-venv \
     ffmpeg \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -68,12 +65,6 @@ COPY . .
 
 # Copy Composer dependencies from builder stage
 COPY --from=composer-builder /app/vendor ./vendor
-
-# Install Python dependencies for audio processing (Whisper, Pyannote)
-RUN pip3 install --no-cache-dir --break-system-packages -r /var/www/html/scripts/requirements.txt \
-    && chmod +x /var/www/html/scripts/whisper_transcribe.py \
-    && chmod +x /var/www/html/scripts/diarize_audio.py \
-    && chmod +x /var/www/html/scripts/init_pyannote.py
 
 # Create necessary directories
 RUN mkdir -p \
