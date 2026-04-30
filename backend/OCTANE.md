@@ -16,12 +16,39 @@ php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000
 ## 🐳 Démarrage Docker
 
 ```bash
-# Avec Octane
+# Avec FrankenPHP (recommandé — HTTP/3, worker mode natif)
+docker-compose -f docker-compose.yml -f docker-compose.frankenphp.yml up -d
+
+# Avec Octane/Swoole
 docker-compose -f docker-compose.yml -f docker-compose.octane.yml up -d
 
 # Mode standard (Apache)
 docker-compose up -d
 ```
+
+## FrankenPHP
+
+FrankenPHP est un serveur PHP moderne basé sur Caddy avec support HTTP/3, worker mode intégré et performances supérieures à Swoole.
+
+### Démarrage local avec FrankenPHP
+
+```bash
+# Installer FrankenPHP via Octane
+composer require laravel/octane
+php artisan octane:install --server=frankenphp
+
+# Démarrer
+php artisan octane:start --server=frankenphp --host=0.0.0.0 --port=8000
+```
+
+### Fichiers FrankenPHP
+
+| Fichier | Description |
+|---|---|
+| `backend/Dockerfile.frankenphp` | Image Docker basée sur `dunglas/frankenphp:latest-php8.3` |
+| `backend/docker/frankenphp/Caddyfile` | Configuration Caddy pour Laravel |
+| `backend/docker-entrypoint.frankenphp.sh` | Entrypoint avec permissions + cache |
+| `docker-compose.frankenphp.yml` | Override docker-compose |
 
 ## 📚 Documentation Complète
 
