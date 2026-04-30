@@ -229,7 +229,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/recordings/{sessionId}/finalize', [RecordingController::class, 'finalize'])
         ->middleware('throttle:audio-finalize');
 
-
     // Questionnaire de risque
     Route::post('/questionnaire-risque/live', [QuestionnaireRisqueController::class, 'live']);
     Route::get('/questionnaire-risque/client/{clientId}', [QuestionnaireRisqueController::class, 'show']);

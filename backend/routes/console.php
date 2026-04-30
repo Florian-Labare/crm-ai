@@ -32,4 +32,3 @@ Schedule::command('audio:purge-old --days=30')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/purge-audio.log'))
     ->description('Supprime les fichiers audio de plus de 30 jours (RGPD)');
-

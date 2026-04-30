@@ -62,7 +62,7 @@ class TranscriptionService
      * Appel Voxtral avec diarisation activée.
      * Identifie le courtier (premier locuteur) et le client (second locuteur).
      *
-     * @return array{transcript: string, client_transcript: string}|null  null en cas d'échec
+     * @return array{transcript: string, client_transcript: string}|null null en cas d'échec
      */
     private function transcribeVoxtralWithDiarization(string $audioPath): ?array
     {

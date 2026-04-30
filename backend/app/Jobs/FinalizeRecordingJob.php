@@ -52,7 +52,7 @@ class FinalizeRecordingJob implements ShouldQueue
 
         try {
             // 3. Transcrire avec diarisation native Voxtral (Courtier / Client)
-            Log::info("[FINALIZE] Transcription avec diarisation Voxtral...");
+            Log::info('[FINALIZE] Transcription avec diarisation Voxtral...');
             $result = $transcriptionService->transcribeWithDiarization($concatenatedAudio);
 
             $finalTranscription = $result['transcript'];
