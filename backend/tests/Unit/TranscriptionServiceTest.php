@@ -64,20 +64,11 @@ class TranscriptionServiceTest extends TestCase
             ], 200),
         ]);
 
-        // Simuler l'échec de Whisper local (le script n'existe pas)
+        Log::shouldReceive('error')->atLeast()->once();
         Log::shouldReceive('warning')
             ->once()
-            ->with('⚠️ Voxtral a échoué, tentative Whisper local...');
-
-        Log::shouldReceive('error')
-            ->atLeast()->once();
-
-        Log::shouldReceive('warning')
-            ->once()
-            ->with('⚠️ Whisper local a échoué, utilisation de l\'API OpenAI');
-
-        Log::shouldReceive('info')
-            ->atLeast()->once();
+            ->with('[TranscriptionService] Voxtral échoué, fallback OpenAI');
+        Log::shouldReceive('info')->atLeast()->once();
 
         config(['openai.api_key' => 'test_openai_key']);
 

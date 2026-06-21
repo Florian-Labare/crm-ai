@@ -185,6 +185,43 @@ class DashboardController extends Controller
         }
 
         // ──────────────────────────────────────────────
+        // COMMISSIONS (depuis les bordereaux)
+        // ──────────────────────────────────────────────
+        $prodBase = DB::table('productions')->where('team_id', $teamId);
+        if (! $isAdmin && ! $user->isSuperAdmin()) {
+            $prodBase->where('user_id', $user->id);
+        }
+
+        $commissionTotals = (clone $prodBase)->selectRaw('
+            sum(commission_mia) as total_commission_mia,
+            sum(encours_commission) as encours_portefeuille,
+            count(*) as nb_lignes,
+            count(distinct client_id) as nb_clients_bordereaux
+        ')->first();
+
+        $typeLabelsComm = [
+            'sante' => 'Santé',
+            'prevoyance' => 'Prévoyance',
+            'per' => 'PER',
+            'assurance_vie' => 'Ass. Vie',
+            'emprunteur' => 'Emprunteur',
+            'vie_entiere' => 'Vie Entière',
+        ];
+        $commParType = (clone $prodBase)
+            ->whereNotNull('type_contrat')
+            ->selectRaw('type_contrat, sum(commission_mia) as commission, count(*) as nb_lignes')
+            ->groupBy('type_contrat')
+            ->orderByDesc('commission')
+            ->get()
+            ->map(fn ($r) => [
+                'type' => $r->type_contrat,
+                'label' => $typeLabelsComm[$r->type_contrat] ?? $r->type_contrat,
+                'commission' => (float) $r->commission,
+                'nb_lignes' => (int) $r->nb_lignes,
+            ])
+            ->values()->toArray();
+
+        // ──────────────────────────────────────────────
         // TENDANCES
         // ──────────────────────────────────────────────
         $nouveaux6Mois = [];
@@ -278,6 +315,13 @@ class DashboardController extends Controller
                 'taux_diarisation' => $tauxDiarisation,
                 'clients_enrichis' => $clientsEnrichisIA,
                 'audio_6mois' => $audio6Mois,
+            ],
+            'commissions' => [
+                'total_commission_mia' => (float) ($commissionTotals->total_commission_mia ?? 0),
+                'encours_portefeuille' => (float) ($commissionTotals->encours_portefeuille ?? 0),
+                'nb_lignes' => (int) ($commissionTotals->nb_lignes ?? 0),
+                'nb_clients_bordereaux' => (int) ($commissionTotals->nb_clients_bordereaux ?? 0),
+                'par_type' => $commParType,
             ],
             'equipe' => $equipe,
             'contrats_par_type' => $contratsParType,

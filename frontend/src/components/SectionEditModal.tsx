@@ -1270,6 +1270,10 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
         const showFondEuro = ['per', 'assurance_vie'].includes(contratType);
         const showUc = ['per', 'assurance_vie'].includes(contratType);
         const showVersement = ['per', 'assurance_vie', 'vie_entiere'].includes(contratType);
+        const fromBordereau = !!(initialData?.numero_contrat);
+        const bordereau = fromBordereau ? (
+          <span className="ml-2 text-xs font-semibold px-1.5 py-0.5 rounded bg-[#28C76F]/10 text-[#28C76F]">bordereau</span>
+        ) : null;
 
         const typeLabels: Record<string, string> = {
           sante: 'Santé',
@@ -1283,10 +1287,27 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
         return (
           <>
             <FormField label="Type de contrat" fullWidth>
-              <div className="px-3 py-2.5 bg-[#F3F2F7] rounded-lg text-sm font-semibold text-[#5E5873]">
+              <div className="px-3 py-2.5 bg-[#F3F2F7] rounded-lg text-sm font-semibold text-[#5E5873] flex items-center gap-2">
                 {typeLabels[contratType] || contratType}
+                {bordereau}
               </div>
             </FormField>
+
+            {initialData?.numero_contrat && (
+              <FormField label="Numéro de contrat" fullWidth>
+                <div className="px-3 py-2.5 bg-[#F3F2F7] rounded-lg text-sm font-mono text-[#6E6B7B]">
+                  {initialData.numero_contrat}
+                </div>
+              </FormField>
+            )}
+
+            {initialData?.produit && (
+              <FormField label="Produit" fullWidth>
+                <div className="px-3 py-2.5 bg-[#F3F2F7] rounded-lg text-sm text-[#6E6B7B]">
+                  {initialData.produit}
+                </div>
+              </FormField>
+            )}
 
             <FormField label="Assureur" fullWidth>
               <select
@@ -1335,7 +1356,7 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
             )}
 
             {showMensualite && (
-              <FormField label="Mensualité (€)">
+              <FormField label={<span>Mensualité (€){fromBordereau && formData.mensualite ? bordereau : null}</span>}>
                 <input
                   type="number"
                   min="0"
@@ -1348,7 +1369,7 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
             )}
 
             {showEnCours && (
-              <FormField label="En-cours (€)">
+              <FormField label={<span>En-cours (€){fromBordereau && formData.en_cours ? bordereau : null}</span>}>
                 <input
                   type="number"
                   min="0"
@@ -1361,7 +1382,7 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
             )}
 
             {showFondEuro && (
-              <FormField label="Fonds euro (€)">
+              <FormField label={<span>Fonds euro (€){fromBordereau && formData.fond_euro ? bordereau : null}</span>}>
                 <input
                   type="number"
                   min="0"
@@ -1374,7 +1395,7 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
             )}
 
             {showUc && (
-              <FormField label="Unités de compte (€)">
+              <FormField label={<span>Unités de compte (€){fromBordereau && formData.uc ? bordereau : null}</span>}>
                 <input
                   type="number"
                   min="0"
@@ -1387,7 +1408,7 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
             )}
 
             {showVersement && (
-              <FormField label="Versement programmé (€)">
+              <FormField label={<span>Versement programmé (€){fromBordereau && formData.versement_programme ? bordereau : null}</span>}>
                 <input
                   type="number"
                   min="0"
@@ -1540,12 +1561,12 @@ export const SectionEditModal: React.FC<SectionEditModalProps> = ({
 
 // Composant helper pour les champs de formulaire
 const FormField: React.FC<{
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   fullWidth?: boolean;
 }> = ({ label, children, fullWidth }) => (
   <div className={fullWidth ? "md:col-span-2" : ""}>
-    <label className="block text-sm font-semibold text-[#5E5873] mb-2">{label}</label>
+    <label className="block text-sm font-semibold text-[#5E5873] mb-2 flex items-center">{label}</label>
     {children}
   </div>
 );

@@ -104,6 +104,8 @@ class ClientResource extends JsonResource
                     'nom' => $c->assureur->nom,
                     'lien_espace_client' => $c->assureur->lien_espace_client,
                 ] : null,
+                'numero_contrat' => $c->numero_contrat,
+                'produit' => $c->produit,
                 'mensualite' => $c->mensualite,
                 'en_cours' => $c->en_cours,
                 'fond_euro' => $c->fond_euro,

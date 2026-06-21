@@ -11,6 +11,8 @@ class ClientContrat extends Model
         'client_id',
         'type',
         'assureur_id',
+        'numero_contrat',
+        'produit',
         'mensualite',
         'en_cours',
         'fond_euro',

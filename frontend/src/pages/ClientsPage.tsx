@@ -650,9 +650,23 @@ const ClientsPage: React.FC = () => {
                           {visibleColumns.besoins && (
                             <td className="px-6 py-4">
                               {client.besoins && client.besoins.length > 0 ? (
-                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#7367F0]/10 text-[#7367F0] text-xs font-semibold">
-                                  {client.besoins.length} besoin{client.besoins.length > 1 ? "s" : ""}
-                                </span>
+                                <div className="flex flex-wrap gap-1">
+                                  {client.besoins.map((b) => {
+                                    const cfg: Record<string, { label: string; color: string }> = {
+                                      sante:       { label: "Santé",      color: "bg-[#EA5455]/10 text-[#EA5455]" },
+                                      prevoyance:  { label: "Prévoyance", color: "bg-[#7367F0]/10 text-[#7367F0]" },
+                                      retraite:    { label: "Retraite",   color: "bg-[#28C76F]/10 text-[#28C76F]" },
+                                      epargne:     { label: "Épargne",    color: "bg-[#FF9F43]/10 text-[#FF9F43]" },
+                                      emprunteur:  { label: "Emprunteur", color: "bg-[#00CFE8]/10 text-[#00CFE8]" },
+                                    };
+                                    const style = cfg[b] ?? { label: b, color: "bg-[#B9B9C3]/10 text-[#B9B9C3]" };
+                                    return (
+                                      <span key={b} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${style.color}`}>
+                                        {style.label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               ) : (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#B9B9C3]/10 text-[#B9B9C3] text-xs font-semibold">Aucun</span>
                               )}

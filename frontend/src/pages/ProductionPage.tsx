@@ -805,6 +805,212 @@ const ImportWizard: React.FC<ImportWizardProps> = ({ members, onClose, onDone })
   );
 };
 
+// ─── Bordereau Import Wizard ─────────────────────────────────────────────────
+
+interface BordereauMiaUser { id: number; label: string; email: string; }
+interface BordereauResult {
+  format: string;
+  created_clients: number;
+  updated_contrats: number;
+  created_productions: number;
+  resiliations: { nom: string; prenom: string; numero_adherent: string }[];
+  errors: string[];
+}
+
+interface BordereauImportWizardProps {
+  onClose: () => void;
+  onDone: () => void;
+}
+
+const FORMAT_LABELS: Record<string, string> = {
+  alptis_cot: 'Alptis — Commissions sur cotisations (COT)',
+  selencia:   'SELENCIA Patrimoine — Commissions sur encours',
+};
+
+const BordereauImportWizard: React.FC<BordereauImportWizardProps> = ({ onClose, onDone }) => {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [detectedFormat, setDetectedFormat] = useState<string | null>(null);
+  const [bordereauMois, setBordereauMois] = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() - 1);
+    return d.toISOString().slice(0, 7); // YYYY-MM du mois précédent
+  });
+  const [miaUsers, setMiaUsers] = useState<BordereauMiaUser[]>([]);
+  const [selectedMiaId, setSelectedMiaId] = useState<number | ''>('');
+  const [result, setResult] = useState<BordereauResult | null>(null);
+
+  useEffect(() => {
+    api.get('/productions/bordereau/mia-users')
+      .then(r => { setMiaUsers(r.data.data ?? []); })
+      .catch(() => {});
+  }, []);
+
+  const handleFile = (f: File) => {
+    if (!f.name.match(/\.(csv|txt)$/i)) { toast.error('Fichier CSV requis (.csv)'); return; }
+    setFile(f);
+    // Auto-détection du format
+    const form = new FormData();
+    form.append('file', f);
+    api.post('/productions/bordereau/preview', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      .then(r => { setDetectedFormat(r.data.format ?? null); })
+      .catch(() => {});
+  };
+
+  const execute = async () => {
+    if (!file || !bordereauMois) return;
+    setLoading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('bordereau_mois', bordereauMois);
+      if (selectedMiaId) form.append('mia_user_id', String(selectedMiaId));
+      const res = await api.post('/productions/bordereau/execute', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setResult(res.data.data);
+      setStep(3);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? "Erreur lors de l'import");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-[#EBE9F1]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#F0EEFF] flex items-center justify-center">
+              <FileText size={18} className="text-[#7367F0]" />
+            </div>
+            <span className="font-semibold text-[#5E5873]">Import bordereau assureur</span>
+          </div>
+          <button onClick={onClose} className="text-[#B9B9C3] hover:text-[#5E5873]"><X size={18} /></button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {step === 1 && (
+            <>
+              {/* Mois */}
+              <div>
+                <label className="block text-xs font-semibold text-[#6E6B7B] mb-1">Mois du bordereau</label>
+                <input type="month" value={bordereauMois} onChange={e => setBordereauMois(e.target.value)}
+                  className="border border-[#D0CDE1] rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:border-[#7367F0]" />
+              </div>
+
+              {/* MIA */}
+              {miaUsers.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#6E6B7B] mb-1">MIA responsable (optionnel)</label>
+                  <select value={selectedMiaId} onChange={e => setSelectedMiaId(e.target.value ? Number(e.target.value) : '')}
+                    className="border border-[#D0CDE1] rounded-xl px-3 py-2 text-sm w-full focus:outline-none focus:border-[#7367F0]">
+                    <option value="">— Moi-même —</option>
+                    {miaUsers.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Drop zone */}
+              <div>
+                <label className="block text-xs font-semibold text-[#6E6B7B] mb-1">Fichier bordereau (.csv)</label>
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-[#D0CDE1] rounded-xl p-8 cursor-pointer hover:border-[#7367F0] transition-colors">
+                  <FileSpreadsheet size={32} className="text-[#B9B9C3] mb-2" />
+                  {file ? (
+                    <span className="text-sm font-semibold text-[#7367F0]">{file.name}</span>
+                  ) : (
+                    <span className="text-sm text-[#B9B9C3]">Glisser ou cliquer pour choisir le fichier CSV</span>
+                  )}
+                  <input type="file" accept=".csv,.txt" className="hidden" onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
+                </label>
+              </div>
+
+              {detectedFormat && (
+                <div className="flex items-center gap-2 bg-[#F0EEFF] rounded-xl px-4 py-2 text-sm text-[#7367F0]">
+                  <Check size={14} />
+                  Format détecté : <strong>{FORMAT_LABELS[detectedFormat] ?? detectedFormat}</strong>
+                </div>
+              )}
+              {file && !detectedFormat && (
+                <div className="flex items-center gap-2 bg-[#FFF5E6] rounded-xl px-4 py-2 text-sm text-[#FF9F43]">
+                  <AlertCircle size={14} />
+                  Format non reconnu — formats supportés : Alptis COT, SELENCIA
+                </div>
+              )}
+            </>
+          )}
+
+          {step === 3 && result && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#F0FFF6] rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#28C76F]">{result.created_clients}</p>
+                  <p className="text-xs text-[#6E6B7B] mt-1">Clients créés</p>
+                </div>
+                <div className="bg-[#F0EEFF] rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#7367F0]">{result.created_productions}</p>
+                  <p className="text-xs text-[#6E6B7B] mt-1">Lignes commission</p>
+                </div>
+                <div className="bg-[#F5F5FF] rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#5E5873]">{result.updated_contrats}</p>
+                  <p className="text-xs text-[#6E6B7B] mt-1">Contrats MAJ</p>
+                </div>
+              </div>
+
+              {result.resiliations.length > 0 && (
+                <div className="bg-[#FFF2F2] border border-[#EA5455]/20 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-[#EA5455] mb-2 flex items-center gap-2">
+                    <AlertCircle size={14} /> {result.resiliations.length} résiliation(s) potentielle(s)
+                  </p>
+                  <p className="text-xs text-[#6E6B7B] mb-2">Ces clients étaient présents le mois précédent mais absents de ce bordereau :</p>
+                  <ul className="text-xs text-[#5E5873] space-y-1">
+                    {result.resiliations.map((r, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="font-medium">{r.nom} {r.prenom}</span>
+                        <span className="text-[#B9B9C3]">— N° {r.numero_adherent}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result.errors.length > 0 && (
+                <div className="bg-[#FFF8ED] border border-[#FF9F43]/20 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-[#FF9F43] mb-2">{result.errors.length} ligne(s) ignorée(s)</p>
+                  <ul className="text-xs text-[#6E6B7B] space-y-1 max-h-24 overflow-y-auto">
+                    {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-[#EBE9F1]">
+          <button onClick={onClose} className="text-sm text-[#6E6B7B] hover:text-[#5E5873] px-4 py-2">
+            {step === 3 ? 'Fermer' : 'Annuler'}
+          </button>
+          {step === 1 && (
+            <button
+              onClick={execute}
+              disabled={!file || !detectedFormat || loading}
+              className="flex items-center gap-2 bg-[#7367F0] text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-[#6557e0] disabled:opacity-50 transition-colors"
+            >
+              {loading ? <RefreshCw size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+              Importer le bordereau
+            </button>
+          )}
+          {step === 3 && (
+            <button onClick={() => { onDone(); onClose(); }}
+              className="flex items-center gap-2 bg-[#28C76F] text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-[#22ab5f] transition-colors">
+              <Check size={14} /> Terminé
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const ProductionPage: React.FC = () => {
@@ -819,6 +1025,7 @@ const ProductionPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const [showImport, setShowImport] = useState(false);
+  const [showBordereauImport, setShowBordereauImport] = useState(false);
   const [formTarget, setFormTarget] = useState<Production | null | undefined>(undefined);
   // undefined = fermé, null = nouvelle ligne, Production = édition
 
@@ -936,6 +1143,13 @@ const ProductionPage: React.FC = () => {
               {members.map((m) => <option key={m.id} value={m.id}>{memberName(m)}</option>)}
             </select>
           )}
+
+          <button
+            onClick={() => setShowBordereauImport(true)}
+            className="flex items-center gap-2 border border-[#28C76F] text-[#28C76F] text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#28C76F]/10 transition-colors"
+          >
+            <FileText size={16} /> Bordereau CSV
+          </button>
 
           <button
             onClick={() => setShowImport(true)}
@@ -1194,6 +1408,9 @@ const ProductionPage: React.FC = () => {
       {/* Modals */}
       {showImport && (
         <ImportWizard members={members} onClose={() => setShowImport(false)} onDone={fetchData} />
+      )}
+      {showBordereauImport && (
+        <BordereauImportWizard onClose={() => setShowBordereauImport(false)} onDone={fetchData} />
       )}
       {formTarget !== undefined && (
         <ProductionFormModal

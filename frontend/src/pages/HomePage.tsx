@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/apiClient";
-import { UserPlus, ClipboardList, Upload, HeartPulse, ShieldAlert, PiggyBank, FileText, Wallet, ArrowUpRight, Mic, CheckCircle, AlertTriangle, Clock, TrendingUp, Building2, Users, User } from "lucide-react";
+import { UserPlus, ClipboardList, Upload, HeartPulse, ShieldAlert, PiggyBank, FileText, Wallet, ArrowUpRight, Mic, CheckCircle, AlertTriangle, Clock, TrendingUp, Building2, Users, User, Euro } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -23,6 +23,7 @@ const HomePage: React.FC = () => {
     equipe: { id: number; nom: string; role: string; nb_contacts: number; nb_clients: number; audio_mois: number; taux_conformite: number }[];
     opportunites: { sans_sante: number; sans_prevoyance: number; sans_retraite: number; sans_epargne: number };
     besoins_repartition: { label: string; count: number }[];
+    commissions: { total_commission_mia: number; encours_portefeuille: number; nb_lignes: number; nb_clients_bordereaux: number; par_type: { type: string; label: string; commission: number; nb_lignes: number }[] };
     contrats_par_type: { type: string; label: string; count: number }[];
     nouveaux_6mois: { mois: string; count: number }[];
     contrats_6mois: { mois: string; count: number }[];
@@ -107,11 +108,12 @@ const HomePage: React.FC = () => {
               <div className="space-y-4">
 
                 {/* Ligne 1 — 4 chips KPI */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { label: 'Clients actifs', value: dashStats.pipeline.clients, sub: `${fmtPct(dashStats.pipeline.taux_conversion)}% de conversion`, color: '#28C76F', bg: '#F0FFF6', icon: <User size={18} /> },
                     { label: 'Contrats', value: `${dashStats.portefeuille.nb_contrats_signes} / ${dashStats.portefeuille.nb_contrats}`, sub: `${dashStats.portefeuille.taux_equipement.toFixed(1)} / client · signés / renseignés`, color: '#FF9F43', bg: '#FFF8EE', icon: <FileText size={18} /> },
-                    { label: 'En-cours', value: fmt(dashStats.portefeuille.en_cours_total), sub: 'PER + Ass. Vie', color: '#00CFE8', bg: '#F0FBFF', icon: <Wallet size={18} /> },
+                    { label: 'Commission MIA', value: fmt(dashStats.commissions?.total_commission_mia ?? 0), sub: `${dashStats.commissions?.nb_lignes ?? 0} lignes bordereaux`, color: '#7367F0', bg: '#F3F2FF', icon: <Euro size={18} /> },
+                    { label: 'Encours portefeuille', value: fmt(dashStats.commissions?.encours_portefeuille ?? 0), sub: 'PER + Ass. Vie · SELENCIA', color: '#00CFE8', bg: '#F0FBFF', icon: <Wallet size={18} /> },
                   ].map((chip) => (
                     <div key={chip.label} className="vx-card p-4 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: chip.bg }}>
@@ -205,6 +207,45 @@ const HomePage: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Commissions bordereaux */}
+                {dashStats.commissions && dashStats.commissions.nb_lignes > 0 && (
+                  <div className="vx-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-[#5E5873]">Commissions bordereaux</h3>
+                        <p className="text-xs text-[#B9B9C3]">{dashStats.commissions.nb_lignes} lignes · {dashStats.commissions.nb_clients_bordereaux} clients</p>
+                      </div>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-[#F3F2FF] text-[#7367F0]">
+                        {fmt(dashStats.commissions.total_commission_mia)}
+                      </span>
+                    </div>
+                    {dashStats.commissions.par_type.length > 0 && (
+                      <div className="space-y-2.5">
+                        {dashStats.commissions.par_type.map((t, i) => {
+                          const maxComm = dashStats.commissions.par_type[0]?.commission ?? 1;
+                          const pct = maxComm > 0 ? Math.round(t.commission / maxComm * 100) : 0;
+                          const colors = ['#7367F0', '#FF9F43', '#28C76F', '#00CFE8', '#EA5455', '#9055FD'];
+                          const c = colors[i % colors.length];
+                          return (
+                            <div key={t.type}>
+                              <div className="flex justify-between text-xs font-semibold text-[#5E5873] mb-1">
+                                <span className="flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c }} />
+                                  {t.label}
+                                </span>
+                                <span className="text-[#B9B9C3]">{fmt(t.commission)}</span>
+                              </div>
+                              <div className="w-full bg-[#EBE9F1] rounded-full h-1.5">
+                                <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: c }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Ligne 3 — Tendances */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

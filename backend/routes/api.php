@@ -17,6 +17,7 @@ use App\Http\Controllers\ImportMappingController;
 use App\Http\Controllers\ImportSessionController;
 use App\Http\Controllers\MeetingSummaryController;
 use App\Http\Controllers\PendingChangesController;
+use App\Http\Controllers\BordereauController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionnaireRisqueController;
@@ -265,6 +266,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [ProductionController::class, 'stats']);
         Route::post('/import/preview', [ProductionController::class, 'importPreview']);
         Route::post('/import/execute', [ProductionController::class, 'importExecute']);
+        // Import bordereau assureur (Alptis, SELENCIA...)
+        Route::post('/bordereau/preview', [BordereauController::class, 'preview']);
+        Route::post('/bordereau/execute', [BordereauController::class, 'execute']);
+        Route::get('/bordereau/mia-users', [BordereauController::class, 'miaUsers']);
         Route::get('/', [ProductionController::class, 'index']);
         Route::post('/', [ProductionController::class, 'store']);
         Route::put('/{production}', [ProductionController::class, 'update']);
