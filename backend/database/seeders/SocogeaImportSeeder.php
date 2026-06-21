@@ -86,27 +86,28 @@ class SocogeaImportSeeder extends Seeder
 
             if ($existingContrat) {
                 $skipped++;
+
                 continue;
             }
 
             // Créer le client
             $client = Client::create([
-                'team_id'    => $team->id,
-                'user_id'    => $mia->id,
-                'nom'        => $data['nom'],
-                'prenom'     => $data['prenom'],
-                'is_client'  => true,  // numéro de contrat présent = client, pas prospect
+                'team_id' => $team->id,
+                'user_id' => $mia->id,
+                'nom' => $data['nom'],
+                'prenom' => $data['prenom'],
+                'is_client' => true,  // numéro de contrat présent = client, pas prospect
                 'is_archived' => false,
             ]);
 
             // Créer le(s) contrat(s)
             foreach ($data['contrats'] as $contrat) {
                 ClientContrat::create([
-                    'client_id'      => $client->id,
-                    'type'           => $contrat['type'],
-                    'assureur_id'    => $alptis->id,
+                    'client_id' => $client->id,
+                    'type' => $contrat['type'],
+                    'assureur_id' => $alptis->id,
                     'numero_contrat' => $data['numero_adherent'],
-                    'produit'        => $contrat['produit'],
+                    'produit' => $contrat['produit'],
                 ]);
             }
 

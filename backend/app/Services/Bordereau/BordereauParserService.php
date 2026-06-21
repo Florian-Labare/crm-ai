@@ -29,31 +29,31 @@ class BordereauParserService
 {
     private const FORMATS = [
         'alptis_cot' => [
-            'col_nom'           => 'Nom de l assuré',
-            'col_prenom'        => 'Prénom de l assuré',
-            'col_numero'        => 'Numéro assuré',
-            'col_produit'       => 'Libellé du produit',
-            'col_famille'       => 'Libellé famille commerciale',
-            'col_prime_ttc'     => 'Montant de la cotisation TTC',
-            'col_prime_ht'      => 'Montant cotisation HT ou net investi en épargne',
-            'col_assiette'      => 'Assiette du cas de commission',
-            'col_taux'          => 'Taux de commission',
-            'col_commission'    => 'Montant de commission',
-            'col_date_op'       => 'Date de l opération',
-            'col_date_debut'    => 'Date de début de période',
-            'col_compagnie'     => 'Compagnie juridique',
-            'col_nature_op'     => 'Nature de l opération',
-            'col_nature_com'    => 'Nature de commission',
+            'col_nom' => 'Nom de l assuré',
+            'col_prenom' => 'Prénom de l assuré',
+            'col_numero' => 'Numéro assuré',
+            'col_produit' => 'Libellé du produit',
+            'col_famille' => 'Libellé famille commerciale',
+            'col_prime_ttc' => 'Montant de la cotisation TTC',
+            'col_prime_ht' => 'Montant cotisation HT ou net investi en épargne',
+            'col_assiette' => 'Assiette du cas de commission',
+            'col_taux' => 'Taux de commission',
+            'col_commission' => 'Montant de commission',
+            'col_date_op' => 'Date de l opération',
+            'col_date_debut' => 'Date de début de période',
+            'col_compagnie' => 'Compagnie juridique',
+            'col_nature_op' => 'Nature de l opération',
+            'col_nature_com' => 'Nature de commission',
         ],
         'selencia' => [
-            'col_nom_prenom'    => 'Nom Prénom du client',
-            'col_numero'        => 'N° de contrat',
-            'col_produit'       => 'Produit',
-            'col_commission'    => 'Montant de commissions',
-            'col_taux'          => 'Votre taux de commissionnement global',
-            'col_pm'            => 'PM fin de période',
-            'col_type_com'      => 'Type de commissions',
-            'col_assureur_src'  => 'Société',
+            'col_nom_prenom' => 'Nom Prénom du client',
+            'col_numero' => 'N° de contrat',
+            'col_produit' => 'Produit',
+            'col_commission' => 'Montant de commissions',
+            'col_taux' => 'Votre taux de commissionnement global',
+            'col_pm' => 'PM fin de période',
+            'col_type_com' => 'Type de commissions',
+            'col_assureur_src' => 'Société',
         ],
     ];
 
@@ -130,8 +130,8 @@ class BordereauParserService
 
         return match ($format) {
             'alptis_cot' => $this->importAlptisCot($filePath, $team, $miaUser, $bordereauMois),
-            'selencia'   => $this->importSelencia($filePath, $team, $miaUser, $bordereauMois),
-            default      => ['format' => $format, 'created_clients' => 0, 'updated_contrats' => 0, 'created_productions' => 0, 'resiliations' => [], 'errors' => ['Format non implémenté.']],
+            'selencia' => $this->importSelencia($filePath, $team, $miaUser, $bordereauMois),
+            default => ['format' => $format, 'created_clients' => 0, 'updated_contrats' => 0, 'created_productions' => 0, 'resiliations' => [], 'errors' => ['Format non implémenté.']],
         };
     }
 
@@ -175,20 +175,20 @@ class BordereauParserService
 
     private function processAlptisRow(array $row, array $colIdx, array $cols, Team $team, User $miaUser, string $bordereauMois, array &$result, array &$adherentsPresents): void
     {
-        $nom           = $this->clean($row[$colIdx[$cols['col_nom']]] ?? '');
-        $prenom        = $this->clean($row[$colIdx[$cols['col_prenom']]] ?? '');
+        $nom = $this->clean($row[$colIdx[$cols['col_nom']]] ?? '');
+        $prenom = $this->clean($row[$colIdx[$cols['col_prenom']]] ?? '');
         $numeroAdherent = $this->clean($row[$colIdx[$cols['col_numero']]] ?? '');
-        $produit       = $this->clean($row[$colIdx[$cols['col_produit']]] ?? '');
-        $famille       = $this->clean($row[$colIdx[$cols['col_famille']]] ?? '');
-        $primeTtc      = $this->parseDecimal($row[$colIdx[$cols['col_prime_ttc']]] ?? '');
-        $primeHt       = $this->parseDecimal($row[$colIdx[$cols['col_prime_ht']]] ?? '');
-        $assiette      = $this->parseDecimal($row[$colIdx[$cols['col_assiette']]] ?? '');
-        $taux          = $this->parseDecimal($row[$colIdx[$cols['col_taux']]] ?? '');
-        $commission    = $this->parseDecimal($row[$colIdx[$cols['col_commission']]] ?? '');
-        $dateOp        = $this->parseDate($row[$colIdx[$cols['col_date_op']]] ?? '');
-        $compagnie     = $this->clean($row[$colIdx[$cols['col_compagnie']]] ?? '');
-        $natureOp      = $this->clean($row[$colIdx[$cols['col_nature_op']]] ?? '');
-        $natureCom     = $this->clean($row[$colIdx[$cols['col_nature_com']]] ?? '');
+        $produit = $this->clean($row[$colIdx[$cols['col_produit']]] ?? '');
+        $famille = $this->clean($row[$colIdx[$cols['col_famille']]] ?? '');
+        $primeTtc = $this->parseDecimal($row[$colIdx[$cols['col_prime_ttc']]] ?? '');
+        $primeHt = $this->parseDecimal($row[$colIdx[$cols['col_prime_ht']]] ?? '');
+        $assiette = $this->parseDecimal($row[$colIdx[$cols['col_assiette']]] ?? '');
+        $taux = $this->parseDecimal($row[$colIdx[$cols['col_taux']]] ?? '');
+        $commission = $this->parseDecimal($row[$colIdx[$cols['col_commission']]] ?? '');
+        $dateOp = $this->parseDate($row[$colIdx[$cols['col_date_op']]] ?? '');
+        $compagnie = $this->clean($row[$colIdx[$cols['col_compagnie']]] ?? '');
+        $natureOp = $this->clean($row[$colIdx[$cols['col_nature_op']]] ?? '');
+        $natureCom = $this->clean($row[$colIdx[$cols['col_nature_com']]] ?? '');
 
         if (empty($nom) || empty($numeroAdherent)) {
             return;
@@ -212,24 +212,24 @@ class BordereauParserService
         // Créer la ligne de production (commission)
         $moisDate = Carbon::createFromFormat('Y-m-d', $bordereauMois.'-01');
         Production::create([
-            'team_id'          => $team->id,
-            'user_id'          => $miaUser->id,
-            'client_id'        => $client->id,
-            'nom_client'       => $nom,
-            'prenom_client'    => $prenom,
-            'assureur_id'      => $assureur->id,
-            'categorie'        => $famille ?: $typeContrat,
-            'type_contrat'     => $typeContrat,
-            'annee'            => $moisDate->year,
-            'date_commission'  => $dateOp,
-            'bordereau_mois'   => $moisDate->format('Y-m-d'),
+            'team_id' => $team->id,
+            'user_id' => $miaUser->id,
+            'client_id' => $client->id,
+            'nom_client' => $nom,
+            'prenom_client' => $prenom,
+            'assureur_id' => $assureur->id,
+            'categorie' => $famille ?: $typeContrat,
+            'type_contrat' => $typeContrat,
+            'annee' => $moisDate->year,
+            'date_commission' => $dateOp,
+            'bordereau_mois' => $moisDate->format('Y-m-d'),
             'bordereau_format' => 'alptis_cot',
-            'numero_adherent'  => $numeroAdherent,
-            'prime_ttc'        => $primeTtc,
-            'prime_ht'         => $primeHt,
-            'taux_commission'  => $taux,
-            'commission_mia'   => $natureCom === 'Crédit' ? $commission : -$commission,
-            'statut'           => 'active',
+            'numero_adherent' => $numeroAdherent,
+            'prime_ttc' => $primeTtc,
+            'prime_ht' => $primeHt,
+            'taux_commission' => $taux,
+            'commission_mia' => $natureCom === 'Crédit' ? $commission : -$commission,
+            'statut' => 'active',
         ]);
         $result['created_productions']++;
     }
@@ -270,15 +270,15 @@ class BordereauParserService
 
     private function processSelenciaRow(array $row, array $colIdx, array $cols, Team $team, User $miaUser, string $bordereauMois, array &$result, array &$adherentsPresents): void
     {
-        $nomPrenom   = $this->clean($row[$colIdx[$cols['col_nom_prenom']]] ?? '');
+        $nomPrenom = $this->clean($row[$colIdx[$cols['col_nom_prenom']]] ?? '');
         $numeroContrat = (string) ($row[$colIdx[$cols['col_numero']]] ?? '');
-        $produit     = $this->clean($row[$colIdx[$cols['col_produit']]] ?? '');
-        $commission  = $this->parseDecimal($row[$colIdx[$cols['col_commission']]] ?? '');
+        $produit = $this->clean($row[$colIdx[$cols['col_produit']]] ?? '');
+        $commission = $this->parseDecimal($row[$colIdx[$cols['col_commission']]] ?? '');
         $tauxColName = $cols['col_taux'] ?? null;
-        $taux        = ($tauxColName && isset($colIdx[$tauxColName])) ? $this->parseDecimal($row[$colIdx[$tauxColName]] ?? '') : null;
-        $pmColName   = $cols['col_pm'] ?? null;
-        $pm          = ($pmColName && isset($colIdx[$pmColName])) ? $this->parseDecimal($row[$colIdx[$pmColName]] ?? '') : null;
-        $typeCom     = $this->clean($row[$colIdx[$cols['col_type_com']]] ?? '');
+        $taux = ($tauxColName && isset($colIdx[$tauxColName])) ? $this->parseDecimal($row[$colIdx[$tauxColName]] ?? '') : null;
+        $pmColName = $cols['col_pm'] ?? null;
+        $pm = ($pmColName && isset($colIdx[$pmColName])) ? $this->parseDecimal($row[$colIdx[$pmColName]] ?? '') : null;
+        $typeCom = $this->clean($row[$colIdx[$cols['col_type_com']]] ?? '');
         $assureurSrc = $this->clean($row[$colIdx[$cols['col_assureur_src']]] ?? 'SELENCIA Patrimoine');
 
         if (empty($nomPrenom) || empty($numeroContrat)) {
@@ -301,22 +301,22 @@ class BordereauParserService
 
         $moisDate = Carbon::createFromFormat('Y-m-d', $bordereauMois.'-01');
         Production::create([
-            'team_id'          => $team->id,
-            'user_id'          => $miaUser->id,
-            'client_id'        => $client->id,
-            'nom_client'       => $nom,
-            'prenom_client'    => $prenom,
-            'assureur_id'      => $assureur->id,
-            'categorie'        => $typeCom,
-            'type_contrat'     => $typeContrat,
-            'annee'            => $moisDate->year,
-            'bordereau_mois'   => $moisDate->format('Y-m-d'),
+            'team_id' => $team->id,
+            'user_id' => $miaUser->id,
+            'client_id' => $client->id,
+            'nom_client' => $nom,
+            'prenom_client' => $prenom,
+            'assureur_id' => $assureur->id,
+            'categorie' => $typeCom,
+            'type_contrat' => $typeContrat,
+            'annee' => $moisDate->year,
+            'bordereau_mois' => $moisDate->format('Y-m-d'),
             'bordereau_format' => 'selencia',
-            'numero_adherent'  => (string) $numeroContrat,
+            'numero_adherent' => (string) $numeroContrat,
             'encours_commission' => $pm,
-            'taux_commission'  => $taux,
-            'commission_mia'   => $commission,
-            'statut'           => 'active',
+            'taux_commission' => $taux,
+            'commission_mia' => $commission,
+            'statut' => 'active',
         ]);
         $result['created_productions']++;
     }
@@ -343,22 +343,22 @@ class BordereauParserService
         $result['created_clients']++;
 
         return Client::create([
-            'team_id'     => $team->id,
-            'user_id'     => $miaUser->id,
-            'nom'         => $nom,
-            'prenom'      => $prenom,
-            'is_client'   => true,
+            'team_id' => $team->id,
+            'user_id' => $miaUser->id,
+            'nom' => $nom,
+            'prenom' => $prenom,
+            'is_client' => true,
             'is_archived' => false,
         ]);
     }
 
     private const CONTRAT_TYPE_TO_BESOIN = [
-        'sante'         => 'sante',
-        'prevoyance'    => 'prevoyance',
-        'per'           => 'retraite',
+        'sante' => 'sante',
+        'prevoyance' => 'prevoyance',
+        'per' => 'retraite',
         'assurance_vie' => 'epargne',
-        'vie_entiere'   => 'epargne',
-        'emprunteur'    => 'emprunteur',
+        'vie_entiere' => 'epargne',
+        'emprunteur' => 'emprunteur',
     ];
 
     private function syncClientContrat(Client $client, Assureur $assureur, string $type, string $produit, string $numeroAdherent, ?float $primeTtc, array &$result, ?float $enCours = null): void
@@ -384,13 +384,13 @@ class BordereauParserService
             }
         } else {
             ClientContrat::create([
-                'client_id'      => $client->id,
-                'type'           => $type,
-                'assureur_id'    => $assureur->id,
+                'client_id' => $client->id,
+                'type' => $type,
+                'assureur_id' => $assureur->id,
                 'numero_contrat' => $numeroAdherent,
-                'produit'        => $produit,
-                'mensualite'     => $primeTtc,
-                'en_cours'       => $enCours,
+                'produit' => $produit,
+                'mensualite' => $primeTtc,
+                'en_cours' => $enCours,
             ]);
             $result['updated_contrats']++;
         }
@@ -436,8 +436,8 @@ class BordereauParserService
         foreach ($productionsPrecedentes as $prod) {
             if (! isset($adherentsPresents[$prod->numero_adherent])) {
                 $resiliations[] = [
-                    'nom'             => $prod->nom_client,
-                    'prenom'          => $prod->prenom_client,
+                    'nom' => $prod->nom_client,
+                    'prenom' => $prod->prenom_client,
                     'numero_adherent' => $prod->numero_adherent,
                 ];
             }

@@ -38,12 +38,12 @@ class BordereauController extends Controller
 
         return response()->json([
             'success' => true,
-            'token'   => $token,
-            'format'  => $format,
+            'token' => $token,
+            'format' => $format,
             'formats_labels' => [
                 'alptis_cot' => 'Alptis — Commissions sur cotisations (COT)',
-                'selencia'   => 'SELENCIA Patrimoine — Commissions sur encours',
-                null         => 'Format non reconnu',
+                'selencia' => 'SELENCIA Patrimoine — Commissions sur encours',
+                null => 'Format non reconnu',
             ],
         ]);
     }
@@ -54,9 +54,9 @@ class BordereauController extends Controller
     public function execute(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file'          => 'required|file|mimes:csv,txt|max:10240',
+            'file' => 'required|file|mimes:csv,txt|max:10240',
             'bordereau_mois' => 'required|date_format:Y-m',
-            'mia_user_id'   => 'nullable|integer|exists:users,id',
+            'mia_user_id' => 'nullable|integer|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -87,7 +87,7 @@ class BordereauController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $result,
+            'data' => $result,
         ]);
     }
 
@@ -109,7 +109,7 @@ class BordereauController extends Controller
             ->select('users.id', 'users.name', 'users.firstname', 'users.email')
             ->get()
             ->map(fn ($u) => [
-                'id'    => $u->id,
+                'id' => $u->id,
                 'label' => trim(($u->firstname ?? '').' '.($u->name ?? '')),
                 'email' => $u->email,
             ]);
